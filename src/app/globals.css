@@ -1,0 +1,130 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%; /* Very Dark Blue/Gray */
+    --foreground: 240 5% 95%; /* Almost White */
+
+    --card: 240 10% 7%; /* Slightly Lighter Dark Blue/Gray */
+    --card-foreground: 240 5% 95%;
+
+    --popover: 240 10% 7%;
+    --popover-foreground: 240 5% 95%;
+
+    --primary: 210 40% 96.1%; /* Bright, Slightly Desaturated Blue */
+    --primary-foreground: 222.2 47.4% 11.2%; /* Dark Blue for text on primary */
+
+    --secondary: 240 5% 15%; /* Dark Gray */
+    --secondary-foreground: 240 5% 95%;
+
+    --muted: 240 5% 15%;
+    --muted-foreground: 240 5% 65%; /* Lighter Gray for muted text */
+
+    --accent: 170 50% 50%; /* Teal/Cyan */
+    --accent-foreground: 240 5% 98%; /* Almost white for text on accent */
+
+    --destructive: 0 62.8% 45%; /* A slightly brighter red for destructive actions */
+    --destructive-foreground: 0 0% 98%; 
+    
+    --border: 240 5% 20%; /* Slightly lighter border */
+    --input: 240 5% 10%; /* Darker for input background */
+    --ring: 210 40% 90%; /* Ring color related to primary */
+
+    --radius: 0.75rem; /* Slightly more rounded corners */
+
+    /* Contribution Graph Colors */
+    --contribution-level-0: hsl(var(--muted) / 0.2); /* More subtle for no activity */
+    --contribution-level-1: hsl(var(--accent) / 0.3); /* Accent based for light activity */
+    --contribution-level-2: hsl(var(--accent) / 0.5);
+    --contribution-level-3: hsl(var(--accent) / 0.7);
+    --contribution-level-4: hsl(var(--accent) / 0.9);
+
+    /* --- Tier Group Theme Colors --- */
+    /* Group 1 (Tiers 1-2) - Base Theme */
+    --tier-group-1-header-bg: var(--card);
+    --tier-group-1-page-bg-start: hsl(var(--background));
+    --tier-group-1-page-bg-end: hsl(var(--background));
+    --progress-tier-group-1: hsl(var(--accent));
+
+    /* Group 2 (Tiers 3-4) - Silent Names, Forgotten Lineage (Fire/Shadows) */
+    --tier-group-2-header-bg: 240 9% 10%;
+    --tier-group-2-page-bg-start: hsl(240 10% 5%);
+    --tier-group-2-page-bg-end: hsl(25 20% 8%); /* Dark warm orange tint */
+    --progress-tier-group-2: 140 60% 55%; /* Green (placeholder, could be fire-themed: 30 80% 60%) */
+
+    /* Group 3 (Tiers 5-6) - Ancient Kin, Doompath Heralds (Deep/Dark) */
+    --tier-group-3-header-bg: 230 12% 9%;
+    --tier-group-3-page-bg-start: hsl(230 12% 4%);
+    --tier-group-3-page-bg-end: hsl(260 15% 7%); /* Dark cool purple tint */
+    --progress-tier-group-3: 30 80% 60%;  /* Orange */
+
+    /* Group 4 (Tiers 7-8) - Names Lost to Fire, Myth Engines (Ash/Metallic) */
+    --tier-group-4-header-bg: 240 5% 11%;
+    --tier-group-4-page-bg-start: hsl(240 5% 6%);
+    --tier-group-4-page-bg-end: hsl(220 8% 10%); /* Dark metallic blue/grey */
+    --progress-tier-group-4: 280 70% 65%; /* Purple */
+
+    /* Group 5 (Tiers 9-10) - Elders of Dust, Final Forms (Void/Power) */
+    --tier-group-5-header-bg: 260 15% 8%;
+    --tier-group-5-page-bg-start: hsl(260 15% 3%);
+    --tier-group-5-page-bg-end: hsl(0 30% 10%); /* Dark powerful red tint */
+    --progress-tier-group-5: 0 70% 60%; /* Crimson/Red */
+  }
+
+  /* Force dark theme for this app */
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 240 5% 95%;
+    --card: 240 10% 7%;
+    --card-foreground: 240 5% 95%;
+    --popover: 240 10% 7%;
+    --popover-foreground: 240 5% 95%;
+    --primary: 210 40% 96.1%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 5% 15%;
+    --secondary-foreground: 240 5% 95%;
+    --muted: 240 5% 15%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 170 50% 50%;
+    --accent-foreground: 240 5% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5% 20%;
+    --input: 240 5% 10%;
+    --ring: 210 40% 90%;
+
+    /* Tier Group Progress Colors (ensure these are available) */
+    --progress-tier-group-1: 170 50% 50%;
+    --progress-tier-group-2: 140 60% 55%;
+    --progress-tier-group-3: 30 80% 60%;
+    --progress-tier-group-4: 280 70% 65%;
+    --progress-tier-group-5: 0 70% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.5s ease-out; /* Smooth background transition */
+  }
+
+  /* Tier Group Page Backgrounds */
+  .page-tier-group-1 { background-color: hsl(var(--tier-group-1-page-bg-start)); }
+  .page-tier-group-2 { background-image: linear-gradient(to bottom right, hsl(var(--tier-group-2-page-bg-start)), hsl(var(--tier-group-2-page-bg-end))); }
+  .page-tier-group-3 { background-image: linear-gradient(to bottom right, hsl(var(--tier-group-3-page-bg-start)), hsl(var(--tier-group-3-page-bg-end))); }
+  .page-tier-group-4 { background-image: linear-gradient(to bottom right, hsl(var(--tier-group-4-page-bg-start)), hsl(var(--tier-group-4-page-bg-end))); }
+  .page-tier-group-5 { background-image: linear-gradient(to bottom right, hsl(var(--tier-group-5-page-bg-start)), hsl(var(--tier-group-5-page-bg-end))); }
+
+  /* Tier Group Header Backgrounds */
+  .header-tier-group-1 { background-color: hsl(var(--tier-group-1-header-bg) / 0.7); }
+  .header-tier-group-2 { background-color: hsl(var(--tier-group-2-header-bg) / 0.7); }
+  .header-tier-group-3 { background-color: hsl(var(--tier-group-3-header-bg) / 0.7); }
+  .header-tier-group-4 { background-color: hsl(var(--tier-group-4-header-bg) / 0.7); }
+  .header-tier-group-5 { background-color: hsl(var(--tier-group-5-header-bg) / 0.7); }
+}

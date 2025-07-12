@@ -1,0 +1,137 @@
+
+"use client";
+
+import React, { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { useUserRecords } from '@/components/providers/UserRecordsProvider';
+import { Wand2, Gift, CheckSquare, Loader2 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import { Separator } from '@/components/ui/separator';
+
+const AISuggestionsCard: React.FC = () => {
+  const {
+    taskDefinitions,
+    checkAndAwardAutomatedGoal,
+    isGoalMetForLastPeriod
+  } = useUserRecords();
+  const [checkingGoals, setCheckingGoals] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+
+  const handleCheckGoal = async (taskId: string) => {
+    setCheckingGoals(prev => ({ ...prev, [taskId]: true }));
+    try {
+      const result = await checkAndAwardAutomatedGoal(taskId);
+
+      if (result.error) {
+        toast({
+          title: `Goal Check: ${result.taskName || 'Task'}`,
+          description: result.error,
+          variant: "destructive",
+        });
+      } else if (result) {
+        if (result.metGoal) {
+          let description = `Goal Met for ${result.taskName}! You recorded ${result.actualValue} / ${result.goalValue} for ${result.periodName}.`;
+          if (result.bonusAwarded !== null && result.bonusAwarded > 0) {
+            description += ` You earned ${result.bonusAwarded} bonus points!`;
+          }
+          toast({
+            title: "🎉 Goal Achieved!",
+            description: description,
+            duration: 7000,
+          });
+        } else {
+          toast({
+            title: `🎯 Goal Update: ${result.taskName}`,
+            description: `Goal not met for ${result.periodName}. You recorded ${result.actualValue} / ${result.goalValue}. Keep pushing!`,
+            duration: 7000,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error checking goal:", e);
+      toast({
+        title: "Error Checking Goal",
+        description: "Could not check goal status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingGoals(prev => ({ ...prev, [taskId]: false }));
+    }
+  };
+
+  const eligibleGoalTasks = useMemo(() => {
+    return taskDefinitions.filter(
+      task => task.goalValue && task.goalValue > 0 && task.goalInterval && !isGoalMetForLastPeriod(task.id)
+    );
+  }, [taskDefinitions, isGoalMetForLastPeriod]);
+
+  const hasConfiguredGoals = useMemo(() => {
+    return taskDefinitions.some(task => task.goalValue && task.goalValue > 0 && task.goalInterval);
+  }, [taskDefinitions]);
+
+  return (
+    <Card className="shadow-lg flex flex-col">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Wand2 className="h-6 w-6 text-accent" />
+          <CardTitle>AI Features</CardTitle>
+        </div>
+        <CardDescription>AI features have been disabled to remove the billing requirement.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow space-y-4">
+        {hasConfiguredGoals ? (
+          <>
+            <div>
+              <h4 className="text-sm font-semibold mb-2 text-foreground/90 flex items-center">
+                <Gift className="h-4 w-4 mr-2 text-yellow-400" />
+                Automated Goal Check & Rewards
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Check your performance against set goals for the last completed period (daily, weekly, or monthly). Bonuses are awarded automatically if criteria are met.
+              </p>
+              {eligibleGoalTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {eligibleGoalTasks.map(task => (
+                    <div key={task.id} className="p-3 border rounded-md bg-card-foreground/5 hover:bg-card-foreground/10 transition-colors">
+                      <p className="text-sm font-medium text-foreground mb-2">
+                        Task: {task.name}
+                        <span className="text-xs text-muted-foreground ml-1">
+                           (Goal: {task.goalValue} / {task.goalInterval?.replace('ly', '')}
+                           {task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''})
+                        </span>
+                      </p>
+                      <Button
+                        onClick={() => handleCheckGoal(task.id)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={checkingGoals[task.id]}
+                      >
+                        {checkingGoals[task.id] ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckSquare className="mr-2 h-4 w-4" />
+                        )}
+                        Check {task.name} Goal
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                 <p className="text-sm text-muted-foreground">All eligible goals for the last completed periods have been checked. New periods will be checkable soon!</p>
+              )}
+            </div>
+          </>
+        ) : (
+            <p className="text-sm text-muted-foreground">Define goals for your tasks in "Manage Tasks" to enable automated reward checking.</p>
+        )}
+      </CardContent>
+      <CardFooter>
+        <p className="text-xs text-muted-foreground text-center w-full">AI Suggestions are disabled.</p>
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default AISuggestionsCard;
