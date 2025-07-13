@@ -1,21 +1,30 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import { Wand2, Gift, CheckSquare, Loader2 } from 'lucide-react';
+import { Wand2, Gift, CheckSquare, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
+import { generateSuggestions } from '@/ai/flows/suggestions-flow';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from 'lucide-react';
 
 const AISuggestionsCard: React.FC = () => {
   const {
     taskDefinitions,
     checkAndAwardAutomatedGoal,
-    isGoalMetForLastPeriod
+    isGoalMetForLastPeriod,
+    getUserLevelInfo,
+    getAllRecordsStringified,
   } = useUserRecords();
+  
   const [checkingGoals, setCheckingGoals] = useState<Record<string, boolean>>({});
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleCheckGoal = async (taskId: string) => {
@@ -60,6 +69,37 @@ const AISuggestionsCard: React.FC = () => {
     }
   };
 
+  const handleGenerateSuggestion = useCallback(async () => {
+    setIsGeneratingSuggestion(true);
+    setSuggestion(null);
+    setSuggestionError(null);
+    try {
+      const levelInfo = getUserLevelInfo();
+      const records = getAllRecordsStringified();
+      const tasks = JSON.stringify(taskDefinitions);
+
+      const result = await generateSuggestions({
+        level: levelInfo.currentLevel,
+        levelName: levelInfo.levelName,
+        tasks,
+        records
+      });
+      
+      setSuggestion(result.suggestion);
+      toast({
+        title: "💡 Suggestion Generated",
+        description: "The AI has provided a new suggestion for your journey.",
+      });
+
+    } catch (e) {
+      console.error("Error generating suggestion:", e);
+      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+      setSuggestionError(`Failed to generate a suggestion. This might be a temporary issue with the AI service or a local configuration problem. Please ensure Genkit is running locally (\`npm run genkit:dev\`). Details: ${errorMessage}`);
+    } finally {
+      setIsGeneratingSuggestion(false);
+    }
+  }, [getUserLevelInfo, getAllRecordsStringified, taskDefinitions, toast]);
+
   const eligibleGoalTasks = useMemo(() => {
     return taskDefinitions.filter(
       task => task.goalValue && task.goalValue > 0 && task.goalInterval && !isGoalMetForLastPeriod(task.id)
@@ -75,11 +115,50 @@ const AISuggestionsCard: React.FC = () => {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Wand2 className="h-6 w-6 text-accent" />
-          <CardTitle>AI Features</CardTitle>
+          <CardTitle>Performance Coach</CardTitle>
         </div>
-        <CardDescription>AI features have been disabled to remove the billing requirement.</CardDescription>
+        <CardDescription>Leverage AI to get suggestions and automatically check goals.</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold mb-2 text-foreground/90 flex items-center">
+            <Sparkles className="h-4 w-4 mr-2 text-yellow-400" />
+            AI-Powered Suggestion
+          </h4>
+           <Button
+            onClick={handleGenerateSuggestion}
+            variant="outline"
+            size="sm"
+            className="w-full mb-3"
+            disabled={isGeneratingSuggestion}
+          >
+            {isGeneratingSuggestion ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            Get New Suggestion
+          </Button>
+
+          {suggestionError && (
+             <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Suggestion Error</AlertTitle>
+                <AlertDescription>{suggestionError}</AlertDescription>
+            </Alert>
+          )}
+
+          {suggestion && (
+            <Alert className="mt-2">
+                <AlertTitle className="font-semibold">Suggestion:</AlertTitle>
+                <AlertDescription>{suggestion}</AlertDescription>
+            </Alert>
+          )}
+
+        </div>
+
+        <Separator />
+
         {hasConfiguredGoals ? (
           <>
             <div>
@@ -127,8 +206,8 @@ const AISuggestionsCard: React.FC = () => {
             <p className="text-sm text-muted-foreground">Define goals for your tasks in "Manage Tasks" to enable automated reward checking.</p>
         )}
       </CardContent>
-      <CardFooter>
-        <p className="text-xs text-muted-foreground text-center w-full">AI Suggestions are disabled.</p>
+       <CardFooter>
+        <p className="text-xs text-muted-foreground text-center w-full">AI features require a running Genkit server.</p>
       </CardFooter>
     </Card>
   );
