@@ -1,5 +1,7 @@
+'use client';
 
-"use client";
+// 🔥 This disables static caching
+export const revalidate = 0;
 
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
@@ -33,7 +35,7 @@ export default function HomePage() {
   const [currentLevelInfo, setCurrentLevelInfo] = useState<UserLevelInfo | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-  
+
   const {
     taskDefinitions,
     getUserLevelInfo,
@@ -47,20 +49,16 @@ export default function HomePage() {
     setCurrentYear(new Date().getFullYear());
   }, []);
 
-  // Effect to set a random quote on load
   useEffect(() => {
     const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
     setQuote(randomQuote);
   }, []);
 
-  // Effect to update level info
   useEffect(() => {
     const levelInfo = getUserLevelInfo();
     setCurrentLevelInfo(levelInfo);
   }, [getUserLevelInfo, records, totalBonusPoints]);
-  
 
-  // Effect for Tier Transition Welcome Message & Bonus Toast
   useEffect(() => {
     if (currentLevelInfo) {
       const newTierSlug = currentLevelInfo.tierSlug;
@@ -139,22 +137,21 @@ export default function HomePage() {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <TodoListCard />
+          <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+            <TodoListCard />
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
             </div>
-            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-                <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
-              </div>
-              <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
-              </div>
-              <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-                 <AISuggestionsCard />
-              </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+              <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
             </div>
+            <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+              <AISuggestionsCard />
+            </div>
+          </div>
         </div>
-
       </main>
       <RecordModal
         isOpen={isRecordModalOpen}
