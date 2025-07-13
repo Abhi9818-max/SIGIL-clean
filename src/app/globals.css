@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer base {
   :root {
     --background: 240 10% 3.9%; /* Very Dark Blue/Gray */
@@ -105,9 +109,7 @@
     @apply border-border;
   }
   body {
-    @ {
-      
-    } bg-background text-foreground;
+    @apply bg-background text-foreground;
     transition: background-color 0.5s ease-out; /* Smooth background transition */
   }
 
