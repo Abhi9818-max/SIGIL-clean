@@ -9,6 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'zod';
 
 const LoreInputSchema = z.object({
@@ -33,6 +34,7 @@ export async function generateLore(input: LoreInput): Promise<LoreOutput> {
 
 const lorePrompt = ai.definePrompt({
   name: 'lorePrompt',
+  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: LoreInputSchema },
   output: { schema: LoreOutputSchema },
   prompt: `

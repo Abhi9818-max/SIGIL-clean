@@ -9,6 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'zod';
 
 const SuggestionsInputSchema = z.object({
@@ -31,6 +32,7 @@ export async function generateSuggestions(input: SuggestionsInput): Promise<Sugg
 
 const suggestionsPrompt = ai.definePrompt({
   name: 'suggestionsPrompt',
+  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: SuggestionsInputSchema },
   output: { schema: SuggestionsOutputSchema },
   prompt: `
