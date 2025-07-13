@@ -1,5 +1,8 @@
 'use client';
 
+// 🔥 This disables static caching
+export const revalidate = 0;
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import QuoteCard from '@/components/layout/QuoteCard';
