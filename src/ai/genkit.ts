@@ -5,7 +5,6 @@
  * to ensure that the same Genkit instance is used throughout the
  * application.
  */
-'use server';
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
