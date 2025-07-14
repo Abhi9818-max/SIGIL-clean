@@ -20,7 +20,7 @@ const DareInputSchema = z.object({
 export type DareInput = z.infer<typeof DareInputSchema>;
 
 const DareOutputSchema = z.object({
-  dare: z.string().describe('A single, actionable, and thematic dare, 1-2 sentences max. The tone should be slightly mysterious and evocative, like a quest from a spirit. Examples: "Sketch a mythical creature from memory" or "Write a three-line poem about a forgotten king."'),
+  dare: z.string().describe('A single, actionable, and simple real-world dare, 1-2 sentences max. The tone should be slightly mysterious and mischievous, like a quest from a spirit, but the action should be easy and quick (under 5 minutes). Examples: "Text a friend a compliment out of the blue" or "Go outside, close your eyes, and listen for 60 seconds."'),
 });
 export type DareOutput = z.infer<typeof DareOutputSchema>;
 
@@ -39,9 +39,9 @@ const darePrompt = ai.definePrompt({
 
     The dare should be:
     - A single, short, actionable sentence.
-    - Thematically related to fantasy, myth, or personal growth, delivered with a mysterious tone.
-    - A simple task (5-15 minutes), not a real punishment.
-    - Creative or mindful, NOT related to the specific task they failed.
+    - A simple real-world task that takes 5 minutes or less. It should be fun and easy, not a punishment.
+    - Examples of good actions: a small physical activity, sending a text, a moment of mindfulness, interacting with an object in a funny way.
+    - The tone should be delivered like a mysterious quest, but the action itself must be simple.
 
     User's Level: {{level}}
     {{#if isGlobalStreak}}
@@ -51,11 +51,12 @@ const darePrompt = ai.definePrompt({
     {{/if}}
 
     Example Dares:
-    - "The archives demand a tribute. Write a three-line poem about a forgotten king."
+    - "The currents of fate must be stirred. Text a friend a compliment you've never given them."
     - "A moment of creation is required. Spend 5 minutes sketching a mythical creature from memory."
-    - "Your mind must be cleared. Listen to one new song with your eyes closed and describe the world it creates."
+    - "Your mind must be cleared. Go outside, close your eyes, and just listen for one full minute."
     - "Whisper a secret to a houseplant. If you have no houseplant, a pet or an inanimate object will suffice."
     - "Find the oldest object in your room and write down one sentence about its imagined history."
+    - "Animate the inanimate. Give a name to the closest object to your left."
 
     Generate one, single, concise dare for the user.
   `,
