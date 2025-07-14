@@ -45,10 +45,10 @@ import { generateDare } from '@/ai/flows/dare-flow';
 
 interface UserRecordsContextType {
   records: RecordEntry[];
-  addRecord: (entry: Omit<RecordEntry, 'notes'> & { notes?: string; taskType?: string }) => void;
+  addRecord: (entry: Omit<RecordEntry, 'id'>) => void;
   updateRecord: (entry: RecordEntry) => void;
-  deleteRecord: (date: string) => void;
-  getRecordByDate: (date: string) => RecordEntry | undefined;
+  deleteRecord: (recordId: string) => void;
+  getRecordsByDate: (date: string) => RecordEntry[];
   getRecordsForDateRange: (startDate: Date, endDate: Date) => RecordEntry[];
   getAggregateSum: (startDate: Date, endDate: Date, taskId?: string | null) => number;
   getYearlySum: (year: number, taskId?: string | null) => number;
@@ -100,7 +100,10 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     try {
       const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedRecords) {
-        setRecords(JSON.parse(storedRecords));
+        // Ensure all records have a unique ID, back-filling if necessary
+        const parsedRecords: RecordEntry[] = JSON.parse(storedRecords);
+        const recordsWithIds = parsedRecords.map(rec => ({ ...rec, id: rec.id || uuidv4() }));
+        setRecords(recordsWithIds);
       }
     } catch (error) {
       console.error("Failed to load records from localStorage:", error);
@@ -274,36 +277,29 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [unlockedSkills, isLoaded]);
 
 
-  const addRecord = useCallback((entry: Omit<RecordEntry, 'notes'> & { notes?: string; taskType?: string }) => {
-    setRecords(prevRecords => {
-      const existingRecordIndex = prevRecords.findIndex(r => r.date === entry.date);
-      const newRecordData: RecordEntry = {
-        date: entry.date,
-        value: Number(entry.value),
-        notes: entry.notes,
-        taskType: entry.taskType,
-      };
-      if (existingRecordIndex > -1) {
-        const updatedRecords = [...prevRecords];
-        updatedRecords[existingRecordIndex] = { ...updatedRecords[existingRecordIndex], ...newRecordData };
-        return updatedRecords;
-      }
-      return [...prevRecords, newRecordData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    });
+  const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
+    const newRecord: RecordEntry = {
+      ...entry,
+      id: uuidv4(),
+      value: Number(entry.value),
+    };
+    setRecords(prevRecords => 
+      [...prevRecords, newRecord].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    );
   }, []);
 
   const updateRecord = useCallback((entry: RecordEntry) => {
     setRecords(prevRecords =>
-      prevRecords.map(r => r.date === entry.date ? { ...entry, value: Number(entry.value) } : r)
+      prevRecords.map(r => r.id === entry.id ? { ...entry, value: Number(entry.value) } : r)
     );
   }, []);
 
-  const deleteRecord = useCallback((date: string) => {
-    setRecords(prevRecords => prevRecords.filter(r => r.date !== date));
+  const deleteRecord = useCallback((recordId: string) => {
+    setRecords(prevRecords => prevRecords.filter(r => r.id !== recordId));
   }, []);
 
-  const getRecordByDate = useCallback((date: string): RecordEntry | undefined => {
-    return records.find(r => r.date === date);
+  const getRecordsByDate = useCallback((date: string): RecordEntry[] => {
+    return records.filter(r => r.date === date);
   }, [records]);
 
   const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
@@ -717,7 +713,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return Array.from(distribution.entries()).map(([_, data]) => ({
       name: data.name,
       value: data.value,
-      fill: data.color,
+      fill: data.fill,
     }));
   }, [getRecordsForDateRange, getTaskDefinitionById]);
 
@@ -750,7 +746,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       addRecord,
       updateRecord,
       deleteRecord,
-      getRecordByDate,
+      getRecordsByDate,
       getRecordsForDateRange,
       getAggregateSum,
       getYearlySum,

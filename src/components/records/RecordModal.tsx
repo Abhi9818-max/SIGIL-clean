@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -23,24 +24,26 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Trash2 } from "lucide-react";
+import { CalendarIcon, Trash2, Pencil, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from 'date-fns';
 import type { RecordEntry } from '@/types';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const recordSchema = z.object({
+  id: z.string().optional(), // For identifying which record to update
   date: z.date({ required_error: "Date is required." }),
   value: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number({ invalid_type_error: "Record value must be a number." }).min(0, "Record value must be non-negative.")
   ),
-  taskType: z.string().optional(),
+  taskType: z.string().min(1, "Task type is required."),
   notes: z.string().optional(),
 });
 
@@ -50,7 +53,7 @@ interface RecordModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   selectedDate: string | null; // YYYY-MM-DD
-  defaultTaskTypeId?: string | null; // New prop for pre-selecting task type based on filter
+  defaultTaskTypeId?: string | null;
 }
 
 const RecordModal: React.FC<RecordModalProps> = ({ 
@@ -63,198 +66,202 @@ const RecordModal: React.FC<RecordModalProps> = ({
     addRecord, 
     updateRecord, 
     deleteRecord, 
-    getRecordByDate, 
-    taskDefinitions
+    getRecordsByDate, 
+    taskDefinitions,
+    getTaskDefinitionById,
   } = useUserRecords();
   const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
-  const existingRecord = selectedDate ? getRecordByDate(selectedDate) : undefined;
+  const dailyRecords = selectedDate ? getRecordsByDate(selectedDate) : [];
 
   const form = useForm<RecordFormData>({
     resolver: zodResolver(recordSchema),
-    defaultValues: {
-      date: selectedDate ? parseISO(selectedDate) : new Date(),
-      value: undefined,
-      taskType: taskDefinitions[0]?.id || undefined, 
-      notes: '',
-    },
   });
 
-  useEffect(() => {
-    let taskToSet: string | undefined = taskDefinitions[0]?.id || undefined;
-
-    if (selectedDate) {
-      const record = getRecordByDate(selectedDate);
-      const dateObj = parseISO(selectedDate);
-      
-      if (record) { // Existing record found for the date
-        taskToSet = record.taskType ?? (defaultTaskTypeId ?? taskDefinitions[0]?.id);
-      } else { // No existing record for the date, use filter or default
-        taskToSet = defaultTaskTypeId ?? taskDefinitions[0]?.id;
-      }
-
+  const resetAndPrepareForm = (record: RecordEntry | null = null) => {
+    if (record) { // Editing an existing record
+      setEditingRecordId(record.id);
       form.reset({
-        date: isValid(dateObj) ? dateObj : new Date(),
-        value: record?.value ?? undefined,
-        taskType: taskToSet,
-        notes: record?.notes ?? '',
+        id: record.id,
+        date: selectedDate ? parseISO(selectedDate) : new Date(),
+        value: record.value,
+        taskType: record.taskType,
+        notes: record.notes,
       });
-    } else { // No selected date (likely "Add Record" from header)
-      taskToSet = defaultTaskTypeId ?? taskDefinitions[0]?.id;
+    } else { // Preparing for a new record
+      setEditingRecordId(null);
       form.reset({
-        date: new Date(),
+        id: undefined,
+        date: selectedDate ? parseISO(selectedDate) : new Date(),
         value: undefined,
-        taskType: taskToSet,
+        taskType: defaultTaskTypeId ?? taskDefinitions[0]?.id,
         notes: '',
       });
     }
-  }, [selectedDate, isOpen, form, getRecordByDate, taskDefinitions, defaultTaskTypeId]);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      resetAndPrepareForm(null); // Always start with the 'new record' form
+    }
+  }, [isOpen, selectedDate, defaultTaskTypeId]);
 
   const onSubmit = (data: RecordFormData) => {
-    const recordEntry: RecordEntry = {
+    if (!selectedDate) return;
+
+    const recordData = {
       date: format(data.date, 'yyyy-MM-dd'),
       value: data.value,
       taskType: data.taskType,
       notes: data.notes,
     };
 
-    if (existingRecord) {
-      updateRecord(recordEntry);
-      toast({ title: "Record Updated", description: `Record for ${recordEntry.date} updated successfully.` });
+    if (editingRecordId) {
+      updateRecord({ ...recordData, id: editingRecordId });
+      toast({ title: "Record Updated", description: `Record for ${recordData.date} updated.` });
     } else {
-      addRecord(recordEntry);
-      toast({ title: "Record Added", description: `Record for ${recordEntry.date} added successfully.` });
+      addRecord(recordData);
+      toast({ title: "Record Added", description: `New record for ${recordData.date} added.` });
     }
-    onOpenChange(false);
+    resetAndPrepareForm(null); // Reset form for another new entry
   };
 
-  const handleDelete = () => {
-    if (selectedDate) {
-      setIsDeleting(true);
-      deleteRecord(selectedDate);
-      toast({ title: "Record Deleted", description: `Record for ${selectedDate} deleted.`, variant: "destructive" });
-      setIsDeleting(false);
-      onOpenChange(false);
+  const handleDelete = (recordId: string) => {
+    setIsDeleting(recordId);
+    deleteRecord(recordId);
+    toast({ title: "Record Deleted", description: `Record deleted successfully.`, variant: "destructive" });
+    setIsDeleting(null);
+    if (editingRecordId === recordId) {
+      resetAndPrepareForm(null);
     }
   };
   
   if (!isOpen) return null;
 
+  const titleDate = selectedDate ? format(parseISO(selectedDate), 'MMMM d, yyyy') : 'New Record';
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{existingRecord ? 'Edit Record' : 'Add Record'}</DialogTitle>
+          <DialogTitle>Records for {titleDate}</DialogTitle>
           <DialogDescription>
-            {existingRecord ? `Editing record for ${selectedDate ? format(parseISO(selectedDate), 'MMMM d, yyyy') : ''}` : 'Add a new record for the selected date.'}
+            Manage all your records for this day. You can add multiple entries for different tasks.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-          <div>
-            <Label htmlFor="date">Date</Label>
-             <Controller
-                name="date"
+        
+        <div className="py-4">
+          {dailyRecords.length > 0 && (
+            <>
+              <h3 className="mb-2 text-sm font-medium text-muted-foreground">Existing Records</h3>
+              <ScrollArea className="max-h-[150px] pr-4 mb-4">
+                <div className="space-y-2">
+                  {dailyRecords.map((rec) => {
+                    const task = rec.taskType ? getTaskDefinitionById(rec.taskType) : null;
+                    return (
+                      <div key={rec.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
+                        <div className="flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full" style={{backgroundColor: task?.color ?? 'gray'}}/>
+                           <span className="text-sm font-medium">{task?.name ?? 'Unassigned'}:</span>
+                           <span className="text-sm">{rec.value}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => resetAndPrepareForm(rec)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                           <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-destructive hover:text-destructive" 
+                              onClick={() => handleDelete(rec.id)}
+                              disabled={isDeleting === rec.id}
+                            >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+              <Separator />
+            </>
+          )}
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              {editingRecordId ? "Editing Record" : "Add New Record"}
+            </h3>
+            
+            <input type="hidden" {...form.register('id')} />
+            <input type="hidden" {...form.register('date')} />
+
+            <div>
+              <Label htmlFor="value">Record Value</Label>
+              <Input
+                id="value"
+                type="number"
+                step="any"
+                className="mt-1"
+                {...form.register('value')}
+                placeholder="e.g., hours, reps, quantity"
+              />
+              {form.formState.errors.value && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.value.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="taskType">Task Type</Label>
+              <Controller
+                name="taskType"
                 control={form.control}
                 render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal mt-1",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue placeholder="Select a task type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {taskDefinitions.length === 0 && <SelectItem value="" disabled>No tasks defined</SelectItem>}
+                      {taskDefinitions.map((task) => (
+                        <SelectItem key={task.id} value={task.id}>
+                          {task.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
-            {form.formState.errors.date && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.date.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="value">Record Value</Label>
-            <Input
-              id="value"
-              type="number"
-              step="any"
-              className="mt-1"
-              {...form.register('value')}
-              placeholder="e.g., hours, reps, quantity"
-            />
-            {form.formState.errors.value && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.value.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="taskType">Task Type</Label>
-            <Controller
-              name="taskType"
-              control={form.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
-                  <SelectTrigger className="w-full mt-1">
-                    <SelectValue placeholder="Select a task type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {taskDefinitions.length === 0 && <SelectItem value="" disabled>No tasks defined</SelectItem>}
-                    {taskDefinitions.map((task) => (
-                      <SelectItem key={task.id} value={task.id}>
-                        {task.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {form.formState.errors.taskType && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.taskType.message}</p>
               )}
-            />
-            {form.formState.errors.taskType && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.taskType.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              className="mt-1"
-              {...form.register('notes')}
-              placeholder="Add any relevant notes..."
-            />
-          </div>
-
-          <DialogFooter className="sm:justify-between pt-2">
-            {existingRecord ? (
-              <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            ) : <div />} 
-            <div className="flex gap-2">
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button type="submit" disabled={form.formState.isSubmitting || taskDefinitions.length === 0}>
-                {form.formState.isSubmitting ? "Saving..." : (existingRecord ? 'Save Changes' : 'Add Record')}
-              </Button>
             </div>
-          </DialogFooter>
-        </form>
+
+            <div>
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                className="mt-1"
+                {...form.register('notes')}
+                placeholder="Add any relevant notes..."
+              />
+            </div>
+
+            <DialogFooter className="sm:justify-end pt-2">
+              {editingRecordId && (
+                <Button type="button" variant="outline" onClick={() => resetAndPrepareForm(null)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                   New Record
+                </Button>
+              )}
+              <Button type="submit" disabled={form.formState.isSubmitting || taskDefinitions.length === 0}>
+                {form.formState.isSubmitting ? "Saving..." : (editingRecordId ? 'Save Changes' : 'Add Record')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

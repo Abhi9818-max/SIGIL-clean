@@ -1,4 +1,5 @@
 
+
 import {
   format,
   startOfMonth,
@@ -23,8 +24,13 @@ export const getMonthlyGraphData = (
   const currentYear = getYear(today);
   const monthlyData: MonthColumn[] = [];
   
-  const recordsMap = new Map<string, RecordEntry>();
-  records.forEach(record => recordsMap.set(record.date, record));
+  const recordsMap = new Map<string, RecordEntry[]>();
+  records.forEach(record => {
+    if (!recordsMap.has(record.date)) {
+      recordsMap.set(record.date, []);
+    }
+    recordsMap.get(record.date)!.push(record);
+  });
 
   const taskDefinitionMap = new Map<string, TaskDefinition>();
   taskDefinitions.forEach(task => taskDefinitionMap.set(task.id, task));
@@ -68,8 +74,13 @@ export const getMonthlyGraphData = (
           taskColor: 'hsl(var(--muted) / 0.1)', // Dimmer for future dates
         });
       } else {
-        const record = recordsMap.get(dateStr);
+        const dailyRecords = recordsMap.get(dateStr) || [];
+        const relevantRecords = filterByTaskId 
+          ? dailyRecords.filter(r => r.taskType === filterByTaskId) 
+          : dailyRecords;
         
+        const totalValue = relevantRecords.reduce((sum, r) => sum + r.value, 0);
+
         let displayValue: number | null = null;
         let displayLevel = 0;
         let taskColor: string | undefined = undefined;
@@ -77,32 +88,34 @@ export const getMonthlyGraphData = (
         let taskType: string | undefined = undefined;
         let taskIntensityThresholds: readonly number[] | undefined = undefined;
 
-        if (record) {
-          if (filterByTaskId === null || record.taskType === filterByTaskId) {
-            displayValue = record.value;
-            if (record.taskType) {
-              const taskDef = taskDefinitionMap.get(record.taskType);
-              if (taskDef) {
-                taskColor = taskDef.color;
-                taskName = taskDef.name;
-                taskType = taskDef.id;
-                if (taskDef.intensityThresholds && taskDef.intensityThresholds.length === 4) {
-                  taskIntensityThresholds = taskDef.intensityThresholds;
-                }
-              } else {
-                taskColor = DEFAULT_TASK_COLOR;
-              }
+        if (relevantRecords.length > 0) {
+          displayValue = totalValue;
+
+          // If filtered, use that task's info. If not, use the info from the first record of the day.
+          const representativeRecord = relevantRecords[0];
+          const taskDef = representativeRecord.taskType ? taskDefinitionMap.get(representativeRecord.taskType) : undefined;
+          
+          if (taskDef) {
+            taskColor = taskDef.color;
+            taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : taskDef.name;
+            taskType = taskDef.id;
+            if (taskDef.intensityThresholds && taskDef.intensityThresholds.length === 4) {
+              taskIntensityThresholds = taskDef.intensityThresholds;
             }
-            displayLevel = getContributionLevel(record.value, taskIntensityThresholds);
+          } else {
+            taskColor = DEFAULT_TASK_COLOR;
+            taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : 'Unassigned';
           }
+          displayLevel = getContributionLevel(totalValue, taskIntensityThresholds);
         }
+
         currentWeek.push({
           date: dateStr,
           value: displayValue,
           level: displayLevel,
-          taskType: (filterByTaskId === null || taskType === filterByTaskId) ? taskType : undefined,
-          taskName: (filterByTaskId === null || taskType === filterByTaskId) ? taskName : undefined,
-          taskColor: (filterByTaskId === null || taskType === filterByTaskId) ? taskColor : undefined,
+          taskType: taskType,
+          taskName: taskName,
+          taskColor: taskColor,
           isPlaceholder: false,
         });
       }

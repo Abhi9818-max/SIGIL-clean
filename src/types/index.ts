@@ -1,6 +1,7 @@
 
 
 export interface RecordEntry {
+  id: string; // Unique identifier for each record
   date: string; // YYYY-MM-DD format
   value: number;
   notes?: string; // Optional notes
