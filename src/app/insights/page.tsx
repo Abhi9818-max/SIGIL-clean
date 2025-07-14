@@ -124,7 +124,7 @@ export default function InsightsPage() {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <TaskDistributionChart startDate={dateRange.start} endDate={dateRange.end} />
-                <ProductivityByDayChart startDate={dateRange.start} endDate={date.end} />
+                <ProductivityByDayChart startDate={dateRange.start} endDate={dateRange.end} />
             </div>
           </CardContent>
         </Card>
