@@ -20,6 +20,7 @@ import { subDays, startOfYear, getYear } from 'date-fns';
 import TaskDistributionChart from '@/components/insights/TaskDistributionChart';
 import ProductivityByDayChart from '@/components/insights/ProductivityByDayChart';
 import Link from 'next/link';
+import { Separator } from '@/components/ui/separator';
 
 type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'custom';
 
@@ -27,7 +28,7 @@ export default function InsightsPage() {
   const { getUserLevelInfo, getYearlySum, taskDefinitions } = useUserRecords();
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('last_30_days');
-  const [customDays, setCustomDays] = useState<number>(7);
+  const [customDays, setCustomDays] = useState<number>(30);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
     start: subDays(new Date(), 29),
@@ -51,7 +52,7 @@ export default function InsightsPage() {
         start = startOfYear(now);
         break;
       case 'custom':
-        start = subDays(now, (days || 7) - 1);
+        start = subDays(now, (days || 30) - 1);
         break;
       case 'last_30_days':
       default:
@@ -88,38 +89,51 @@ export default function InsightsPage() {
       <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up">
         <Card className="shadow-lg w-full max-w-6xl mx-auto">
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <BarChart2 className="h-6 w-6 text-primary" />
-                  <CardTitle>Your Insights</CardTitle>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <ListFilter className="h-4 w-4 text-muted-foreground" />
-                    <Select onValueChange={(value) => setSelectedTaskId(value === 'all' ? null : value)} defaultValue="all">
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Select a task" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Tasks</SelectItem>
-                            {taskDefinitions.map(task => (
-                                <SelectItem key={task.id} value={task.id}>{task.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <Select onValueChange={(value: TimeRange) => setTimeRange(value)} defaultValue={timeRange}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Select time range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="last_30_days">Last 30 Days</SelectItem>
-                            <SelectItem value="last_90_days">Last 90 Days</SelectItem>
-                            <SelectItem value="this_year">This Year</SelectItem>
-                             <SelectItem value="custom">Custom</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-6 w-6 text-primary" />
+              <CardTitle>Your Insights</CardTitle>
+            </div>
+            <CardDescription>A deeper look into your patterns of growth and effort.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <div className="p-4 border rounded-lg bg-muted/50 mb-8">
+                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <ListFilter className="h-4 w-4 text-muted-foreground" />
+                        <Label htmlFor="task-filter">Task</Label>
+                        <Select onValueChange={(value) => setSelectedTaskId(value === 'all' ? null : value)} defaultValue="all" name="task-filter">
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select a task" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Tasks</SelectItem>
+                                {taskDefinitions.map(task => (
+                                    <SelectItem key={task.id} value={task.id}>{task.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <Label htmlFor="time-range-filter">Time Range</Label>
+                         <Select onValueChange={(value: TimeRange) => setTimeRange(value)} defaultValue={timeRange} name="time-range-filter">
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select time range" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="last_30_days">Last 30 Days</SelectItem>
+                                <SelectItem value="last_90_days">Last 90 Days</SelectItem>
+                                <SelectItem value="this_year">This Year</SelectItem>
+                                <SelectItem value="custom">Custom</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                   
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="custom-days" className="sr-only">Custom Days</Label>
                         <Input 
+                            id="custom-days"
                             type="number"
                             value={customDays}
                             onChange={(e) => setCustomDays(e.target.valueAsNumber || 0)}
@@ -128,15 +142,12 @@ export default function InsightsPage() {
                             onFocus={() => setTimeRange('custom')}
                         />
                         <Button onClick={handleCustomDaysApply} size="sm" variant="secondary">
-                            <Search className="mr-2 h-4 w-4"/>
-                            Apply
+                            <Search className="h-4 w-4"/>
                         </Button>
                     </div>
                 </div>
             </div>
-            <CardDescription>A deeper look into your patterns of growth and effort.</CardDescription>
-          </CardHeader>
-          <CardContent>
+
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
                <Card className="lg:col-span-1">
                  <CardHeader>
