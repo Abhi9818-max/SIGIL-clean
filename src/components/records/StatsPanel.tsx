@@ -38,20 +38,17 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
   const aggregateStats = useMemo(() => {
     const today = new Date();
     const last30DaysStart = subDays(today, 29);
-    const currentYear = getYear(today);
-    const yearStart = startOfYear(today);
-
+    
     const taskForAggregates = selectedTaskFilterId;
 
     return [
       { title: "Total Last 30 Days", value: getAggregateSum(last30DaysStart, today, taskForAggregates) },
-      { title: `Total This Year (${currentYear})`, value: getAggregateSum(yearStart, today, taskForAggregates) },
     ];
   }, [getAggregateSum, selectedTaskFilterId]);
 
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
       {aggregateStats.map((stat, index) => (
         <Card
           key={index}

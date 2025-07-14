@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
-import { subDays, startOfYear } from 'date-fns';
+import { subDays, startOfYear, getYear } from 'date-fns';
 import TaskDistributionChart from '@/components/insights/TaskDistributionChart';
 import ProductivityByDayChart from '@/components/insights/ProductivityByDayChart';
 import Link from 'next/link';
@@ -24,7 +24,7 @@ import Link from 'next/link';
 type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'custom';
 
 export default function InsightsPage() {
-  const { getUserLevelInfo } = useUserRecords();
+  const { getUserLevelInfo, getYearlySum } = useUserRecords();
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('last_30_days');
   const [customDays, setCustomDays] = useState<number>(7);
@@ -75,6 +75,8 @@ export default function InsightsPage() {
   
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
+
+  const currentYearSum = currentYear ? getYearlySum(currentYear) : 0;
   
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -122,6 +124,19 @@ export default function InsightsPage() {
             <CardDescription>A deeper look into your patterns of growth and effort.</CardDescription>
           </CardHeader>
           <CardContent>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+               <Card className="lg:col-span-1">
+                 <CardHeader>
+                   <CardTitle className="text-sm font-medium text-muted-foreground">Total This Year ({currentYear})</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <p className="text-3xl font-bold">{currentYearSum.toLocaleString()}</p>
+                 </CardContent>
+               </Card>
+                <div className="lg:col-span-2">
+                    {/* Placeholder for potential future cards */}
+                </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <TaskDistributionChart startDate={dateRange.start} endDate={dateRange.end} />
                 <ProductivityByDayChart startDate={dateRange.start} endDate={dateRange.end} />
