@@ -1,5 +1,7 @@
 
 
+export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic';
+
 export interface RecordEntry {
   id: string; // Unique identifier for each record
   date: string; // YYYY-MM-DD format
@@ -34,6 +36,7 @@ export interface TaskDefinition {
   id: string;
   name: string;
   color: string; // HSL color string e.g., 'hsl(210 90% 70%)'
+  unit?: TaskUnit; // The unit of measurement for this task's value
   intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
   goalValue?: number; // Optional: A numerical goal for the task (e.g., hours)
   goalInterval?: 'daily' | 'weekly' | 'monthly'; // Optional: The interval for the goal
