@@ -36,19 +36,9 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     setIsLoaded(true);
   }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(todoItems));
-      } catch (error) {
-        console.error("Failed to save to-do items to localStorage:", error);
-      }
-    }
-  }, [todoItems, isLoaded]);
-
+  
   const applyPenalty = useCallback((item: TodoItem) => {
-    if (item.penalty && item.penalty > 0 && userRecords.deductBonusPoints) {
+    if (item.penalty && item.penalty > 0 && userRecords.deductBonusPoints && !item.penaltyApplied) {
       userRecords.deductBonusPoints(item.penalty);
       toast({
         title: "Pact Broken",
@@ -64,6 +54,35 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [userRecords, toast]);
 
 
+  // Check for overdue tasks on load
+  useEffect(() => {
+    if (isLoaded) {
+      const today = startOfDay(new Date());
+      todoItems.forEach(item => {
+        if (item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate))) && !item.penaltyApplied) {
+          applyPenalty(item);
+        }
+      });
+      // Save any changes from penalty applications
+      try {
+        localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(todoItems));
+      } catch (error) {
+        console.error("Failed to save to-do items to localStorage:", error);
+      }
+    }
+  }, [isLoaded, applyPenalty]); // Removed todoItems dependency to avoid loop
+
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(todoItems));
+      } catch (error) {
+        console.error("Failed to save to-do items to localStorage:", error);
+      }
+    }
+  }, [todoItems, isLoaded]);
+
   const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
     const newItem: TodoItem = {
@@ -75,7 +94,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       penalty: (dueDate && penalty && penalty > 0) ? penalty : undefined,
       penaltyApplied: false,
     };
-    setTodoItems(prevItems => [newItem, ...prevItems]);
+    setTodoItems(prevItems => [newItem, ...prevItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   }, []);
 
   const toggleTodoItem = useCallback((id: string) => {

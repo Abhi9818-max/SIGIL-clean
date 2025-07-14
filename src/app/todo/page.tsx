@@ -72,7 +72,7 @@ export default function TodoPage() {
               <CardTitle>My Pacts</CardTitle>
             </div>
             <CardDescription>
-              Manage your tasks. Tasks with a due date are considered pacts. Breaking a pact by not completing it on time will incur the specified XP penalty.
+              Manage your tasks. Tasks with a due date are considered pacts. You can optionally add an XP penalty for breaking a pact.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -108,7 +108,7 @@ export default function TodoPage() {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {newDueDate ? format(newDueDate, "PPP") : <span>Pick due date</span>}
+                        {newDueDate ? format(newDueDate, "PPP") : <span>Pick due date (optional)</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -129,7 +129,7 @@ export default function TodoPage() {
                     type="number"
                     value={newPenalty || ''}
                     onChange={(e) => setNewPenalty(e.target.value === '' ? undefined : Number(e.target.value))}
-                    placeholder="Penalty XP (e.g., 50)"
+                    placeholder="Penalty XP (optional)"
                     disabled={!newDueDate}
                   />
                 </div>
@@ -184,7 +184,7 @@ export default function TodoPage() {
                                   )}
                                 >
                                     <ShieldAlert className="h-3.5 w-3.5 mr-1" />
-                                    Penalty: {item.penalty} XP
+                                    Pact Penalty: {item.penalty} XP
                                 </div>
                             )}
                           </div>
