@@ -1,0 +1,17 @@
+import json
+from pathlib import Path
+
+# Define the path for saving the JSON file
+file_path = Path("/mnt/data/dares_and_punishments.json")
+
+# Combine dares and punishments into a dictionary
+data = {
+    "dares": all_dares,
+    "punishments": all_punishments
+}
+
+# Save as JSON
+with open(file_path, "w") as f:
+    json.dump(data, f, indent=2)
+
+file_path.name
