@@ -5,10 +5,13 @@ import type { TodoItem } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { LOCAL_STORAGE_TODO_KEY } from '@/lib/config';
 import { v4 as uuidv4 } from 'uuid';
+import { useUserRecords } from './UserRecordsProvider';
+import { useToast } from '@/hooks/use-toast';
+import { isPast, startOfDay } from 'date-fns';
 
 interface TodoContextType {
   todoItems: TodoItem[];
-  addTodoItem: (text: string, dueDate?: string) => void; // Added dueDate parameter
+  addTodoItem: (text: string, dueDate?: string, penalty?: number) => void;
   toggleTodoItem: (id: string) => void;
   deleteTodoItem: (id: string) => void;
   getTodoItemById: (id: string) => TodoItem | undefined;
@@ -19,6 +22,8 @@ const TodoContext = createContext<TodoContextType | undefined>(undefined);
 export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const userRecords = useUserRecords();
+  const { toast } = useToast();
 
   useEffect(() => {
     try {
@@ -42,29 +47,66 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [todoItems, isLoaded]);
 
-  const addTodoItem = useCallback((text: string, dueDate?: string) => {
+  const applyPenalty = useCallback((item: TodoItem) => {
+    if (item.penalty && item.penalty > 0 && userRecords.deductBonusPoints) {
+      userRecords.deductBonusPoints(item.penalty);
+      toast({
+        title: "Pact Broken",
+        description: `Your pact "${item.text}" was not honored in time. A penalty of ${item.penalty} XP has been deducted.`,
+        variant: "destructive",
+        duration: 7000,
+      });
+      // Mark penalty as applied to prevent it from being applied again
+      setTodoItems(prevItems => 
+        prevItems.map(i => i.id === item.id ? {...i, penaltyApplied: true} : i)
+      );
+    }
+  }, [userRecords, toast]);
+
+
+  const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
     const newItem: TodoItem = {
       id: uuidv4(),
       text,
       completed: false,
       createdAt: new Date().toISOString(),
-      dueDate, // Add dueDate to the new item
+      dueDate,
+      penalty: (dueDate && penalty && penalty > 0) ? penalty : undefined,
+      penaltyApplied: false,
     };
-    setTodoItems(prevItems => [newItem, ...prevItems]); // Add new items to the top
+    setTodoItems(prevItems => [newItem, ...prevItems]);
   }, []);
 
   const toggleTodoItem = useCallback((id: string) => {
+    const item = todoItems.find(i => i.id === id);
+    if (!item) return;
+
+    // Check for penalty when completing an overdue task
+    const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
+    if (isOverdue && !item.penaltyApplied) {
+        applyPenalty(item);
+    }
+
     setTodoItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, completed: !item.completed } : item
+      prevItems.map(i =>
+        i.id === id ? { ...i, completed: !i.completed } : i
       )
     );
-  }, []);
+  }, [todoItems, applyPenalty]);
 
   const deleteTodoItem = useCallback((id: string) => {
-    setTodoItems(prevItems => prevItems.filter(item => item.id !== id));
-  }, []);
+    const item = todoItems.find(i => i.id === id);
+    if (!item) return;
+
+     // Check for penalty when deleting an overdue, uncompleted task
+    const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
+    if (isOverdue && !item.penaltyApplied) {
+        applyPenalty(item);
+    }
+
+    setTodoItems(prevItems => prevItems.filter(i => i.id !== id));
+  }, [todoItems, applyPenalty]);
 
   const getTodoItemById = useCallback((id: string): TodoItem | undefined => {
     return todoItems.find(item => item.id === id);

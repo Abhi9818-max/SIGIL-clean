@@ -113,6 +113,8 @@ export interface TodoItem {
   completed: boolean;
   createdAt: string; // ISO date string
   dueDate?: string; // Optional: YYYY-MM-DD format
+  penalty?: number; // Optional: XP penalty if overdue
+  penaltyApplied?: boolean; // Optional: whether the penalty has been applied
 }
 
 // For Constellations
