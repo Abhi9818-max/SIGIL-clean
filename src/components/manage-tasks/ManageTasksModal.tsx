@@ -47,7 +47,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
@@ -244,104 +243,101 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
         resetFormFields(null);
       }
     }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg p-0 flex flex-col max-h-screen md:max-h-[90vh]">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>Manage Tasks</DialogTitle>
           <DialogDescription>Add, edit, or delete your task types, their display properties, and goals.</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] -mx-6 px-6">
-          <div className="flex flex-col gap-8 py-4">
-            <div className="px-0">
-               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
-                  <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium text-primary">
-                          {editingTask ? 'Edit Task' : 'Add New Task'}
-                      </h3>
-                      {editingTask && (
-                          <Button variant="outline" size="sm" onClick={() => resetFormFields(null)}>
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          New Task
-                          </Button>
-                      )}
+        <div className="flex flex-col gap-6 py-4 overflow-y-auto px-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
+                <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium text-primary">
+                        {editingTask ? 'Edit Task' : 'Add New Task'}
+                    </h3>
+                    {editingTask && (
+                        <Button variant="outline" size="sm" onClick={() => resetFormFields(null)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        New Task
+                        </Button>
+                    )}
+                </div>
+                  <div>
+                    <Label htmlFor="taskName">Task Name</Label>
+                    <Input id="taskName" {...form.register('name')} className="mt-1" />
+                    {form.formState.errors.name && (<p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>)}
                   </div>
-                    <div>
-                      <Label htmlFor="taskName">Task Name</Label>
-                      <Input id="taskName" {...form.register('name')} className="mt-1" />
-                      {form.formState.errors.name && (<p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>)}
-                    </div>
-                    <div>
-                      <Label htmlFor="taskColor">Task Color</Label>
-                      <Controller name="color" control={form.control} render={({ field }) => (
-                        <div className="flex items-center mt-1 gap-2 border border-input rounded-md pr-2 focus-within:ring-2 focus-within:ring-ring">
-                          <Input id="taskColor" type="color" value={field.value.startsWith('hsl') ? '#000000' : field.value} onChange={(e) => field.onChange(e.target.value)} className="w-10 h-10 p-1 border-0 bg-transparent cursor-pointer"/>
-                          <Input type="text" value={field.value} onChange={field.onChange} placeholder="hsl(...) or #..." className="flex-grow border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"/>
-                        </div>
-                      )}/>
-                      {form.formState.errors.color && (<p className="text-sm text-destructive mt-1">{form.formState.errors.color.message}</p>)}
-                    </div>
+                  <div>
+                    <Label htmlFor="taskColor">Task Color</Label>
+                    <Controller name="color" control={form.control} render={({ field }) => (
+                      <div className="flex items-center mt-1 gap-2 border border-input rounded-md pr-2 focus-within:ring-2 focus-within:ring-ring">
+                        <Input id="taskColor" type="color" value={field.value.startsWith('hsl') ? '#000000' : field.value} onChange={(e) => field.onChange(e.target.value)} className="w-10 h-10 p-1 border-0 bg-transparent cursor-pointer"/>
+                        <Input type="text" value={field.value} onChange={field.onChange} placeholder="hsl(...) or #..." className="flex-grow border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                      </div>
+                    )}/>
+                    {form.formState.errors.color && (<p className="text-sm text-destructive mt-1">{form.formState.errors.color.message}</p>)}
                   </div>
-                  
-                  <Accordion type="multiple" className="w-full space-y-2">
-                    <AccordionItem value="goals" className="border-b-0">
-                      <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Goals & Bonuses (Optional)</div></AccordionTrigger>
-                      <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
-                          <div className="sm:col-span-1"><Label htmlFor="goalValue">Goal ({unitLabel})</Label><Input id="goalValue" type="number" {...form.register('goalValue')} className="mt-1"/></div>
-                          <div className="sm:col-span-1"><Label htmlFor="goalInterval">Interval</Label><Controller name="goalInterval" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select>)}/></div>
-                          <div className="sm:col-span-1"><Label htmlFor="goalCompletionBonusPercentage">Bonus %</Label><Input id="goalCompletionBonusPercentage" type="number" {...form.register('goalCompletionBonusPercentage')} className="mt-1" disabled={!watchGoalValue || Number(watchGoalValue) <= 0}/></div>
-                        </div>
-                         {form.formState.errors.goalValue && (<p className="text-sm text-destructive mt-1">{form.formState.errors.goalValue.message}</p>)}
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="intensity" className="border-b-0">
-                      <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Timer className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
-                      <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
-                        <p className="text-xs text-muted-foreground">Define 4 values for different shades. Defaults: {VALUE_THRESHOLDS.join(', ')}.</p>
-                        <div>
-                           <Label htmlFor="unit">Unit of Measurement</Label>
-                           <Controller name="unit" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? "count"}><SelectTrigger className="mt-1"><SelectValue placeholder="Select unit" /></SelectTrigger><SelectContent><SelectItem value="count">Count</SelectItem><SelectItem value="minutes">Minutes</SelectItem><SelectItem value="hours">Hours</SelectItem><SelectItem value="pages">Pages</SelectItem><SelectItem value="generic">Generic Units</SelectItem></SelectContent></Select>)}/>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                          {[1, 2, 3, 4].map(i => (<div key={i}><Label htmlFor={`threshold${i}`}>Phase {i} ({unitLabel})</Label><Input id={`threshold${i}`} type="number" placeholder={unitPlaceholders[watchUnit || 'count']} {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/></div>))}
-                        </div>
-                        {form.formState.errors.threshold1 && (<p className="text-sm text-destructive mt-1">{form.formState.errors.threshold1.message}</p>)}
-                      </AccordionContent>
-                    </AccordionItem>
-                     <AccordionItem value="dark-streak" className="border-b-0">
-                        <div className="flex items-center justify-between text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none">
-                            <AccordionTrigger className="flex-1 py-0 pr-2">
-                                <div className="flex items-center gap-2">
-                                    <Zap className="h-4 w-4 text-muted-foreground" />
-                                    Dark Streak (High Stakes)
-                                </div>
-                            </AccordionTrigger>
-                            <Controller
-                                name="darkStreakEnabled"
-                                control={form.control}
-                                render={({ field }) => (
-                                    <Switch
-                                        id="dark-streak-switch"
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                )}
-                            />
-                        </div>
-                      <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
-                        <p className="text-xs text-muted-foreground">Enable this for a high-stakes daily challenge. Missing a day incurs a heavy penalty and a dare.</p>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                  
-                  <div className="pt-2">
-                    <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                      {form.formState.isSubmitting ? "Saving..." : (editingTask ? 'Save Changes' : 'Add Task')}
-                    </Button>
-                  </div>
-                </form>
-            </div>
+                </div>
+                
+                <Accordion type="multiple" className="w-full space-y-2">
+                  <AccordionItem value="goals" className="border-b-0">
+                    <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Goals & Bonuses (Optional)</div></AccordionTrigger>
+                    <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
+                        <div className="sm:col-span-1"><Label htmlFor="goalValue">Goal ({unitLabel})</Label><Input id="goalValue" type="number" {...form.register('goalValue')} className="mt-1"/></div>
+                        <div className="sm:col-span-1"><Label htmlFor="goalInterval">Interval</Label><Controller name="goalInterval" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select>)}/></div>
+                        <div className="sm:col-span-1"><Label htmlFor="goalCompletionBonusPercentage">Bonus %</Label><Input id="goalCompletionBonusPercentage" type="number" {...form.register('goalCompletionBonusPercentage')} className="mt-1" disabled={!watchGoalValue || Number(watchGoalValue) <= 0}/></div>
+                      </div>
+                       {form.formState.errors.goalValue && (<p className="text-sm text-destructive mt-1">{form.formState.errors.goalValue.message}</p>)}
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="intensity" className="border-b-0">
+                    <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Timer className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
+                    <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
+                      <p className="text-xs text-muted-foreground">Define 4 values for different shades. Defaults: {VALUE_THRESHOLDS.join(', ')}.</p>
+                      <div>
+                         <Label htmlFor="unit">Unit of Measurement</Label>
+                         <Controller name="unit" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? "count"}><SelectTrigger className="mt-1"><SelectValue placeholder="Select unit" /></SelectTrigger><SelectContent><SelectItem value="count">Count</SelectItem><SelectItem value="minutes">Minutes</SelectItem><SelectItem value="hours">Hours</SelectItem><SelectItem value="pages">Pages</SelectItem><SelectItem value="generic">Generic Units</SelectItem></SelectContent></Select>)}/>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {[1, 2, 3, 4].map(i => (<div key={i}><Label htmlFor={`threshold${i}`}>Phase {i} ({unitLabel})</Label><Input id={`threshold${i}`} type="number" placeholder={unitPlaceholders[watchUnit || 'count']} {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/></div>))}
+                      </div>
+                      {form.formState.errors.threshold1 && (<p className="text-sm text-destructive mt-1">{form.formState.errors.threshold1.message}</p>)}
+                    </AccordionContent>
+                  </AccordionItem>
+                   <AccordionItem value="dark-streak" className="border-b-0">
+                      <div className="flex items-center justify-between text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none">
+                          <AccordionTrigger className="flex-1 py-0 pr-2">
+                              <div className="flex items-center gap-2">
+                                  <Zap className="h-4 w-4 text-muted-foreground" />
+                                  Dark Streak (High Stakes)
+                              </div>
+                          </AccordionTrigger>
+                          <Controller
+                              name="darkStreakEnabled"
+                              control={form.control}
+                              render={({ field }) => (
+                                  <Switch
+                                      id="dark-streak-switch"
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      onClick={(e) => e.stopPropagation()}
+                                  />
+                              )}
+                          />
+                      </div>
+                    <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
+                      <p className="text-xs text-muted-foreground">Enable this for a high-stakes daily challenge. Missing a day incurs a heavy penalty and a dare.</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                <div className="pt-2">
+                  <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+                    {form.formState.isSubmitting ? "Saving..." : (editingTask ? 'Save Changes' : 'Add Task')}
+                  </Button>
+                </div>
+              </form>
 
             <div className="px-0">
               <h3 className="text-lg font-medium mb-4 text-primary">Existing Tasks</h3>
@@ -405,8 +401,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
               )}
             </div>
           </div>
-        </ScrollArea>
-        <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-6">
+        <DialogFooter className="px-6 pb-6 pt-4 border-t mt-auto">
           <DialogClose asChild>
             <Button type="button" variant="secondary" className="w-full">Close</Button>
           </DialogClose>
@@ -417,3 +412,5 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
+
+    
