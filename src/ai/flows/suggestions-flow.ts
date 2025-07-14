@@ -32,7 +32,6 @@ export async function generateSuggestions(input: SuggestionsInput): Promise<Sugg
 
 const suggestionsPrompt = ai.definePrompt({
   name: 'suggestionsPrompt',
-  model: googleAI.model('gemini-pro'),
   input: { schema: SuggestionsInputSchema },
   output: { schema: SuggestionsOutputSchema },
   prompt: `
