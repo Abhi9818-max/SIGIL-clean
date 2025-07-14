@@ -13,6 +13,10 @@ export const LOCAL_STORAGE_UNLOCKED_SKILLS_KEY = 'sigiLUnlockedSkills';
 export const MAX_CONTRIBUTION_LEVEL = 4;
 export const NUM_WEEKS_TO_DISPLAY = 52;
 
+// Consistency Breach Settings
+export const CONSISTENCY_BREACH_DAYS = 3; // Days of inactivity to trigger a breach
+export const CONSISTENCY_BREACH_PENALTY = 50; // XP penalty for a breach
+
 export const VALUE_THRESHOLDS: readonly number[] = [5, 10, 15, 20];
 
 export const getContributionLevel = (value: number | null | undefined, customThresholds?: readonly number[]): number => {

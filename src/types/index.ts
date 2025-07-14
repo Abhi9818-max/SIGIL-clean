@@ -93,6 +93,15 @@ export type AutomatedGoalCheckResult =
       periodIdentifier?: never;
       taskName?: never;
     };
+    
+// For Consistency Breach Modal
+export type BreachCheckResult = {
+  breachDetected: boolean;
+  lastRecordDate: string | null;
+  daysSince: number | null;
+  penalty: number;
+};
+
 
 // Specific for TIER_INFO in config.ts
 export interface TierConfig {

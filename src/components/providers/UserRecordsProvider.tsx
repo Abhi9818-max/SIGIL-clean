@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
@@ -13,7 +14,9 @@ import {
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
-  calculateUserLevelInfo
+  calculateUserLevelInfo,
+  CONSISTENCY_BREACH_DAYS,
+  CONSISTENCY_BREACH_PENALTY
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
 import {
@@ -33,6 +36,7 @@ import {
   endOfMonth,
   subMonths,
   getDay,
+  differenceInDays,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -47,6 +51,7 @@ interface UserRecordsContextType {
   getYearlySum: (year: number, taskId?: string | null) => number;
   getAllRecordsStringified: () => string;
   getDailyConsistencyLast30Days: (taskId?: string | null) => number;
+  getCurrentStreak: () => number;
   taskDefinitions: TaskDefinition[];
   addTaskDefinition: (taskData: Omit<TaskDefinition, 'id'>) => string;
   updateTaskDefinition: (task: TaskDefinition) => void;
@@ -61,6 +66,7 @@ interface UserRecordsContextType {
   awardTierEntryBonus: (bonusAmount: number) => void;
   isGoalMetForLastPeriod: (taskId: string) => boolean;
   deductBonusPoints: (penalty: number) => void;
+  handleConsistencyCheck: () => BreachCheckResult;
   // Constellations
   getAvailableSkillPoints: (taskId: string) => number;
   unlockSkill: (skillId: string, taskId: string, cost: number) => boolean;
@@ -78,6 +84,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [taskDefinitions, setTaskDefinitions] = useState<TaskDefinition[]>([]);
   const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
   const [metGoals, setMetGoals] = useState<Record<string, string>>({}); // New state for met goals
+  const [handledStreaks, setHandledStreaks] = useState<Record<string, boolean>>({});
   const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -136,6 +143,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     } catch (error) {
       console.error("Failed to load met goals from localStorage:", error);
+    }
+    
+    try {
+      const storedHandledStreaks = localStorage.getItem(LOCAL_STORAGE_HANDLED_STREAKS_KEY);
+      if (storedHandledStreaks) {
+        setHandledStreaks(JSON.parse(storedHandledStreaks));
+      }
+    } catch (error) {
+        console.error("Failed to load handled streaks from localStorage:", error);
     }
 
     try {
@@ -198,6 +214,17 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     }
   }, [metGoals, isLoaded]);
+
+   useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_HANDLED_STREAKS_KEY, JSON.stringify(handledStreaks));
+      } catch (error) {
+        console.error("Failed to save handled streaks to localStorage:", error);
+      }
+    }
+  }, [handledStreaks, isLoaded]);
+
 
   useEffect(() => {
     if (isLoaded) {
@@ -302,6 +329,32 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     return Math.round((uniqueDaysWithRecords / daysInPeriod) * 100);
   }, [getRecordsForDateRange, isLoaded]);
+  
+  const getCurrentStreak = useCallback((): number => {
+    if (!isLoaded || records.length === 0) return 0;
+
+    const sortedRecords = [...records].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    const recordDates = new Set(sortedRecords.map(r => r.date));
+    
+    let currentDate = startOfDay(new Date());
+    
+    // If there's no record for today, the current streak is 0, unless the last record was yesterday.
+    if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+      currentDate = subDays(currentDate, 1);
+      // If there's also no record for yesterday, streak is definitely 0.
+      if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+        return 0;
+      }
+    }
+
+    let streak = 0;
+    while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+        streak++;
+        currentDate = subDays(currentDate, 1);
+    }
+
+    return streak;
+  }, [isLoaded, records]);
 
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
@@ -496,6 +549,38 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     setTotalBonusPoints(prevBonus => prevBonus + actualPenalty);
   }, []);
 
+  const handleConsistencyCheck = useCallback((): BreachCheckResult => {
+    const result: BreachCheckResult = {
+        breachDetected: false,
+        lastRecordDate: null,
+        daysSince: null,
+        penalty: 0,
+    };
+
+    if (records.length === 0) return result;
+
+    const sortedRecords = [...records].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    const lastRecordDate = parseISO(sortedRecords[0].date);
+    const today = startOfDay(new Date());
+
+    const daysSince = differenceInDays(today, lastRecordDate);
+
+    result.lastRecordDate = format(lastRecordDate, 'yyyy-MM-dd');
+    result.daysSince = daysSince;
+
+    if (daysSince >= CONSISTENCY_BREACH_DAYS) {
+        const breachKey = format(lastRecordDate, 'yyyy-MM-dd');
+        if (!handledStreaks[breachKey]) {
+            result.breachDetected = true;
+            result.penalty = CONSISTENCY_BREACH_PENALTY;
+            deductBonusPoints(CONSISTENCY_BREACH_PENALTY);
+            setHandledStreaks(prev => ({ ...prev, [breachKey]: true }));
+        }
+    }
+
+    return result;
+  }, [records, handledStreaks, deductBonusPoints]);
+
   // Constellation Functions
   const getAvailableSkillPoints = useCallback((taskId: string): number => {
     if (!isLoaded) return 0;
@@ -579,6 +664,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       getYearlySum,
       getAllRecordsStringified,
       getDailyConsistencyLast30Days,
+      getCurrentStreak,
       taskDefinitions,
       addTaskDefinition,
       updateTaskDefinition,
@@ -591,8 +677,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       totalBonusPoints,
       checkAndAwardAutomatedGoal,
       awardTierEntryBonus,
-      isGoalMetForLastPeriod,
       deductBonusPoints,
+      handleConsistencyCheck,
+      isGoalMetForLastPeriod,
       // Constellations
       getAvailableSkillPoints,
       unlockSkill,
