@@ -12,16 +12,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertTriangle, Zap } from 'lucide-react';
+import { AlertTriangle, Zap, Sword } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 interface PunishmentModalProps {
   isOpen: boolean;
   onAccept: () => void;
   penalty: number;
-  taskName?: string; // Optional: name of the task if it's a dark streak breach
+  taskName?: string;
+  dare?: string;
 }
 
-const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAccept, penalty, taskName }) => {
+const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAccept, penalty, taskName, dare }) => {
   if (!isOpen) return null;
 
   return (
@@ -47,6 +49,19 @@ const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAccept, pen
                     A penalty of <span className="font-bold">{penalty.toLocaleString()} XP</span> has been deducted from your bonus points.
                 </AlertDescription>
             </Alert>
+            
+            {dare && (
+                <>
+                <Separator />
+                <Alert>
+                    <Sword className="h-4 w-4" />
+                    <AlertTitle>A Dare is Issued</AlertTitle>
+                    <AlertDescription>
+                        A new pact has been added to your To-Do list: <span className="font-semibold italic">"{dare}"</span>. Fulfill it to regain your honor.
+                    </AlertDescription>
+                </Alert>
+                </>
+            )}
         </div>
 
         <DialogFooter>

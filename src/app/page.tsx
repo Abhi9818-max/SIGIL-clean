@@ -12,7 +12,7 @@ import ManageTasksModal from '@/components/manage-tasks/ManageTasksModal';
 import TaskFilterBar from '@/components/records/TaskFilterBar';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useTodos } from '@/components/providers/TodoProvider';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import WeeklyProgressCard from '@/components/progress/WeeklyProgressCard';
 import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +73,9 @@ export default function HomePage() {
     // Check for Dark Streaks first
     const darkStreakResult = await checkDarkStreaks();
     if (darkStreakResult) {
+      if (darkStreakResult.dare) {
+        addTodoItem(darkStreakResult.dare, format(addDays(new Date(), 1), 'yyyy-MM-dd'), darkStreakResult.penalty);
+      }
       setDarkStreakBreach(darkStreakResult);
       return; // Stop here if a dark streak is found
     }
@@ -82,7 +85,7 @@ export default function HomePage() {
     if (consistencyResult.breachDetected) {
         setConsistencyBreach(consistencyResult);
     }
-  }, [checkDarkStreaks, handleConsistencyCheck]);
+  }, [checkDarkStreaks, handleConsistencyCheck, addTodoItem]);
 
   useEffect(() => {
     handleBreaches();
@@ -218,6 +221,7 @@ export default function HomePage() {
             onAccept={handleAcceptDarkStreakPunishment}
             penalty={darkStreakBreach.penalty}
             taskName={darkStreakBreach.taskName}
+            dare={darkStreakBreach.dare}
         />
        )}
       <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border">

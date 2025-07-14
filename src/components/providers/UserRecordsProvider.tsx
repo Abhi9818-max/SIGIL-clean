@@ -632,12 +632,33 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
         if (!wasTaskDoneYesterday && !wasHandled) {
             deductBonusPoints(DARK_STREAK_PENALTY);
-            return {
-                taskId: task.id,
-                taskName: task.name,
-                streakBroken: true,
-                penalty: DARK_STREAK_PENALTY,
-            };
+            
+            try {
+                const response = await fetch('/dares.json');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch dares');
+                }
+                const data = await response.json();
+                const dares: string[] = data.dares;
+                const dare = dares[Math.floor(Math.random() * dares.length)];
+
+                return {
+                    taskId: task.id,
+                    taskName: task.name,
+                    streakBroken: true,
+                    penalty: DARK_STREAK_PENALTY,
+                    dare: dare
+                };
+            } catch (error) {
+                console.error("Error fetching or processing dares:", error);
+                // Return penalty without a dare if fetching fails
+                return {
+                    taskId: task.id,
+                    taskName: task.name,
+                    streakBroken: true,
+                    penalty: DARK_STREAK_PENALTY,
+                };
+            }
         }
     }
 

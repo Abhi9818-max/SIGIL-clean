@@ -162,4 +162,5 @@ export interface DarkStreakCheckResult {
   taskName: string;
   streakBroken: boolean;
   penalty: number;
+  dare?: string;
 }
