@@ -86,6 +86,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
                 {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
             </CardTitle>
             <div className="flex items-center gap-3">
+              <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]")} />
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -99,7 +100,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]")} />
             </div>
         </CardHeader>
         <CardContent>
