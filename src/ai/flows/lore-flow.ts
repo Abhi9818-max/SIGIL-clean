@@ -34,6 +34,7 @@ export async function generateLore(input: LoreInput): Promise<LoreOutput> {
 
 const lorePrompt = ai.definePrompt({
   name: 'lorePrompt',
+  model: googleAI.model('gemini-pro'),
   input: { schema: LoreInputSchema },
   output: { schema: LoreOutputSchema },
   prompt: `

@@ -30,6 +30,7 @@ export async function generateEcho(input: EchoInput): Promise<EchoOutput> {
 
 const echoPrompt = ai.definePrompt({
   name: 'echoPrompt',
+  model: googleAI.model('gemini-pro'),
   input: { schema: EchoInputSchema },
   output: { schema: EchoOutputSchema },
   prompt: `
