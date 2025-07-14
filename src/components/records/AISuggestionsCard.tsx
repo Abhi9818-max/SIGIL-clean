@@ -24,7 +24,7 @@ const AISuggestionsCard: React.FC = () => {
   const [checkingGoals, setCheckingGoals] = useState<Record<string, boolean>>({});
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  const [suggestionError, setSuggestionError] = useState<string | null>("AI features are temporarily unavailable due to high demand. Please try again later.");
   const { toast } = useToast();
 
   const handleCheckGoal = async (taskId: string) => {
@@ -70,35 +70,8 @@ const AISuggestionsCard: React.FC = () => {
   };
 
   const handleGenerateSuggestion = useCallback(async () => {
-    setIsGeneratingSuggestion(true);
-    setSuggestion(null);
-    setSuggestionError(null);
-    try {
-      const levelInfo = getUserLevelInfo();
-      const records = getAllRecordsStringified();
-      const tasks = JSON.stringify(taskDefinitions);
-
-      const result = await generateSuggestions({
-        level: levelInfo.currentLevel,
-        levelName: levelInfo.levelName,
-        tasks,
-        records
-      });
-      
-      setSuggestion(result.suggestion);
-      toast({
-        title: "💡 Suggestion Generated",
-        description: "The AI has provided a new suggestion for your journey.",
-      });
-
-    } catch (e) {
-      console.error("Error generating suggestion:", e);
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-      setSuggestionError(`Failed to generate a suggestion. This might be a temporary issue with the AI service or a local configuration problem. Please ensure Genkit is running locally (\`npm run genkit:dev\`). Details: ${errorMessage}`);
-    } finally {
-      setIsGeneratingSuggestion(false);
-    }
-  }, [getUserLevelInfo, getAllRecordsStringified, taskDefinitions, toast]);
+    // This function is now disabled
+  }, []);
 
   const eligibleGoalTasks = useMemo(() => {
     return taskDefinitions.filter(
@@ -130,20 +103,16 @@ const AISuggestionsCard: React.FC = () => {
             variant="outline"
             size="sm"
             className="w-full mb-3"
-            disabled={isGeneratingSuggestion}
+            disabled={true}
           >
-            {isGeneratingSuggestion ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
+            <Sparkles className="mr-2 h-4 w-4" />
             Get New Suggestion
           </Button>
 
           {suggestionError && (
              <Alert variant="destructive" className="mt-2">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Suggestion Error</AlertTitle>
+                <AlertTitle>AI Service Unavailable</AlertTitle>
                 <AlertDescription>{suggestionError}</AlertDescription>
             </Alert>
           )}
@@ -207,7 +176,7 @@ const AISuggestionsCard: React.FC = () => {
         )}
       </CardContent>
        <CardFooter>
-        <p className="text-xs text-muted-foreground text-center w-full">AI features require a running Genkit server.</p>
+        <p className="text-xs text-muted-foreground text-center w-full">AI features are temporarily rate-limited.</p>
       </CardFooter>
     </Card>
   );

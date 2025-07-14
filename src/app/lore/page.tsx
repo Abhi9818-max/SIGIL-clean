@@ -48,46 +48,14 @@ export default function LorePage() {
   }, [loreEntries]);
 
   const handleGenerateLore = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const levelInfo = getUserLevelInfo();
-      const records = getAllRecordsStringified();
-      const tasks = JSON.stringify(taskDefinitions);
-
-      const result = await generateLore({
-        level: levelInfo.currentLevel,
-        levelName: levelInfo.levelName,
-        tierName: levelInfo.tierName,
-        tasks,
-        records
-      });
-
-      const newEntry: LoreEntry = {
-        ...result,
-        timestamp: new Date().toISOString(),
-      };
-      
-      setLoreEntries(prev => [newEntry, ...prev]);
-
-      toast({
-        title: "📜 Lore Generated!",
-        description: `A new chapter, "${result.title}", has been written.`,
-      });
-
-    } catch (e) {
-      console.error("Error generating lore:", e);
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-      setError(`Failed to generate lore. This may be due to a network issue or API configuration problem. Please ensure Genkit is running locally (\`npm run genkit:dev\`) and you are authenticated with Google Cloud. Details: ${errorMessage}`);
-      toast({
-        title: "Lore Generation Failed",
-        description: "Could not write a new chapter to your history.",
+    // This function is now disabled
+    setError("Lore generation is temporarily unavailable due to high demand. Please try again later.");
+    toast({
+        title: "Lore Generation Unavailable",
+        description: "The Lorekeeper is resting.",
         variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getUserLevelInfo, getAllRecordsStringified, taskDefinitions, toast]);
+    });
+  }, [toast]);
 
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
@@ -111,18 +79,9 @@ export default function LorePage() {
           </CardHeader>
           <CardContent>
             <div className="mb-6 text-center">
-              <Button onClick={handleGenerateLore} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Writing your legend...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Generate New Lore Entry
-                  </>
-                )}
+              <Button onClick={handleGenerateLore} disabled={true}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Generate New Lore Entry
               </Button>
             </div>
 
@@ -131,7 +90,7 @@ export default function LorePage() {
                  <div className="flex items-start">
                     <AlertTriangle className="h-5 w-5 mr-3 mt-1" />
                     <div>
-                        <p className="font-semibold">Generation Error</p>
+                        <p className="font-semibold">Service Unavailable</p>
                         <p className="text-sm">{error}</p>
                     </div>
                 </div>

@@ -47,39 +47,12 @@ export default function EchoesPage() {
   }, [summary]);
 
   const handleGenerateSummary = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-        const levelInfo = getUserLevelInfo();
-        const recentRecords = getAllRecordsStringified();
-
-        const result = await generateEcho({
-            levelName: levelInfo.levelName,
-            tierName: levelInfo.tierName,
-            recentRecords: recentRecords,
-        });
-
-        if (result && result.summary) {
-            setSummary(result.summary);
-            toast({
-                title: "🔮 Echo Generated!",
-                description: "A new summary of your deeds has been chronicled.",
-            });
-        } else {
-            throw new Error("AI did not return a valid summary.");
-        }
-    } catch (e) {
-      console.error("Error generating echo:", e);
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred. Ensure Genkit is running.";
-      setError(`Failed to generate echo. Details: ${errorMessage}`);
-      toast({
-        title: "Echo Generation Failed",
-        description: "The Chronicler fell silent.",
+    setError("Echo generation is temporarily unavailable due to high demand. Please try again later.");
+    toast({
+        title: "Echo Generation Unavailable",
+        description: "The Chronicler is resting.",
         variant: "destructive"
-      });
-    } finally {
-        setIsLoading(false);
-    }
+    });
   };
 
   const handleDownloadImage = async () => {
@@ -127,7 +100,7 @@ export default function EchoesPage() {
                  <div className="flex items-start">
                     <AlertTriangle className="h-5 w-5 mr-3 mt-1" />
                     <div>
-                        <p className="font-semibold">Generation Error</p>
+                        <p className="font-semibold">Service Unavailable</p>
                         <p className="text-sm">{error}</p>
                     </div>
                 </div>
@@ -135,18 +108,9 @@ export default function EchoesPage() {
             )}
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button onClick={handleGenerateSummary} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Chronicling...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Generate New Summary
-                  </>
-                )}
+                <Button onClick={handleGenerateSummary} disabled={true}>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Generate New Summary
               </Button>
                <Button onClick={handleDownloadImage} variant="secondary">
                 <Download className="mr-2 h-4 w-4" />
