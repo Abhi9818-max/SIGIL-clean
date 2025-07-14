@@ -139,13 +139,13 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
           providedThresholds[2] < providedThresholds[3]) {
         intensityThresholds = providedThresholds;
       } else {
-        form.setError("threshold1", { type: "manual", message: "All 4 thresholds must be positive and in increasing order." });
-        toast({ title: "Validation Error", description: "Custom thresholds must be 4 positive, increasing numbers.", variant: "destructive" });
+        form.setError("threshold1", { type: "manual", message: "All 4 phases must be positive and in increasing order." });
+        toast({ title: "Validation Error", description: "Custom phases must be 4 positive, increasing numbers.", variant: "destructive" });
         return;
       }
     } else if (providedThresholds.length > 0 && providedThresholds.length < 4) {
-      form.setError("threshold1", { type: "manual", message: "Either fill all 4 thresholds or leave all blank for global defaults." });
-      toast({ title: "Validation Error", description: "Fill all 4 thresholds or leave all blank.", variant: "destructive" });
+      form.setError("threshold1", { type: "manual", message: "Either fill all 4 phases or leave all blank for global defaults." });
+      toast({ title: "Validation Error", description: "Fill all 4 phases or leave all blank.", variant: "destructive" });
       return;
     }
 
@@ -307,19 +307,19 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   <AccordionTrigger className="text-sm py-2">
                     <div className="flex items-center gap-2">
                       <Info className="h-4 w-4 text-muted-foreground" />
-                      Custom Intensity Thresholds (Optional)
+                      Custom Intensity Phases (Optional)
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-2 space-y-3">
                     <p className="text-xs text-muted-foreground">
                       Define 4 record values to set different shades for this task. Higher values mean darker shades.
                       Leave all blank to use global defaults (currently: {VALUE_THRESHOLDS.join(', ')}).
-                      Thresholds must be positive and in increasing order (e.g., 5, 10, 15, 20).
+                      Phases must be positive and in increasing order (e.g., 5, 10, 15, 20).
                     </p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                       {[1, 2, 3, 4].map(i => (
                         <div key={i}>
-                          <Label htmlFor={`threshold${i}`}>Threshold {i}</Label>
+                          <Label htmlFor={`threshold${i}`}>Phase {i}</Label>
                           <Input id={`threshold${i}`} type="number" {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/>
                           {form.formState.errors[`threshold${i}` as keyof TaskFormData] && (
                             <p className="text-sm text-destructive mt-1">{form.formState.errors[`threshold${i}` as keyof TaskFormData]?.message}</p>
