@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult } from '@/types';
@@ -54,7 +53,7 @@ interface UserRecordsContextType {
   getYearlySum: (year: number, taskId?: string | null) => number;
   getAllRecordsStringified: () => string;
   getDailyConsistencyLast30Days: (taskId?: string | null) => number;
-  getCurrentStreak: () => number;
+  getCurrentStreak: (taskId?: string | null) => number;
   taskDefinitions: TaskDefinition[];
   addTaskDefinition: (taskData: Omit<TaskDefinition, 'id'>) => string;
   updateTaskDefinition: (task: TaskDefinition) => void;
@@ -353,10 +352,17 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return Math.round((uniqueDaysWithRecords / daysInPeriod) * 100);
   }, [getRecordsForDateRange, isLoaded]);
   
-  const getCurrentStreak = useCallback((): number => {
+  const getCurrentStreak = useCallback((taskId: string | null = null): number => {
     if (!isLoaded || records.length === 0) return 0;
 
-    const sortedRecords = [...records].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    let relevantRecords = records;
+    if (taskId) {
+        relevantRecords = records.filter(r => r.taskType === taskId);
+    }
+
+    if (relevantRecords.length === 0) return 0;
+
+    const sortedRecords = [...relevantRecords].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     const recordDates = new Set(sortedRecords.map(r => r.date));
     
     let currentDate = startOfDay(new Date());
@@ -791,3 +797,6 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
+
+
+    
