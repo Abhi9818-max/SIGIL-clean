@@ -11,11 +11,12 @@ import { cn } from '@/lib/utils';
 import EchoCard from '@/components/echoes/EchoCard';
 import { useToast } from "@/hooks/use-toast";
 import { toPng } from 'html-to-image';
+import { generateEcho } from '@/ai/flows/echo-flow';
 
 const LOCAL_STORAGE_ECHO_SUMMARY_KEY = 'sigiLEchoSummary';
 
 export default function EchoesPage() {
-  const { getUserLevelInfo } = useUserRecords();
+  const { getUserLevelInfo, getAllRecordsStringified, taskDefinitions } = useUserRecords();
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,20 +48,27 @@ export default function EchoesPage() {
     setIsLoading(true);
     setError(null);
     try {
-        // This is a placeholder for the actual AI call.
-        // In a real implementation, you would call your `generateEcho` flow here.
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate AI delay
-        const newSummary = "The echo of a will forged in both sweat and steel reverberates through the void.";
-        setSummary(newSummary);
+        const levelInfo = getUserLevelInfo();
+        const recentRecords = getAllRecordsStringified();
 
-        toast({
-            title: "🔮 Echo Generated!",
-            description: "A new summary of your deeds has been chronicled.",
+        const result = await generateEcho({
+            levelName: levelInfo.levelName,
+            tierName: levelInfo.tierName,
+            recentRecords: recentRecords,
         });
 
+        if (result && result.summary) {
+            setSummary(result.summary);
+            toast({
+                title: "🔮 Echo Generated!",
+                description: "A new summary of your deeds has been chronicled.",
+            });
+        } else {
+            throw new Error("AI did not return a valid summary.");
+        }
     } catch (e) {
       console.error("Error generating echo:", e);
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred. Ensure Genkit is running.";
       setError(`Failed to generate echo. Details: ${errorMessage}`);
       toast({
         title: "Echo Generation Failed",
