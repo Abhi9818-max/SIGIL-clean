@@ -21,6 +21,7 @@ import TaskDistributionChart from '@/components/insights/TaskDistributionChart';
 import ProductivityByDayChart from '@/components/insights/ProductivityByDayChart';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 
 type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'custom';
 
