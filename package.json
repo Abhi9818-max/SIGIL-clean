@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "npm run genkit:watch & next dev --turbopack",
         "genkit:dev": "genkit start src/ai/dev.ts",
-        "genkit:watch": "genkit start --watch src/ai/dev.ts",
+        "genkit:watch": "genkit start -w src/ai/dev.ts",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
