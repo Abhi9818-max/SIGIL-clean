@@ -494,5 +494,4 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 
 export default ManageTasksModal;
 
-
     
