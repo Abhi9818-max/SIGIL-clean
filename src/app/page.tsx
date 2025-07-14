@@ -73,9 +73,6 @@ export default function HomePage() {
     // Check for Dark Streaks first
     const darkStreakResult = await checkDarkStreaks();
     if (darkStreakResult) {
-      if (darkStreakResult.dare) {
-        addTodoItem(darkStreakResult.dare, format(addDays(new Date(), 1), 'yyyy-MM-dd'), darkStreakResult.penalty);
-      }
       setDarkStreakBreach(darkStreakResult);
       return; // Stop here if a dark streak is found
     }
@@ -85,7 +82,7 @@ export default function HomePage() {
     if (consistencyResult.breachDetected) {
         setConsistencyBreach(consistencyResult);
     }
-  }, [checkDarkStreaks, handleConsistencyCheck, addTodoItem]);
+  }, [checkDarkStreaks, handleConsistencyCheck]);
 
   useEffect(() => {
     handleBreaches();
@@ -151,7 +148,17 @@ export default function HomePage() {
     setConsistencyBreach(null);
   };
   
-  const handleAcceptDarkStreakPunishment = () => {
+  const handleAcceptDare = () => {
+    if (darkStreakBreach) {
+        if(darkStreakBreach.dare) {
+            addTodoItem(darkStreakBreach.dare, format(addDays(new Date(), 1), 'yyyy-MM-dd'), darkStreakBreach.penalty);
+        }
+        markDarkStreakHandled(darkStreakBreach.taskId);
+        setDarkStreakBreach(null);
+    }
+  };
+  
+  const handleDeclineDare = () => {
     if (darkStreakBreach) {
         markDarkStreakHandled(darkStreakBreach.taskId);
         setDarkStreakBreach(null);
@@ -218,7 +225,8 @@ export default function HomePage() {
        {darkStreakBreach && (
         <PunishmentModal
             isOpen={!!darkStreakBreach}
-            onAccept={handleAcceptDarkStreakPunishment}
+            onAcceptDare={handleAcceptDare}
+            onDecline={handleDeclineDare}
             penalty={darkStreakBreach.penalty}
             taskName={darkStreakBreach.taskName}
             dare={darkStreakBreach.dare}

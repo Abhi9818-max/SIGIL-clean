@@ -17,17 +17,18 @@ import { Separator } from '../ui/separator';
 
 interface PunishmentModalProps {
   isOpen: boolean;
-  onAccept: () => void;
+  onAcceptDare: () => void;
+  onDecline: () => void;
   penalty: number;
   taskName?: string;
   dare?: string;
 }
 
-const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAccept, penalty, taskName, dare }) => {
+const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAcceptDare, onDecline, penalty, taskName, dare }) => {
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={onDecline}>
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
@@ -46,7 +47,7 @@ const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAccept, pen
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Penalty Incurred</AlertTitle>
                 <AlertDescription>
-                    A penalty of <span className="font-bold">{penalty.toLocaleString()} XP</span> has been deducted from your bonus points.
+                    A penalty of <span className="font-bold">{penalty.toLocaleString()} XP</span> has been deducted.
                 </AlertDescription>
             </Alert>
             
@@ -57,17 +58,29 @@ const PunishmentModal: React.FC<PunishmentModalProps> = ({ isOpen, onAccept, pen
                     <Sword className="h-4 w-4" />
                     <AlertTitle>A Dare is Issued</AlertTitle>
                     <AlertDescription>
-                        A new pact has been added to your To-Do list: <span className="font-semibold italic">"{dare}"</span>. Fulfill it to regain your honor.
+                        You may choose to accept a new pact: <span className="font-semibold italic">"{dare}"</span>.
                     </AlertDescription>
                 </Alert>
                 </>
             )}
         </div>
 
-        <DialogFooter>
-          <Button onClick={onAccept} className="w-full">
-            Acknowledge
-          </Button>
+        <DialogFooter className="gap-2 sm:flex-col sm:space-x-0">
+          {dare ? (
+            <>
+               <Button onClick={onAcceptDare} className="w-full">
+                <Sword className="mr-2 h-4 w-4" />
+                Accept Dare
+              </Button>
+               <Button onClick={onDecline} className="w-full" variant="secondary">
+                Decline Dare (Take Penalty Only)
+              </Button>
+            </>
+          ) : (
+             <Button onClick={onDecline} className="w-full">
+                Acknowledge
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
