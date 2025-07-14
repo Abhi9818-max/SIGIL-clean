@@ -16,7 +16,7 @@ import { generateEcho } from '@/ai/flows/echo-flow';
 const LOCAL_STORAGE_ECHO_SUMMARY_KEY = 'sigiLEchoSummary';
 
 export default function EchoesPage() {
-  const { getUserLevelInfo, getAllRecordsStringified, taskDefinitions } = useUserRecords();
+  const { getUserLevelInfo, getAllRecordsStringified } = useUserRecords();
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,10 +37,12 @@ export default function EchoesPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_ECHO_SUMMARY_KEY, JSON.stringify(summary));
-    } catch (e)      {
-      console.error("Failed to save echo summary to localStorage", e);
+    if(summary) {
+        try {
+          localStorage.setItem(LOCAL_STORAGE_ECHO_SUMMARY_KEY, JSON.stringify(summary));
+        } catch (e)      {
+          console.error("Failed to save echo summary to localStorage", e);
+        }
     }
   }, [summary]);
 
