@@ -227,90 +227,32 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
         resetFormFields(null);
       }
     }}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Manage Tasks</DialogTitle>
           <DialogDescription>Add, edit, or delete your task types, their display properties, and goals.</DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="max-h-[70vh]">
-          <div className="flex flex-col-reverse lg:flex-row gap-8 p-1">
-            {/* Existing Tasks Column */}
-            <div className="lg:w-2/3">
-              <h3 className="text-lg font-medium mb-4 text-primary">Existing Tasks</h3>
-              {taskDefinitions.length === 0 ? (
-                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                  <p className="text-sm text-center text-muted-foreground">No tasks defined yet.</p>
-                </div>
-              ) : (
-                <TooltipProvider>
-                  <div className="space-y-3">
-                    {taskDefinitions.map((task) => (
-                      <div key={task.id} className={cn("p-3 border rounded-lg transition-all", editingTask?.id === task.id ? 'bg-muted border-primary/50' : 'bg-card-foreground/5')}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-3 h-10 rounded-sm" style={{ backgroundColor: task.color }} />
-                            <div>
-                                <p className="font-semibold">{task.name}</p>
-                                <div className="flex items-center gap-4 text-muted-foreground text-xs mt-1">
-                                {task.darkStreakEnabled && (
-                                    <Tooltip><TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger><TooltipContent><p>Dark Streak Enabled</p></TooltipContent></Tooltip>
-                                )}
-                                {task.goalValue && (
-                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalValue} / {task.goalInterval?.charAt(0)}</span></TooltipTrigger><TooltipContent>
-                                    <p>Goal: {task.goalValue}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
-                                    </TooltipContent></Tooltip>
-                                )}
-                                </div>
-                            </div>
-                          </div>
-                           <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => resetFormFields(task)}>
-                                <Pencil className="h-4 w-4" />
-                                <span className="sr-only">Edit {task.name}</span>
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete {task.name}</span>
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete "{task.name}" and remove it from any existing records.</AlertDialogDescription></AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteTask(task.id, task.name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </TooltipProvider>
-              )}
-            </div>
-
+          <div className="flex flex-col gap-8 p-1">
             {/* Add/Edit Form Column */}
-            <div className="lg:w-1/3">
-                <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-primary">
-                            {editingTask ? 'Edit Task' : 'Add New Task'}
-                        </h3>
-                        {editingTask && (
-                            <Button variant="outline" size="sm" onClick={() => resetFormFields(null)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            New Task
-                            </Button>
-                        )}
-                    </div>
-                </div>
+            <div>
+              <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1 mb-4">
+                  <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-medium text-primary">
+                          {editingTask ? 'Edit Task' : 'Add New Task'}
+                      </h3>
+                      {editingTask && (
+                          <Button variant="outline" size="sm" onClick={() => resetFormFields(null)}>
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          New Task
+                          </Button>
+                      )}
+                  </div>
+              </div>
               <div className="p-4 border rounded-lg bg-background shadow-inner">
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
                     <div>
                       <Label htmlFor="taskName">Task Name</Label>
                       <Input id="taskName" {...form.register('name')} className="mt-1" />
@@ -366,6 +308,64 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   </div>
                 </form>
               </div>
+            </div>
+
+            {/* Existing Tasks Column */}
+            <div>
+              <h3 className="text-lg font-medium mb-4 text-primary">Existing Tasks</h3>
+              {taskDefinitions.length === 0 ? (
+                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-center text-muted-foreground">No tasks defined yet.</p>
+                </div>
+              ) : (
+                <TooltipProvider>
+                  <div className="space-y-3">
+                    {taskDefinitions.map((task) => (
+                      <div key={task.id} className={cn("p-3 border rounded-lg transition-all", editingTask?.id === task.id ? 'bg-muted border-primary/50' : 'bg-card-foreground/5')}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-10 rounded-sm" style={{ backgroundColor: task.color }} />
+                            <div>
+                                <p className="font-semibold">{task.name}</p>
+                                <div className="flex items-center gap-4 text-muted-foreground text-xs mt-1">
+                                {task.darkStreakEnabled && (
+                                    <Tooltip><TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger><TooltipContent><p>Dark Streak Enabled</p></TooltipContent></Tooltip>
+                                )}
+                                {task.goalValue && (
+                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalValue}{task.goalInterval ? `/${task.goalInterval.charAt(0)}` : ''}</span></TooltipTrigger><TooltipContent>
+                                    <p>Goal: {task.goalValue}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
+                                    </TooltipContent></Tooltip>
+                                )}
+                                </div>
+                            </div>
+                          </div>
+                           <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => resetFormFields(task)}>
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Edit {task.name}</span>
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete {task.name}</span>
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete "{task.name}" and remove it from any existing records.</AlertDialogDescription></AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteTask(task.id, task.name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </ScrollArea>
