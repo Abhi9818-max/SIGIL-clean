@@ -7,7 +7,7 @@ import type { DayData, MonthColumn } from '@/types';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { getMonthlyGraphData } from '@/lib/date-utils';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { getMonth, parseISO, isFuture } from 'date-fns'; // Added parseISO and isFuture
+import { getMonth, parseISO, isFuture } from 'date-fns';
 
 interface ContributionGraphProps {
   onDayClick: (date: string) => void;
@@ -17,8 +17,8 @@ interface ContributionGraphProps {
 const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selectedTaskFilterId }) => {
   const { records, taskDefinitions } = useUserRecords();
   const [clientToday, setClientToday] = React.useState<Date | null>(null);
-  const monthColumnRefs = useRef<Array<HTMLDivElement | null>>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null); 
+  const monthColumnRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     setClientToday(new Date()); 
@@ -30,13 +30,9 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
   }, [records, taskDefinitions, clientToday, selectedTaskFilterId]);
 
   useEffect(() => {
-    monthColumnRefs.current = monthColumnRefs.current.slice(0, monthlyGraphData.length);
-  }, [monthlyGraphData.length]);
-
-  useEffect(() => {
-    if (clientToday && monthlyGraphData.length > 0 && monthColumnRefs.current.length === monthlyGraphData.length) {
+    if (clientToday && monthlyGraphData.length > 0) {
       const currentMonthIndex = getMonth(clientToday); 
-      const targetMonthEl = monthColumnRefs.current[currentMonthIndex];
+      const targetMonthEl = monthColumnRefs.current.get(currentMonthIndex);
 
       if (targetMonthEl && scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -44,10 +40,12 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
             const scrollAreaWidth = viewport.clientWidth;
             const targetScrollLeft = targetMonthEl.offsetLeft - (scrollAreaWidth / 2) + (targetMonthEl.offsetWidth / 2);
             
-            viewport.scrollTo({
-                left: targetScrollLeft,
-                behavior: 'smooth' 
-            });
+            setTimeout(() => {
+              viewport.scrollTo({
+                  left: targetScrollLeft,
+                  behavior: 'smooth' 
+              });
+            }, 100);
         }
       }
     }
@@ -70,7 +68,11 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
                 key={monthCol.monthLabel}
                 className="flex flex-col items-center flex-shrink-0"
                 ref={el => {
-                  monthColumnRefs.current[monthIdx] = el;
+                  if (el) {
+                    monthColumnRefs.current.set(monthIdx, el);
+                  } else {
+                    monthColumnRefs.current.delete(monthIdx);
+                  }
                 }}>
                 <div className="text-xs font-medium mb-1 text-center h-5 flex items-center">{monthCol.monthLabel}</div>
                 <div className="grid grid-cols-7 grid-rows-6 gap-1"> 
@@ -88,7 +90,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
                             onClick={() => {
                               // Prevent opening modal for future dates
                               const clickedDate = parseISO(day.date);
-                              if (!isFuture(clickedDate)) {
+                              if (!isFuture(clickedDate) || isFuture(new Date(day.date))) {
                                 onDayClick(day.date);
                               }
                             }} 
