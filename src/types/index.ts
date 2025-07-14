@@ -102,7 +102,6 @@ export type BreachCheckResult = {
   lastRecordDate: string | null;
   daysSince: number | null;
   penalty: number;
-  dare?: string; // Optional AI-generated dare
 };
 
 
@@ -163,5 +162,4 @@ export interface DarkStreakCheckResult {
   taskName: string;
   streakBroken: boolean;
   penalty: number;
-  dare: string;
 }

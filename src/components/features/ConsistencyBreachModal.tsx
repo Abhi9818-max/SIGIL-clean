@@ -24,7 +24,7 @@ interface ConsistencyBreachModalProps {
 const ConsistencyBreachModal: React.FC<ConsistencyBreachModalProps> = ({ isOpen, onAccept, breachInfo }) => {
   if (!isOpen || !breachInfo) return null;
 
-  const { penalty, dare } = breachInfo;
+  const { penalty } = breachInfo;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -47,19 +47,11 @@ const ConsistencyBreachModal: React.FC<ConsistencyBreachModalProps> = ({ isOpen,
                     A penalty of <span className="font-bold">{penalty.toLocaleString()} XP</span> has been deducted from your bonus points.
                 </AlertDescription>
             </Alert>
-             <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Redemption Dare</AlertTitle>
-                <AlertDescription>
-                    To reclaim your focus, the spirits issue a dare:
-                    <span className="block font-semibold italic mt-2 text-foreground">"{dare || 'Reflect on your journey.'}"</span>
-                </AlertDescription>
-            </Alert>
         </div>
 
         <DialogFooter>
           <Button onClick={onAccept} className="w-full">
-            Accept & Add Dare to To-Do List
+            Acknowledge
           </Button>
         </DialogFooter>
       </DialogContent>

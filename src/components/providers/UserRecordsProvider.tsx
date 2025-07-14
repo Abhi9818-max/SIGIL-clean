@@ -40,7 +40,6 @@ import {
   differenceInDays,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { generateDare } from '@/ai/flows/dare-flow';
 
 interface UserRecordsContextType {
   records: RecordEntry[];
@@ -632,37 +631,17 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
         if (!wasTaskDoneYesterday && !wasHandled) {
             deductBonusPoints(DARK_STREAK_PENALTY);
-
-            try {
-                const levelInfo = getUserLevelInfo();
-                const dareResult = await generateDare({ 
-                    level: levelInfo.currentLevel, 
-                    taskName: task.name, 
-                    isGlobalStreak: false 
-                });
-
-                return {
-                    taskId: task.id,
-                    taskName: task.name,
-                    streakBroken: true,
-                    penalty: DARK_STREAK_PENALTY,
-                    dare: dareResult.dare
-                };
-            } catch (error) {
-                console.error(`Failed to generate dare for task ${task.name}:`, error);
-                return {
-                    taskId: task.id,
-                    taskName: task.name,
-                    streakBroken: true,
-                    penalty: DARK_STREAK_PENALTY,
-                    dare: "The spirits are silent. Meditate on your failure."
-                };
-            }
+            return {
+                taskId: task.id,
+                taskName: task.name,
+                streakBroken: true,
+                penalty: DARK_STREAK_PENALTY,
+            };
         }
     }
 
     return null; // No broken dark streaks
-  }, [isLoaded, taskDefinitions, records, handledDarkStreaks, deductBonusPoints, getUserLevelInfo]);
+  }, [isLoaded, taskDefinitions, records, handledDarkStreaks, deductBonusPoints]);
 
   const markDarkStreakHandled = useCallback((taskId: string) => {
     const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
@@ -797,6 +776,3 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
-
-
-    

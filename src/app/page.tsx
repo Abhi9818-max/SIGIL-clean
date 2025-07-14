@@ -25,7 +25,6 @@ import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
 import ConsistencyBreachModal from '@/components/features/ConsistencyBreachModal';
 import PunishmentModal from '@/components/features/PunishmentModal';
-import { generateDare } from '@/ai/flows/dare-flow';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
 
@@ -71,8 +70,6 @@ export default function HomePage() {
   }, [getUserLevelInfo, records, totalBonusPoints]);
 
    const handleBreaches = useCallback(async () => {
-    const levelInfo = getUserLevelInfo();
-
     // Check for Dark Streaks first
     const darkStreakResult = await checkDarkStreaks();
     if (darkStreakResult) {
@@ -82,21 +79,10 @@ export default function HomePage() {
 
     // If no dark streak, check for global consistency breach
     const consistencyResult = handleConsistencyCheck();
-    if (consistencyResult.breachDetected && !consistencyResult.dare) {
-      try {
-        const dareResult = await generateDare({ 
-            level: levelInfo.currentLevel, 
-            taskName: 'Overall Consistency', 
-            isGlobalStreak: true 
-        });
-        setConsistencyBreach({ ...consistencyResult, dare: dareResult.dare });
-      } catch (e) {
-        console.error("Failed to generate dare for consistency breach:", e);
-        // Proceed without a dare if AI fails
-        setConsistencyBreach({ ...consistencyResult, dare: "Reflect on your journey for 5 minutes." });
-      }
+    if (consistencyResult.breachDetected) {
+        setConsistencyBreach(consistencyResult);
     }
-  }, [checkDarkStreaks, handleConsistencyCheck, getUserLevelInfo]);
+  }, [checkDarkStreaks, handleConsistencyCheck]);
 
   useEffect(() => {
     handleBreaches();
@@ -159,24 +145,12 @@ export default function HomePage() {
   };
 
   const handleAcceptConsistencyBreach = () => {
-    if (consistencyBreach?.dare) {
-      addTodoItem(consistencyBreach.dare);
-      toast({
-        title: "Dare Accepted",
-        description: "A new task has been added to your To-Do list.",
-      });
-    }
     setConsistencyBreach(null);
   };
   
   const handleAcceptDarkStreakPunishment = () => {
     if (darkStreakBreach) {
-        addTodoItem(darkStreakBreach.dare);
         markDarkStreakHandled(darkStreakBreach.taskId);
-         toast({
-            title: "Dare Accepted",
-            description: "A new task has been added to your To-Do list to redeem yourself.",
-        });
         setDarkStreakBreach(null);
     }
   };
@@ -243,7 +217,6 @@ export default function HomePage() {
             isOpen={!!darkStreakBreach}
             onAccept={handleAcceptDarkStreakPunishment}
             penalty={darkStreakBreach.penalty}
-            dare={darkStreakBreach.dare}
             taskName={darkStreakBreach.taskName}
         />
        )}
