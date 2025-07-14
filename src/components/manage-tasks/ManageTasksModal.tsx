@@ -55,6 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VALUE_THRESHOLDS } from '@/lib/config'; 
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: string | null) => z.object({
   name: z.string()
@@ -244,11 +245,13 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       }
     }}>
       <DialogContent className="sm:max-w-lg p-0 flex flex-col max-h-screen md:max-h-[90vh]">
-        <DialogHeader className="px-6 pt-6">
+        <DialogHeader className="p-6 pb-4 flex-shrink-0">
           <DialogTitle>Manage Tasks</DialogTitle>
           <DialogDescription>Add, edit, or delete your task types, their display properties, and goals.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-6 py-4 overflow-y-auto px-6">
+
+        <div className="flex-1 overflow-y-auto px-6 pb-4">
+          <div className="flex flex-col gap-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
                 <div className="flex justify-between items-center">
@@ -339,7 +342,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                 </div>
               </form>
 
-            <div className="px-0">
+            <div>
               <h3 className="text-lg font-medium mb-4 text-primary">Existing Tasks</h3>
               {taskDefinitions.length === 0 ? (
                 <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
@@ -401,7 +404,9 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
               )}
             </div>
           </div>
-        <DialogFooter className="px-6 pb-6 pt-4 border-t mt-auto">
+        </div>
+
+        <DialogFooter className="p-6 pt-4 border-t flex-shrink-0">
           <DialogClose asChild>
             <Button type="button" variant="secondary" className="w-full">Close</Button>
           </DialogClose>
@@ -412,5 +417,3 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
-
-    
