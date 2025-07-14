@@ -10,6 +10,7 @@ export const LOCAL_STORAGE_TODO_KEY = 'sigiLTodoItems';
 export const LOCAL_STORAGE_LORE_KEY = 'sigiLLoreEntries';
 export const LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY = 'sigiLSpentSkillPoints';
 export const LOCAL_STORAGE_UNLOCKED_SKILLS_KEY = 'sigiLUnlockedSkills';
+export const LOCAL_STORAGE_SIGIL_KEY = 'sigiLSigilImage';
 export const MAX_CONTRIBUTION_LEVEL = 4;
 export const NUM_WEEKS_TO_DISPLAY = 52;
 
