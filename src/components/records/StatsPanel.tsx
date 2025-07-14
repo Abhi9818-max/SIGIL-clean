@@ -8,6 +8,7 @@ import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { subDays, startOfYear, getYear } from 'date-fns';
 import PerformanceCircle from './PerformanceCircle';
 import { Flame } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface StatsPanelProps {
   selectedTaskFilterId: string | null;
@@ -20,32 +21,34 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
   const [consistencyCircleColor, setConsistencyCircleColor] = useState<string | undefined>(undefined);
   const [currentStreak, setCurrentStreak] = useState(0);
 
+  const selectedTask = useMemo(() => {
+    return selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+  }, [selectedTaskFilterId, getTaskDefinitionById]);
+
+  const isDarkStreakSelected = selectedTask?.darkStreakEnabled === true;
+
   useEffect(() => {
     const newConsistency = getDailyConsistencyLast30Days(selectedTaskFilterId);
     setConsistency(newConsistency);
-    setCurrentStreak(getCurrentStreak());
+    setCurrentStreak(getCurrentStreak(selectedTaskFilterId));
 
-    if (selectedTaskFilterId) {
-      const taskDef = getTaskDefinitionById(selectedTaskFilterId);
-      setConsistencyLabel(taskDef ? `Consistency for ${taskDef.name}` : "Task Consistency (30D)");
-      setConsistencyCircleColor(taskDef?.color);
+    if (selectedTask) {
+      setConsistencyLabel(`Consistency for ${selectedTask.name}`);
+      setConsistencyCircleColor(selectedTask.color);
     } else {
       setConsistencyLabel("Consistency (Last 30D)");
-      setConsistencyCircleColor(undefined); // Reset to default color
+      setConsistencyCircleColor(undefined);
     }
-  }, [getDailyConsistencyLast30Days, selectedTaskFilterId, getTaskDefinitionById, getCurrentStreak]);
+  }, [getDailyConsistencyLast30Days, selectedTaskFilterId, selectedTask, getCurrentStreak]);
 
   const aggregateStats = useMemo(() => {
     const today = new Date();
     const last30DaysStart = subDays(today, 29);
     
-    const taskForAggregates = selectedTaskFilterId;
-
     return [
-      { title: "Total Last 30 Days", value: getAggregateSum(last30DaysStart, today, taskForAggregates) },
+      { title: "Total Last 30 Days", value: getAggregateSum(last30DaysStart, today, selectedTaskFilterId) },
     ];
   }, [getAggregateSum, selectedTaskFilterId]);
-
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
@@ -66,14 +69,17 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
         </Card>
       ))}
        <Card
-        className="shadow-lg animate-fade-in-up"
+        className={cn(
+            "shadow-lg animate-fade-in-up transition-all",
+            isDarkStreakSelected && "border-yellow-400/50 ring-2 ring-yellow-400/20"
+        )}
         style={{ animationDelay: `${aggregateStats.length * 100}ms` }}
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-                Current Streak
+                {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
             </CardTitle>
-            <Flame className="h-4 w-4 text-orange-400" />
+            <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.7)]")} />
         </CardHeader>
         <CardContent>
             <div className="text-2xl font-bold text-foreground">
