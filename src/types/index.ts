@@ -129,3 +129,15 @@ export interface Constellation {
   taskColor: string;
   nodes: SkillNode[];
 }
+
+// For Insights Page
+export interface TaskDistributionData {
+  name: string;
+  value: number;
+  fill: string;
+}
+
+export interface ProductivityByDayData {
+    day: string;
+    total: number;
+}

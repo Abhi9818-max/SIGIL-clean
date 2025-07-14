@@ -1,13 +1,14 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
   LOCAL_STORAGE_TASKS_KEY,
   LOCAL_STORAGE_BONUS_POINTS_KEY,
   LOCAL_STORAGE_MET_GOALS_KEY,
+  LOCAL_STORAGE_HANDLED_STREAKS_KEY,
   LOCAL_STORAGE_TODO_KEY,
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
@@ -30,7 +31,8 @@ import {
   isSameDay,
   startOfMonth,
   endOfMonth,
-  subMonths
+  subMonths,
+  getDay,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -64,6 +66,9 @@ interface UserRecordsContextType {
   unlockSkill: (skillId: string, taskId: string, cost: number) => boolean;
   isSkillUnlocked: (skillId: string) => boolean;
   constellations: Constellation[];
+  // Insights
+  getTaskDistribution: (startDate: Date, endDate: Date) => TaskDistributionData[];
+  getProductivityByDay: (startDate: Date, endDate: Date) => ProductivityByDayData[];
 }
 
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
@@ -519,6 +524,48 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const constellations = useMemo(() => CONSTELLATIONS, []);
 
+  // Insights Functions
+  const getTaskDistribution = useCallback((startDate: Date, endDate: Date): TaskDistributionData[] => {
+    const relevantRecords = getRecordsForDateRange(startDate, endDate);
+    const distribution = new Map<string, { value: number; color: string; name: string }>();
+
+    relevantRecords.forEach(record => {
+      const taskDef = record.taskType ? getTaskDefinitionById(record.taskType) : undefined;
+      const taskId = taskDef?.id || 'unassigned';
+      const taskName = taskDef?.name || 'Unassigned';
+      const taskColor = taskDef?.color || '#8884d8';
+
+      const current = distribution.get(taskId) || { value: 0, color: taskColor, name: taskName };
+      current.value += record.value;
+      distribution.set(taskId, current);
+    });
+
+    return Array.from(distribution.entries()).map(([_, data]) => ({
+      name: data.name,
+      value: data.value,
+      fill: data.color,
+    }));
+  }, [getRecordsForDateRange, getTaskDefinitionById]);
+
+  const getProductivityByDay = useCallback((startDate: Date, endDate: Date): ProductivityByDayData[] => {
+    const relevantRecords = getRecordsForDateRange(startDate, endDate);
+    const dayTotals = [
+        { day: 'Sun', total: 0 }, { day: 'Mon', total: 0 }, { day: 'Tue', total: 0 }, 
+        { day: 'Wed', total: 0 }, { day: 'Thu', total: 0 }, { day: 'Fri', total: 0 }, { day: 'Sat', total: 0 }
+    ];
+
+    relevantRecords.forEach(record => {
+        try {
+            const dayOfWeek = getDay(parseISO(record.date)); // 0 for Sunday, 1 for Monday, etc.
+            dayTotals[dayOfWeek].total += record.value;
+        } catch(e) {
+            // Ignore invalid dates
+        }
+    });
+
+    return dayTotals;
+  }, [getRecordsForDateRange]);
+
 
   return (
     <UserRecordsContext.Provider value={{
@@ -551,6 +598,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       unlockSkill,
       isSkillUnlocked,
       constellations,
+      // Insights
+      getTaskDistribution,
+      getProductivityByDay,
     }}>
       {children}
     </UserRecordsContext.Provider>

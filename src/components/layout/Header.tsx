@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server } from 'lucide-react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -40,7 +40,8 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
   const isWidgetPage = pathname === '/widget';
   const isConstellationsPage = pathname === '/constellations';
   const isTestApiPage = pathname === '/test-api';
-
+  const isInsightsPage = pathname === '/insights';
+  const isEchoesPage = pathname === '/echoes';
 
   return (
     <>
@@ -64,7 +65,19 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
           </div>
 
           {/* Desktop Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
+             <Link href="/insights" passHref>
+              <Button variant={isInsightsPage ? "secondary" : "ghost"} size="sm">
+                <BarChart2 className="mr-1.5 h-4 w-4" />
+                Insights
+              </Button>
+            </Link>
+             <Link href="/echoes" passHref>
+              <Button variant={isEchoesPage ? "secondary" : "ghost"} size="sm">
+                <Share2 className="mr-1.5 h-4 w-4" />
+                Echoes
+              </Button>
+            </Link>
              <Link href="/constellations" passHref>
               <Button variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
                 <Sparkles className="mr-1.5 h-4 w-4" />
@@ -75,18 +88,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
               <Button variant={isTodoPage ? "secondary" : "ghost"} size="sm">
                 <ListChecks className="mr-1.5 h-4 w-4" />
                 To-Do List
-              </Button>
-            </Link>
-            <Link href="/widget" passHref>
-              <Button variant={isWidgetPage ? "secondary" : "ghost"} size="sm">
-                <AppWindow className="mr-1.5 h-4 w-4" />
-                Widget
-              </Button>
-            </Link>
-             <Link href="/test-api" passHref>
-              <Button variant={isTestApiPage ? "secondary" : "ghost"} size="sm">
-                <Server className="mr-1.5 h-4 w-4" />
-                Test API
               </Button>
             </Link>
             {isDashboardPage && (
@@ -118,6 +119,18 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                  <DropdownMenuItem asChild>
+                  <Link href="/insights" className="flex items-center w-full">
+                    <BarChart2 className="mr-2 h-4 w-4" />
+                    Insights
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/echoes" className="flex items-center w-full">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Echoes
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
                   <Link href="/constellations" className="flex items-center w-full">
                     <Sparkles className="mr-2 h-4 w-4" />
                     Constellations
@@ -127,18 +140,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   <Link href="/todo" className="flex items-center w-full">
                     <ListChecks className="mr-2 h-4 w-4" />
                     To-Do List
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/widget" className="flex items-center w-full">
-                    <AppWindow className="mr-2 h-4 w-4" />
-                    Widget
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/test-api" className="flex items-center w-full">
-                    <Server className="mr-2 h-4 w-4" />
-                    Test API
                   </Link>
                 </DropdownMenuItem>
                 {isDashboardPage && (
@@ -154,6 +155,19 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                     </DropdownMenuItem>
                   </>
                 )}
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem asChild>
+                  <Link href="/widget" className="flex items-center w-full">
+                    <AppWindow className="mr-2 h-4 w-4" />
+                    Widget
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/test-api" className="flex items-center w-full">
+                    <Server className="mr-2 h-4 w-4" />
+                    Test API
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
