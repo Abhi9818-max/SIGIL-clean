@@ -229,12 +229,14 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
     hours: 'e.g., 1',
     pages: 'e.g., 10',
     generic: 'e.g., 100',
-  }
+  };
   const unitLabel = watchUnit ? watchUnit.charAt(0).toUpperCase() + watchUnit.slice(1) : 'Value';
 
 
-  if (!isOpen) return null;
-
+  if (!isOpen) {
+    return null;
+  }
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
@@ -247,10 +249,10 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
           <DialogTitle>Manage Tasks</DialogTitle>
           <DialogDescription>Add, edit, or delete your task types, their display properties, and goals.</DialogDescription>
         </DialogHeader>
-        
-        <ScrollArea className="max-h-[70vh]">
-          <div className="flex flex-col gap-8 p-1">
-             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <ScrollArea className="max-h-[70vh] -mx-6 px-6">
+          <div className="flex flex-col gap-8 py-4">
+            <div className="px-0">
+               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
                   <div className="flex justify-between items-center">
                       <h3 className="text-lg font-medium text-primary">
@@ -339,9 +341,9 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                     </Button>
                   </div>
                 </form>
-              </div>
+            </div>
 
-            <div>
+            <div className="px-0">
               <h3 className="text-lg font-medium mb-4 text-primary">Existing Tasks</h3>
               {taskDefinitions.length === 0 ? (
                 <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
@@ -404,10 +406,9 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
             </div>
           </div>
         </ScrollArea>
-
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-6">
           <DialogClose asChild>
-            <Button type="button" variant="secondary">Close</Button>
+            <Button type="button" variant="secondary" className="w-full">Close</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
