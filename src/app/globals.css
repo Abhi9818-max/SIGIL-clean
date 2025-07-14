@@ -126,4 +126,15 @@
   .header-tier-group-3 { background-color: hsl(var(--tier-group-3-header-bg) / 0.7); }
   .header-tier-group-4 { background-color: hsl(var(--tier-group-4-header-bg) / 0.7); }
   .header-tier-group-5 { background-color: hsl(var(--tier-group-5-header-bg) / 0.7); }
+
+  /* Hide number input spinners */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
