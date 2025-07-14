@@ -184,10 +184,10 @@ export default function HomePage() {
           </div>
           <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
+              <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-              <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
+              <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
             </div>
             <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
               <AISuggestionsCard />
