@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, Image as ImageIcon } from 'lucide-react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -40,7 +40,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
   const isWidgetPage = pathname === '/widget';
   const isConstellationsPage = pathname === '/constellations';
   const isTestApiPage = pathname === '/test-api';
-  const isSigilPage = pathname === '/sigil';
 
 
   return (
@@ -66,12 +65,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/sigil" passHref>
-              <Button variant={isSigilPage ? "secondary" : "ghost"} size="sm">
-                <ImageIcon className="mr-1.5 h-4 w-4" />
-                Sigil
-              </Button>
-            </Link>
              <Link href="/constellations" passHref>
               <Button variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
                 <Sparkles className="mr-1.5 h-4 w-4" />
@@ -124,12 +117,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   View Level Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                 <DropdownMenuItem asChild>
-                  <Link href="/sigil" className="flex items-center w-full">
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    Sigil
-                  </Link>
-                </DropdownMenuItem>
                  <DropdownMenuItem asChild>
                   <Link href="/constellations" className="flex items-center w-full">
                     <Sparkles className="mr-2 h-4 w-4" />
