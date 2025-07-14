@@ -41,6 +41,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Pencil, Trash2, Info, Target, Zap } from 'lucide-react';
@@ -229,7 +235,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
         <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
           <div className="my-4 space-y-8">
             <div>
-              <h3 className="text-lg font-medium mb-2">
+              <h3 className="text-lg font-medium mb-2 text-primary">
                 {editingTask ? 'Edit Task' : 'Add New Task'}
               </h3>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -241,25 +247,27 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="taskColor">Task Color (Hex or HSL)</Label>
+                  <Label htmlFor="taskColor">Task Color</Label>
                   <Controller
                     name="color"
                     control={form.control}
                     render={({ field }) => (
-                      <div className="flex items-center mt-1">
-                        <Input 
-                          id="taskColor" 
-                          type="color" 
-                          value={field.value.startsWith('hsl') ? '#000000' : field.value} 
-                          onChange={(e) => field.onChange(e.target.value)} 
-                          className="w-16 h-10 p-1" 
-                        />
+                      <div className="flex items-center mt-1 gap-2">
+                         <div className="relative">
+                            <Input 
+                              id="taskColor" 
+                              type="color" 
+                              value={field.value.startsWith('hsl') ? '#000000' : field.value} 
+                              onChange={(e) => field.onChange(e.target.value)} 
+                              className="w-10 h-10 p-0 border-none cursor-pointer"
+                            />
+                         </div>
                         <Input 
                           type="text"
                           value={field.value}
                           onChange={field.onChange}
                           placeholder="hsl(H, S%, L%) or #RRGGBB"
-                          className="ml-2 flex-grow"
+                          className="flex-grow"
                         />
                       </div>
                     )}
@@ -401,37 +409,46 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
             <div>
               <h3 className="text-lg font-medium mb-2">Existing Tasks</h3>
               {taskDefinitions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tasks defined yet.</p>
+                <p className="text-sm text-center text-muted-foreground py-4">No tasks defined yet.</p>
               ) : (
+                <TooltipProvider>
                   <ul className="space-y-2">
                     {taskDefinitions.map((task) => (
-                      <li key={task.id} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50">
-                        <div className="flex items-center gap-2">
+                      <li key={task.id} className="flex items-center justify-between p-2 pl-3 border rounded-md hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-3">
                           <div 
-                            className="w-4 h-4 rounded-sm border" 
+                            className="w-5 h-5 rounded-full border-2 border-background shadow-inner" 
                             style={{ backgroundColor: task.color }} 
-                            title={`Color: ${task.color}`}
                           />
-                          <span className="text-sm">{task.name}</span>
-                           {task.darkStreakEnabled && (
-                            <Zap className="h-3.5 w-3.5 text-yellow-400" title="Dark Streak Enabled" />
-                          )}
-                          {task.goalValue && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              (Goal: {task.goalValue}
-                              {task.goalInterval ? ` / ${task.goalInterval.charAt(0).toUpperCase() + task.goalInterval.slice(1).replace('ly', '')}` : ''}
-                              {task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''})
-                            </span>
-                          )}
+                          <span className="font-medium">{task.name}</span>
+                          <div className="flex items-center gap-3 text-muted-foreground">
+                            {task.darkStreakEnabled && (
+                              <Tooltip>
+                                <TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger>
+                                <TooltipContent><p>Dark Streak Enabled</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                            {task.goalValue && (
+                              <Tooltip>
+                                <TooltipTrigger><Target className="h-4 w-4" /></TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Goal: {task.goalValue}
+                                  {task.goalInterval ? ` / ${task.goalInterval.charAt(0).toUpperCase() + task.goalInterval.slice(1).replace('ly', '')}` : ''}
+                                  {task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditTask(task)}>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditTask(task)}>
                             <Pencil className="h-4 w-4" />
                             <span className="sr-only">Edit {task.name}</span>
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Delete {task.name}</span>
                               </Button>
@@ -459,6 +476,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                       </li>
                     ))}
                   </ul>
+                </TooltipProvider>
               )}
             </div>
           </div>
@@ -475,3 +493,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
+
+
+    
