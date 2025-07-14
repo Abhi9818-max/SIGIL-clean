@@ -250,9 +250,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
         
         <ScrollArea className="max-h-[70vh]">
           <div className="flex flex-col gap-8 p-1">
-            {/* Add/Edit Form Column */}
-            <div>
-              <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1 mb-4">
+             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
                   <div className="flex justify-between items-center">
                       <h3 className="text-lg font-medium text-primary">
                           {editingTask ? 'Edit Task' : 'Add New Task'}
@@ -264,10 +263,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                           </Button>
                       )}
                   </div>
-              </div>
-              <div className="p-4 border rounded-lg bg-background shadow-inner">
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="p-4 rounded-lg bg-muted/30 border space-y-4">
                     <div>
                       <Label htmlFor="taskName">Task Name</Label>
                       <Input id="taskName" {...form.register('name')} className="mt-1" />
@@ -312,10 +307,28 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                       </AccordionContent>
                     </AccordionItem>
                      <AccordionItem value="dark-streak" className="border-b-0">
-                      <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-muted-foreground" />Dark Streak (High Stakes)</div></AccordionTrigger>
+                        <div className="flex items-center justify-between text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none">
+                            <AccordionTrigger className="flex-1 py-0 pr-2">
+                                <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4 text-muted-foreground" />
+                                    Dark Streak (High Stakes)
+                                </div>
+                            </AccordionTrigger>
+                            <Controller
+                                name="darkStreakEnabled"
+                                control={form.control}
+                                render={({ field }) => (
+                                    <Switch
+                                        id="dark-streak-switch"
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                )}
+                            />
+                        </div>
                       <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
                         <p className="text-xs text-muted-foreground">Enable this for a high-stakes daily challenge. Missing a day incurs a heavy penalty and a dare.</p>
-                        <Controller name="darkStreakEnabled" control={form.control} render={({ field }) => (<div className="flex items-center space-x-2 mt-2"><Switch id="dark-streak" checked={field.value} onCheckedChange={field.onChange} /><Label htmlFor="dark-streak">Enable Dark Streak</Label></div>)}/>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -327,9 +340,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   </div>
                 </form>
               </div>
-            </div>
 
-            {/* Existing Tasks Column */}
             <div>
               <h3 className="text-lg font-medium mb-4 text-primary">Existing Tasks</h3>
               {taskDefinitions.length === 0 ? (
