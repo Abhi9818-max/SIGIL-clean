@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,8 +56,26 @@ import { useToast } from "@/hooks/use-toast";
 import { VALUE_THRESHOLDS } from '@/lib/config'; 
 import { Switch } from '@/components/ui/switch';
 
-const taskFormSchema = z.object({
-  name: z.string().min(1, "Task name is required.").max(50, "Task name must be 50 characters or less."),
+type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
+
+interface ManageTasksModalProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+}
+
+const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: string | null) => z.object({
+  name: z.string()
+    .min(1, "Task name is required.")
+    .max(50, "Task name must be 50 characters or less.")
+    .refine(
+      (name) => {
+        const lowerCaseName = name.toLowerCase();
+        return !existingTasks.some(
+          (task) => task.id !== editingTaskId && task.name.toLowerCase() === lowerCaseName
+        );
+      },
+      { message: "This task name already exists." }
+    ),
   color: z.string().regex(/^(#[0-9A-Fa-f]{6}|hsl\(\s*\d+\s*,\s*\d+%?\s*,\s*\d+%?\s*\))$/, "Color must be a valid hex or HSL string."),
   goalValue: z.preprocess(
     val => (val === "" || val === null || val === undefined ? undefined : Number(val)),
@@ -111,17 +129,15 @@ const taskFormSchema = z.object({
     }
 });
 
-type TaskFormData = z.infer<typeof taskFormSchema>;
-
-interface ManageTasksModalProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-}
 
 const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChange }) => {
   const { taskDefinitions, addTaskDefinition, updateTaskDefinition, deleteTaskDefinition } = useUserRecords();
   const { toast } = useToast();
   const [editingTask, setEditingTask] = useState<TaskDefinition | null>(null);
+
+  const taskFormSchema = useMemo(() => {
+    return createTaskFormSchema(taskDefinitions, editingTask?.id || null);
+  }, [taskDefinitions, editingTask]);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -493,5 +509,3 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
-
-    
