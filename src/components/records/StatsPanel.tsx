@@ -71,7 +71,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
        <Card
         className={cn(
             "shadow-lg animate-fade-in-up transition-all",
-            isDarkStreakSelected && "border-yellow-400/50 ring-2 ring-yellow-400/20"
+            isDarkStreakSelected && "border-orange-400/50"
         )}
         style={{ animationDelay: `${aggregateStats.length * 100}ms` }}
       >
@@ -79,10 +79,10 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
             <CardTitle className="text-sm font-medium text-muted-foreground">
                 {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
             </CardTitle>
-            <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.7)]")} />
+            <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-orange-500 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]")} />
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className={cn("text-2xl font-bold text-foreground", isDarkStreakSelected && "text-orange-500")}>
                 {currentStreak} Day{currentStreak !== 1 ? 's' : ''}
             </div>
         </CardContent>
