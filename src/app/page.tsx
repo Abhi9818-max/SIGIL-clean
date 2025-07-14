@@ -18,7 +18,7 @@ import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import type { UserLevelInfo, BreachCheckResult, DarkStreakCheckResult } from '@/types';
-import { TIER_INFO } from '@/lib/config';
+import { TIER_INFO, DARK_STREAK_PENALTY } from '@/lib/config';
 import type { Quote } from '@/lib/quotes';
 import { QUOTES } from '@/lib/quotes';
 import TodoListCard from '@/components/todo/TodoListCard';
@@ -51,6 +51,9 @@ export default function HomePage() {
     handleConsistencyCheck,
     checkDarkStreaks,
     markDarkStreakHandled,
+    deductBonusPoints,
+    useFreezeCrystal,
+    freezeCrystals,
   } = useUserRecords();
   const { addTodoItem } = useTodos();
   const { toast } = useToast();
@@ -160,8 +163,27 @@ export default function HomePage() {
   
   const handleDeclineDare = () => {
     if (darkStreakBreach) {
+        const additionalPenalty = darkStreakBreach.penalty * 0.5;
+        deductBonusPoints(additionalPenalty);
+        toast({
+            title: "Dare Declined",
+            description: `An additional penalty of ${additionalPenalty} XP has been applied.`,
+            variant: "destructive"
+        })
         markDarkStreakHandled(darkStreakBreach.taskId);
         setDarkStreakBreach(null);
+    }
+  };
+  
+  const handleUseFreezeCrystal = () => {
+    if (darkStreakBreach) {
+        useFreezeCrystal();
+        markDarkStreakHandled(darkStreakBreach.taskId); // Mark as handled to prevent re-triggering
+        setDarkStreakBreach(null); // Close the modal
+        toast({
+            title: "❄️ Streak Frozen!",
+            description: `You used a Freeze Crystal. Your streak for "${darkStreakBreach.taskName}" is safe for today.`,
+        });
     }
   };
 
@@ -227,9 +249,11 @@ export default function HomePage() {
             isOpen={!!darkStreakBreach}
             onAcceptDare={handleAcceptDare}
             onDecline={handleDeclineDare}
+            onUseFreeze={handleUseFreezeCrystal}
             penalty={darkStreakBreach.penalty}
             taskName={darkStreakBreach.taskName}
             dare={darkStreakBreach.dare}
+            availableCrystals={freezeCrystals}
         />
        )}
       <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border">

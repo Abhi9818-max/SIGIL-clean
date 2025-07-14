@@ -14,11 +14,14 @@ import {
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
   LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY,
+  LOCAL_STORAGE_FREEZE_CRYSTALS_KEY,
+  LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
   CONSISTENCY_BREACH_DAYS,
   CONSISTENCY_BREACH_PENALTY,
-  DARK_STREAK_PENALTY
+  DARK_STREAK_PENALTY,
+  STREAK_MILESTONES_FOR_CRYSTALS
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
 import {
@@ -41,6 +44,8 @@ import {
   differenceInDays,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from "@/hooks/use-toast";
+
 
 interface UserRecordsContextType {
   records: RecordEntry[];
@@ -80,6 +85,9 @@ interface UserRecordsContextType {
   // Insights
   getTaskDistribution: (startDate: Date, endDate: Date, taskId?: string | null) => TaskDistributionData[];
   getProductivityByDay: (startDate: Date, endDate: Date, taskId?: string | null) => ProductivityByDayData[];
+  // Freeze Crystals
+  freezeCrystals: number;
+  useFreezeCrystal: () => void;
 }
 
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
@@ -93,7 +101,10 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [handledDarkStreaks, setHandledDarkStreaks] = useState<Record<string, string>>({});
   const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
+  const [freezeCrystals, setFreezeCrystals] = useState<number>(0);
+  const [awardedStreakMilestones, setAwardedStreakMilestones] = useState<Record<string, number[]>>({});
   const [isLoaded, setIsLoaded] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     try {
@@ -190,6 +201,25 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch (error) {
         console.error("Failed to load unlocked skills from localStorage:", error);
     }
+    
+    try {
+        const storedCrystals = localStorage.getItem(LOCAL_STORAGE_FREEZE_CRYSTALS_KEY);
+        if (storedCrystals) {
+            setFreezeCrystals(JSON.parse(storedCrystals));
+        }
+    } catch (error) {
+        console.error("Failed to load freeze crystals from localStorage:", error);
+    }
+
+    try {
+        const storedMilestones = localStorage.getItem(LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY);
+        if (storedMilestones) {
+            setAwardedStreakMilestones(JSON.parse(storedMilestones));
+        }
+    } catch (error) {
+        console.error("Failed to load awarded streak milestones from localStorage:", error);
+    }
+
 
     setIsLoaded(true);
   }, []);
@@ -274,7 +304,67 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
     }
   }, [unlockedSkills, isLoaded]);
+  
+  useEffect(() => {
+    if (isLoaded) {
+        try {
+            localStorage.setItem(LOCAL_STORAGE_FREEZE_CRYSTALS_KEY, JSON.stringify(freezeCrystals));
+        } catch (error) {
+            console.error("Failed to save freeze crystals to localStorage:", error);
+        }
+    }
+    }, [freezeCrystals, isLoaded]);
 
+    useEffect(() => {
+        if (isLoaded) {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY, JSON.stringify(awardedStreakMilestones));
+            } catch (error) {
+                console.error("Failed to save awarded streak milestones to localStorage:", error);
+            }
+        }
+    }, [awardedStreakMilestones, isLoaded]);
+
+  const getCurrentStreak = useCallback((taskId: string | null = null): number => {
+    if (!isLoaded) return 0;
+
+    const allRecords = [...records];
+    const taskRelevantRecords = taskId ? allRecords.filter(r => r.taskType === taskId) : allRecords;
+
+    if (taskRelevantRecords.length === 0) return 0;
+
+    const recordDates = new Set(taskRelevantRecords.map(r => r.date));
+    let streak = 0;
+    let currentDate = startOfDay(new Date());
+
+    if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+        currentDate = subDays(currentDate, 1);
+        // Reset streak milestone tracking if the streak was broken *yesterday*
+        if (taskId && !recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+            setAwardedStreakMilestones(prev => {
+                const newMilestones = {...prev};
+                delete newMilestones[taskId];
+                return newMilestones;
+            });
+        }
+    }
+
+    while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+        streak++;
+        currentDate = subDays(currentDate, 1);
+    }
+    
+    if (streak === 0 && taskId && awardedStreakMilestones[taskId]) {
+        // Streak is broken, clear milestones
+        setAwardedStreakMilestones(prev => {
+            const newMilestones = {...prev};
+            delete newMilestones[taskId];
+            return newMilestones;
+        });
+    }
+
+    return streak;
+  }, [isLoaded, records, awardedStreakMilestones]);
 
   const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
     const newRecord: RecordEntry = {
@@ -282,10 +372,30 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       id: uuidv4(),
       value: Number(entry.value),
     };
-    setRecords(prevRecords => 
-      [...prevRecords, newRecord].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    );
-  }, []);
+
+    const updatedRecords = [...records, newRecord].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    setRecords(updatedRecords);
+
+    // Post-record addition logic for streak rewards
+    if(newRecord.taskType) {
+        const taskId = newRecord.taskType;
+        const newStreak = getCurrentStreak(taskId);
+
+        STREAK_MILESTONES_FOR_CRYSTALS.forEach(milestone => {
+            if (newStreak >= milestone && !(awardedStreakMilestones[taskId] || []).includes(milestone)) {
+                setFreezeCrystals(prev => prev + 1);
+                setAwardedStreakMilestones(prev => ({
+                    ...prev,
+                    [taskId]: [...(prev[taskId] || []), milestone]
+                }));
+                toast({
+                    title: "❄️ Freeze Crystal Earned!",
+                    description: `You've maintained a ${milestone}-day streak and earned a Freeze Crystal!`
+                });
+            }
+        });
+    }
+  }, [records, getCurrentStreak, awardedStreakMilestones, toast]);
 
   const updateRecord = useCallback((entry: RecordEntry) => {
     setRecords(prevRecords =>
@@ -351,40 +461,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     return Math.round((uniqueDaysWithRecords / daysInPeriod) * 100);
   }, [getRecordsForDateRange, isLoaded]);
-  
-  const getCurrentStreak = useCallback((taskId: string | null = null): number => {
-    if (!isLoaded || records.length === 0) return 0;
-
-    let relevantRecords = records;
-    if (taskId) {
-        relevantRecords = records.filter(r => r.taskType === taskId);
-    }
-
-    if (relevantRecords.length === 0) return 0;
-
-    const sortedRecords = [...relevantRecords].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-    const recordDates = new Set(sortedRecords.map(r => r.date));
-    
-    let currentDate = startOfDay(new Date());
-    
-    // If there's no record for today, the current streak is 0, unless the last record was yesterday.
-    if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
-      currentDate = subDays(currentDate, 1);
-      // If there's also no record for yesterday, streak is definitely 0.
-      if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
-        return 0;
-      }
-    }
-
-    let streak = 0;
-    while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
-        streak++;
-        currentDate = subDays(currentDate, 1);
-    }
-
-    return streak;
-  }, [isLoaded, records]);
-
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
@@ -574,8 +650,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [metGoals, getTaskDefinitionById, isLoaded]);
 
   const deductBonusPoints = useCallback((penalty: number) => {
-    const actualPenalty = Math.abs(penalty) * -1;
-    setTotalBonusPoints(prevBonus => prevBonus + actualPenalty);
+    setTotalBonusPoints(prevBonus => prevBonus - Math.abs(penalty));
   }, []);
 
   const handleConsistencyCheck = useCallback((): BreachCheckResult => {
@@ -670,6 +745,16 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     setHandledDarkStreaks(prev => ({ ...prev, [taskId]: yesterdayStr }));
   }, []);
 
+  const useFreezeCrystal = useCallback(() => {
+    if (freezeCrystals > 0) {
+        setFreezeCrystals(prev => prev - 1);
+        // We're essentially "paying" the penalty with a crystal, so we add the penalty value back
+        // to negate the deduction that already happened in checkDarkStreaks.
+        setTotalBonusPoints(prev => prev + DARK_STREAK_PENALTY);
+    }
+  }, [freezeCrystals]);
+
+
   // Constellation Functions
   const getAvailableSkillPoints = useCallback((taskId: string): number => {
     if (!isLoaded) return 0;
@@ -720,7 +805,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return Array.from(distribution.entries()).map(([_, data]) => ({
       name: data.name,
       value: data.value,
-      fill: data.fill,
+      fill: data.name,
     }));
   }, [getRecordsForDateRange, getTaskDefinitionById]);
 
@@ -785,6 +870,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       // Insights
       getTaskDistribution,
       getProductivityByDay,
+      // Freeze Crystals
+      freezeCrystals,
+      useFreezeCrystal,
     }}>
       {children}
     </UserRecordsContext.Provider>
