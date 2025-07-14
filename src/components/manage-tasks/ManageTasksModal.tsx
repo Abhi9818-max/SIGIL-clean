@@ -234,11 +234,85 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
           <DialogDescription>Add, edit, or delete your task types, their display properties, and goals.</DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-4">
-          {/* Left Column: Existing Tasks */}
-          <div className="flex flex-col">
-            <h3 className="text-lg font-medium mb-2 text-primary">Existing Tasks</h3>
-            <ScrollArea className="flex-grow h-[450px] pr-4 -mr-4">
+        <ScrollArea className="max-h-[70vh] p-1">
+          <div className="flex flex-col gap-8 my-4 pr-6">
+
+            {/* Add/Edit Form */}
+            <div className="flex flex-col">
+              <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium text-primary">
+                    {editingTask ? 'Edit Task' : 'Add New Task'}
+                  </h3>
+                  {editingTask && (
+                    <Button variant="outline" size="sm" onClick={() => resetFormFields(null)}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      New Task
+                    </Button>
+                  )}
+              </div>
+              <div className="p-4 border rounded-lg bg-background">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div>
+                    <Label htmlFor="taskName">Task Name</Label>
+                    <Input id="taskName" {...form.register('name')} className="mt-1" />
+                    {form.formState.errors.name && (<p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>)}
+                  </div>
+                  <div>
+                    <Label htmlFor="taskColor">Task Color</Label>
+                    <Controller name="color" control={form.control} render={({ field }) => (
+                      <div className="flex items-center mt-1 gap-2">
+                        <Input id="taskColor" type="color" value={field.value.startsWith('hsl') ? '#000000' : field.value} onChange={(e) => field.onChange(e.target.value)} className="w-10 h-10 p-1 border-2 cursor-pointer"/>
+                        <Input type="text" value={field.value} onChange={field.onChange} placeholder="hsl(H, S%, L%) or #RRGGBB" className="flex-grow"/>
+                      </div>
+                    )}/>
+                    {form.formState.errors.color && (<p className="text-sm text-destructive mt-1">{form.formState.errors.color.message}</p>)}
+                  </div>
+                  
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger className="text-sm py-2"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Goals & Bonuses (Optional)</div></AccordionTrigger>
+                      <AccordionContent className="pt-2 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
+                          <div className="sm:col-span-1"><Label htmlFor="goalValue">Goal</Label><Input id="goalValue" type="number" {...form.register('goalValue')} className="mt-1"/></div>
+                          <div className="sm:col-span-1"><Label htmlFor="goalInterval">Interval</Label><Controller name="goalInterval" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select>)}/></div>
+                          <div className="sm:col-span-1"><Label htmlFor="goalCompletionBonusPercentage">Bonus %</Label><Input id="goalCompletionBonusPercentage" type="number" {...form.register('goalCompletionBonusPercentage')} className="mt-1" disabled={!watchGoalValue || Number(watchGoalValue) <= 0}/></div>
+                        </div>
+                         {form.formState.errors.goalValue && (<p className="text-sm text-destructive mt-1">{form.formState.errors.goalValue.message}</p>)}
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-2">
+                      <AccordionTrigger className="text-sm py-2"><div className="flex items-center gap-2"><Info className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
+                      <AccordionContent className="pt-2 space-y-3">
+                        <p className="text-xs text-muted-foreground">Define 4 values for different shades. Defaults: {VALUE_THRESHOLDS.join(', ')}.</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          {[1, 2, 3, 4].map(i => (<div key={i}><Label htmlFor={`threshold${i}`}>Phase {i}</Label><Input id={`threshold${i}`} type="number" {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/></div>))}
+                        </div>
+                        {form.formState.errors.threshold1 && (<p className="text-sm text-destructive mt-1">{form.formState.errors.threshold1.message}</p>)}
+                      </AccordionContent>
+                    </AccordionItem>
+                     <AccordionItem value="item-3">
+                      <AccordionTrigger className="text-sm py-2"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-muted-foreground" />Dark Streak (High Stakes)</div></AccordionTrigger>
+                      <AccordionContent className="pt-2 space-y-3">
+                        <p className="text-xs text-muted-foreground">Enable this for a high-stakes daily challenge. Missing a day incurs a heavy penalty and a dare.</p>
+                        <Controller name="darkStreakEnabled" control={form.control} render={({ field }) => (<div className="flex items-center space-x-2 mt-2"><Switch id="dark-streak" checked={field.value} onCheckedChange={field.onChange} /><Label htmlFor="dark-streak">Enable Dark Streak</Label></div>)}/>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+                      {form.formState.isSubmitting ? "Saving..." : (editingTask ? 'Save Changes' : 'Add Task')}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            {/* Existing Tasks */}
+            <div className="flex flex-col">
+              <h3 className="text-lg font-medium mb-2 text-primary">Existing Tasks</h3>
               {taskDefinitions.length === 0 ? (
                 <p className="text-sm text-center text-muted-foreground py-10">No tasks defined yet.</p>
               ) : (
@@ -288,82 +362,12 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   </div>
                 </TooltipProvider>
               )}
-            </ScrollArea>
-          </div>
-
-          {/* Right Column: Add/Edit Form */}
-          <div className="flex flex-col">
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium text-primary">
-                  {editingTask ? 'Edit Task' : 'Add New Task'}
-                </h3>
-                {editingTask && (
-                  <Button variant="outline" size="sm" onClick={() => resetFormFields(null)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Task
-                  </Button>
-                )}
             </div>
-            <ScrollArea className="flex-grow h-[450px] pr-4 -mr-4">
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <Label htmlFor="taskName">Task Name</Label>
-                  <Input id="taskName" {...form.register('name')} className="mt-1" />
-                  {form.formState.errors.name && (<p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>)}
-                </div>
-                <div>
-                  <Label htmlFor="taskColor">Task Color</Label>
-                  <Controller name="color" control={form.control} render={({ field }) => (
-                    <div className="flex items-center mt-1 gap-2">
-                      <Input id="taskColor" type="color" value={field.value.startsWith('hsl') ? '#000000' : field.value} onChange={(e) => field.onChange(e.target.value)} className="w-10 h-10 p-1 border-2 cursor-pointer"/>
-                      <Input type="text" value={field.value} onChange={field.onChange} placeholder="hsl(H, S%, L%) or #RRGGBB" className="flex-grow"/>
-                    </div>
-                  )}/>
-                  {form.formState.errors.color && (<p className="text-sm text-destructive mt-1">{form.formState.errors.color.message}</p>)}
-                </div>
-                
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="item-1">
-                    <AccordionTrigger className="text-sm py-2"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Goals & Bonuses (Optional)</div></AccordionTrigger>
-                    <AccordionContent className="pt-2 space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
-                        <div className="sm:col-span-1"><Label htmlFor="goalValue">Goal</Label><Input id="goalValue" type="number" {...form.register('goalValue')} className="mt-1"/></div>
-                        <div className="sm:col-span-1"><Label htmlFor="goalInterval">Interval</Label><Controller name="goalInterval" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select>)}/></div>
-                        <div className="sm:col-span-1"><Label htmlFor="goalCompletionBonusPercentage">Bonus %</Label><Input id="goalCompletionBonusPercentage" type="number" {...form.register('goalCompletionBonusPercentage')} className="mt-1" disabled={!watchGoalValue || Number(watchGoalValue) <= 0}/></div>
-                      </div>
-                       {form.formState.errors.goalValue && (<p className="text-sm text-destructive mt-1">{form.formState.errors.goalValue.message}</p>)}
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="item-2">
-                    <AccordionTrigger className="text-sm py-2"><div className="flex items-center gap-2"><Info className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
-                    <AccordionContent className="pt-2 space-y-3">
-                      <p className="text-xs text-muted-foreground">Define 4 values for different shades. Defaults: {VALUE_THRESHOLDS.join(', ')}.</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {[1, 2, 3, 4].map(i => (<div key={i}><Label htmlFor={`threshold${i}`}>Phase {i}</Label><Input id={`threshold${i}`} type="number" {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/></div>))}
-                      </div>
-                      {form.formState.errors.threshold1 && (<p className="text-sm text-destructive mt-1">{form.formState.errors.threshold1.message}</p>)}
-                    </AccordionContent>
-                  </AccordionItem>
-                   <AccordionItem value="item-3">
-                    <AccordionTrigger className="text-sm py-2"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-muted-foreground" />Dark Streak (High Stakes)</div></AccordionTrigger>
-                    <AccordionContent className="pt-2 space-y-3">
-                      <p className="text-xs text-muted-foreground">Enable this for a high-stakes daily challenge. Missing a day incurs a heavy penalty and a dare.</p>
-                      <Controller name="darkStreakEnabled" control={form.control} render={({ field }) => (<div className="flex items-center space-x-2 mt-2"><Switch id="dark-streak" checked={field.value} onCheckedChange={field.onChange} /><Label htmlFor="dark-streak">Enable Dark Streak</Label></div>)}/>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-                
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                    {form.formState.isSubmitting ? "Saving..." : (editingTask ? 'Save Changes' : 'Add Task')}
-                  </Button>
-                </div>
-              </form>
-            </ScrollArea>
-          </div>
-        </div>
 
-        <DialogFooter className="pt-4">
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="secondary">Close</Button>
           </DialogClose>
@@ -374,5 +378,3 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
-
-    
