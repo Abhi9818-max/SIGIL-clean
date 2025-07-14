@@ -19,7 +19,7 @@
     --secondary: 240 5% 15%; /* Dark Gray */
     --secondary-foreground: 240 5% 95%;
 
-    --muted: 240 5% 15%;
+    --muted: 240 5% 25%; /* Lighter Gray for better contrast */
     --muted-foreground: 240 5% 65%; /* Lighter Gray for muted text */
 
     --accent: 170 50% 50%; /* Teal/Cyan */
@@ -85,7 +85,7 @@
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 240 5% 15%;
     --secondary-foreground: 240 5% 95%;
-    --muted: 240 5% 15%;
+    --muted: 240 5% 25%;
     --muted-foreground: 240 5% 65%;
     --accent: 170 50% 50%;
     --accent-foreground: 240 5% 98%;
