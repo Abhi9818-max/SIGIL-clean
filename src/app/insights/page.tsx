@@ -107,7 +107,7 @@ export default function InsightsPage() {
                         <Input 
                             type="number"
                             value={customDays}
-                            onChange={(e) => setCustomDays(Number(e.target.value))}
+                            onChange={(e) => setCustomDays(e.target.valueAsNumber || 0)}
                             placeholder="Days"
                             className="w-24"
                             onFocus={() => setTimeRange('custom')}
@@ -124,7 +124,7 @@ export default function InsightsPage() {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <TaskDistributionChart startDate={dateRange.start} endDate={dateRange.end} />
-                <ProductivityByDayChart startDate={dateRange.start} endDate={dateRange.end} />
+                <ProductivityByDayChart startDate={dateRange.start} endDate={date.end} />
             </div>
           </CardContent>
         </Card>
