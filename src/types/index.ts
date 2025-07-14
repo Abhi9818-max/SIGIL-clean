@@ -33,10 +33,11 @@ export interface TaskDefinition {
   id: string;
   name: string;
   color: string; // HSL color string e.g., 'hsl(210 90% 70%)'
-  intensityThresholds?: number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
+  intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
   goalValue?: number; // Optional: A numerical goal for the task (e.g., hours)
   goalInterval?: 'daily' | 'weekly' | 'monthly'; // Optional: The interval for the goal
   goalCompletionBonusPercentage?: number; // Optional: Percentage of goalValue to award as bonus points
+  darkStreakEnabled?: boolean; // Optional: Enable high-stakes daily streak for this task
 }
 
 // For progress charts
@@ -100,6 +101,7 @@ export type BreachCheckResult = {
   lastRecordDate: string | null;
   daysSince: number | null;
   penalty: number;
+  dare?: string; // Optional AI-generated dare
 };
 
 
@@ -151,4 +153,14 @@ export interface TaskDistributionData {
 export interface ProductivityByDayData {
     day: string;
     total: number;
+}
+
+
+// For Dark Streak
+export interface DarkStreakCheckResult {
+  taskId: string;
+  taskName: string;
+  streakBroken: boolean;
+  penalty: number;
+  dare: string;
 }

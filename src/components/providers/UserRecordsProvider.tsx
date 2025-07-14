@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
@@ -13,10 +13,12 @@ import {
   LOCAL_STORAGE_TODO_KEY,
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
+  LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
   CONSISTENCY_BREACH_DAYS,
-  CONSISTENCY_BREACH_PENALTY
+  CONSISTENCY_BREACH_PENALTY,
+  DARK_STREAK_PENALTY
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
 import {
@@ -39,6 +41,7 @@ import {
   differenceInDays,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { generateDare } from '@/ai/flows/dare-flow';
 
 interface UserRecordsContextType {
   records: RecordEntry[];
@@ -67,6 +70,9 @@ interface UserRecordsContextType {
   isGoalMetForLastPeriod: (taskId: string) => boolean;
   deductBonusPoints: (penalty: number) => void;
   handleConsistencyCheck: () => BreachCheckResult;
+  // Dark Streak
+  checkDarkStreaks: () => Promise<DarkStreakCheckResult | null>;
+  markDarkStreakHandled: (taskId: string) => void;
   // Constellations
   getAvailableSkillPoints: (taskId: string) => number;
   unlockSkill: (skillId: string, taskId: string, cost: number) => boolean;
@@ -85,6 +91,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
   const [metGoals, setMetGoals] = useState<Record<string, string>>({}); // New state for met goals
   const [handledStreaks, setHandledStreaks] = useState<Record<string, boolean>>({});
+  const [handledDarkStreaks, setHandledDarkStreaks] = useState<Record<string, string>>({});
   const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -111,6 +118,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
                 goalInterval: task.goalInterval,
                 intensityThresholds: task.intensityThresholds,
                 goalCompletionBonusPercentage: task.goalCompletionBonusPercentage,
+                darkStreakEnabled: task.darkStreakEnabled ?? false,
             })));
         } else {
             const defaultTasksWithId = DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
@@ -152,6 +160,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     } catch (error) {
         console.error("Failed to load handled streaks from localStorage:", error);
+    }
+    
+    try {
+      const storedHandledDarkStreaks = localStorage.getItem(LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY);
+      if (storedHandledDarkStreaks) {
+        setHandledDarkStreaks(JSON.parse(storedHandledDarkStreaks));
+      }
+    } catch (error) {
+        console.error("Failed to load handled dark streaks from localStorage:", error);
     }
 
     try {
@@ -224,6 +241,16 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     }
   }, [handledStreaks, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY, JSON.stringify(handledDarkStreaks));
+      } catch (error) {
+        console.error("Failed to save handled dark streaks to localStorage:", error);
+      }
+    }
+  }, [handledDarkStreaks, isLoaded]);
 
 
   useEffect(() => {
@@ -581,6 +608,65 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return result;
   }, [records, handledStreaks, deductBonusPoints]);
 
+  const checkDarkStreaks = useCallback(async (): Promise<DarkStreakCheckResult | null> => {
+    if (!isLoaded) return null;
+
+    const darkStreakTasks = taskDefinitions.filter(t => t.darkStreakEnabled);
+    if (darkStreakTasks.length === 0) return null;
+
+    const yesterday = startOfDay(subDays(new Date(), 1));
+    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+    const recordsByDate = new Map<string, RecordEntry[]>();
+    records.forEach(rec => {
+        if (!recordsByDate.has(rec.date)) recordsByDate.set(rec.date, []);
+        recordsByDate.get(rec.date)!.push(rec);
+    });
+    
+    const yesterdayRecords = recordsByDate.get(yesterdayStr) || [];
+
+    for (const task of darkStreakTasks) {
+        const wasTaskDoneYesterday = yesterdayRecords.some(r => r.taskType === task.id);
+        const wasHandled = handledDarkStreaks[task.id] === yesterdayStr;
+
+        if (!wasTaskDoneYesterday && !wasHandled) {
+            deductBonusPoints(DARK_STREAK_PENALTY);
+
+            try {
+                const levelInfo = getUserLevelInfo();
+                const dareResult = await generateDare({ 
+                    level: levelInfo.currentLevel, 
+                    taskName: task.name, 
+                    isGlobalStreak: false 
+                });
+
+                return {
+                    taskId: task.id,
+                    taskName: task.name,
+                    streakBroken: true,
+                    penalty: DARK_STREAK_PENALTY,
+                    dare: dareResult.dare
+                };
+            } catch (error) {
+                console.error(`Failed to generate dare for task ${task.name}:`, error);
+                return {
+                    taskId: task.id,
+                    taskName: task.name,
+                    streakBroken: true,
+                    penalty: DARK_STREAK_PENALTY,
+                    dare: "The spirits are silent. Meditate on your failure."
+                };
+            }
+        }
+    }
+
+    return null; // No broken dark streaks
+  }, [isLoaded, taskDefinitions, records, handledDarkStreaks, deductBonusPoints, getUserLevelInfo]);
+
+  const markDarkStreakHandled = useCallback((taskId: string) => {
+    const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    setHandledDarkStreaks(prev => ({ ...prev, [taskId]: yesterdayStr }));
+  }, []);
+
   // Constellation Functions
   const getAvailableSkillPoints = useCallback((taskId: string): number => {
     if (!isLoaded) return 0;
@@ -680,6 +766,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       deductBonusPoints,
       handleConsistencyCheck,
       isGoalMetForLastPeriod,
+      checkDarkStreaks,
+      markDarkStreakHandled,
       // Constellations
       getAvailableSkillPoints,
       unlockSkill,

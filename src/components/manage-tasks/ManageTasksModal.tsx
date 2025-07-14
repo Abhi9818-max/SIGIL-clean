@@ -43,11 +43,12 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Pencil, Trash2, Info, Target } from 'lucide-react';
+import { Pencil, Trash2, Info, Target, Zap } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import type { TaskDefinition } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { VALUE_THRESHOLDS } from '@/lib/config'; 
+import { Switch } from '@/components/ui/switch';
 
 const taskFormSchema = z.object({
   name: z.string().min(1, "Task name is required.").max(50, "Task name must be 50 characters or less."),
@@ -68,6 +69,7 @@ const taskFormSchema = z.object({
   threshold2: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   threshold3: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   threshold4: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
+  darkStreakEnabled: z.boolean().optional(),
 }).superRefine((data, ctx) => {
     // Phase validation: all or nothing, and must be in increasing order
     const thresholds = [data.threshold1, data.threshold2, data.threshold3, data.threshold4];
@@ -127,6 +129,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       threshold2: undefined,
       threshold3: undefined,
       threshold4: undefined,
+      darkStreakEnabled: false,
     },
   });
 
@@ -141,6 +144,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       threshold2: task?.intensityThresholds?.[1] ?? undefined,
       threshold3: task?.intensityThresholds?.[2] ?? undefined,
       threshold4: task?.intensityThresholds?.[3] ?? undefined,
+      darkStreakEnabled: task?.darkStreakEnabled ?? false,
     });
   };
 
@@ -181,6 +185,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       goalInterval: goalInterval,
       intensityThresholds: intensityThresholds,
       goalCompletionBonusPercentage: goalCompletionBonusPercentage,
+      darkStreakEnabled: data.darkStreakEnabled,
     };
 
     if (editingTask) {
@@ -349,6 +354,33 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                         )}
                     </AccordionContent>
                   </AccordionItem>
+                   <AccordionItem value="item-3">
+                    <AccordionTrigger className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-muted-foreground" />
+                        Dark Streak (High Stakes)
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-2 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Enable this for a high-stakes daily challenge. If you miss a day for this task, a significant penalty will be applied and you will be issued a dare.
+                      </p>
+                      <Controller
+                        name="darkStreakEnabled"
+                        control={form.control}
+                        render={({ field }) => (
+                           <div className="flex items-center space-x-2 mt-2">
+                            <Switch
+                              id="dark-streak"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                            <Label htmlFor="dark-streak">Enable Dark Streak</Label>
+                          </div>
+                        )}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
                 </Accordion>
                 
                 <div className="flex justify-end gap-2 pt-2">
@@ -381,6 +413,9 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                             title={`Color: ${task.color}`}
                           />
                           <span className="text-sm">{task.name}</span>
+                           {task.darkStreakEnabled && (
+                            <Zap className="h-3.5 w-3.5 text-yellow-400" title="Dark Streak Enabled" />
+                          )}
                           {task.goalValue && (
                             <span className="text-xs text-muted-foreground ml-1">
                               (Goal: {task.goalValue}

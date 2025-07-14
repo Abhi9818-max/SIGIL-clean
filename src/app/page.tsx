@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/layout/Header';
 import QuoteCard from '@/components/layout/QuoteCard';
 import ContributionGraph from '@/components/records/ContributionGraph';
@@ -16,12 +16,15 @@ import WeeklyProgressCard from '@/components/progress/WeeklyProgressCard';
 import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import type { UserLevelInfo } from '@/types';
+import type { UserLevelInfo, BreachCheckResult, DarkStreakCheckResult } from '@/types';
 import { TIER_INFO } from '@/lib/config';
 import type { Quote } from '@/lib/quotes';
 import { QUOTES } from '@/lib/quotes';
 import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
+import ConsistencyBreachModal from '@/components/features/ConsistencyBreachModal';
+import PunishmentModal from '@/components/features/PunishmentModal';
+import { generateDare } from '@/ai/flows/dare-flow';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
 
@@ -34,13 +37,22 @@ export default function HomePage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
 
+  // State for breach modals
+  const [consistencyBreach, setConsistencyBreach] = useState<BreachCheckResult | null>(null);
+  const [darkStreakBreach, setDarkStreakBreach] = useState<DarkStreakCheckResult | null>(null);
+
+
   const {
     taskDefinitions,
     getUserLevelInfo,
     records,
     totalBonusPoints,
     awardTierEntryBonus,
+    handleConsistencyCheck,
+    checkDarkStreaks,
+    markDarkStreakHandled,
   } = useUserRecords();
+  const { addTodoItem } = useTodos();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,6 +68,39 @@ export default function HomePage() {
     const levelInfo = getUserLevelInfo();
     setCurrentLevelInfo(levelInfo);
   }, [getUserLevelInfo, records, totalBonusPoints]);
+
+   const handleBreaches = useCallback(async () => {
+    const levelInfo = getUserLevelInfo();
+
+    // Check for Dark Streaks first
+    const darkStreakResult = await checkDarkStreaks();
+    if (darkStreakResult) {
+      setDarkStreakBreach(darkStreakResult);
+      return; // Stop here if a dark streak is found
+    }
+
+    // If no dark streak, check for global consistency breach
+    const consistencyResult = handleConsistencyCheck();
+    if (consistencyResult.breachDetected && !consistencyResult.dare) {
+      try {
+        const dareResult = await generateDare({ 
+            level: levelInfo.currentLevel, 
+            taskName: 'Overall Consistency', 
+            isGlobalStreak: true 
+        });
+        setConsistencyBreach({ ...consistencyResult, dare: dareResult.dare });
+      } catch (e) {
+        console.error("Failed to generate dare for consistency breach:", e);
+        // Proceed without a dare if AI fails
+        setConsistencyBreach({ ...consistencyResult, dare: "Reflect on your journey for 5 minutes." });
+      }
+    }
+  }, [checkDarkStreaks, handleConsistencyCheck, getUserLevelInfo]);
+
+  useEffect(() => {
+    handleBreaches();
+  }, [handleBreaches]);
+
 
   useEffect(() => {
     if (currentLevelInfo) {
@@ -112,6 +157,30 @@ export default function HomePage() {
     setIsManageTasksModalOpen(true);
   };
 
+  const handleAcceptConsistencyBreach = () => {
+    if (consistencyBreach?.dare) {
+      addTodoItem(consistencyBreach.dare);
+      toast({
+        title: "Dare Accepted",
+        description: "A new task has been added to your To-Do list.",
+      });
+    }
+    setConsistencyBreach(null);
+  };
+  
+  const handleAcceptDarkStreakPunishment = () => {
+    if (darkStreakBreach) {
+        addTodoItem(darkStreakBreach.dare);
+        markDarkStreakHandled(darkStreakBreach.taskId);
+         toast({
+            title: "Dare Accepted",
+            description: "A new task has been added to your To-Do list to redeem yourself.",
+        });
+        setDarkStreakBreach(null);
+    }
+  };
+
+
   const pageTierClass = currentLevelInfo ? `page-tier-group-${currentLevelInfo.tierGroup}` : 'page-tier-group-1';
 
   return (
@@ -161,6 +230,22 @@ export default function HomePage() {
         isOpen={isManageTasksModalOpen}
         onOpenChange={setIsManageTasksModalOpen}
       />
+       {consistencyBreach && (
+        <ConsistencyBreachModal
+          isOpen={!!consistencyBreach}
+          onAccept={handleAcceptConsistencyBreach}
+          breachInfo={consistencyBreach}
+        />
+      )}
+       {darkStreakBreach && (
+        <PunishmentModal
+            isOpen={!!darkStreakBreach}
+            onAccept={handleAcceptDarkStreakPunishment}
+            penalty={darkStreakBreach.penalty}
+            dare={darkStreakBreach.dare}
+            taskName={darkStreakBreach.taskName}
+        />
+       )}
       <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border">
         S.I.G.I.L. &copy; {currentYear}
       </footer>
