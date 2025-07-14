@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -9,6 +8,7 @@ import { subDays, startOfYear, getYear } from 'date-fns';
 import PerformanceCircle from './PerformanceCircle';
 import { Flame, Snowflake } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 interface StatsPanelProps {
   selectedTaskFilterId: string | null;
@@ -57,7 +57,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
   }, [getAggregateSum, selectedTaskFilterId]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
       {aggregateStats.map((stat, index) => (
         <Card
           key={index}
@@ -85,7 +85,22 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
             <CardTitle className="text-sm font-medium text-muted-foreground">
                 {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
             </CardTitle>
-            <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]")} />
+            <div className="flex items-center gap-3">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1">
+                      <Snowflake className="h-4 w-4 text-blue-300" />
+                      <span className="text-sm font-bold">{freezeCrystals}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Freeze Crystals available</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]")} />
+            </div>
         </CardHeader>
         <CardContent>
             <div className={cn("text-2xl font-bold text-foreground", isDarkStreakSelected && "text-yellow-400")}>
@@ -96,20 +111,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
       <Card
         className="shadow-lg animate-fade-in-up"
         style={{ animationDelay: `${(aggregateStats.length + 1) * 100}ms` }}
-      >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground truncate" title="Freeze Crystals">
-            Freeze Crystals
-          </CardTitle>
-          <Snowflake className="h-4 w-4 text-blue-300" />
-        </CardHeader>
-        <CardContent>
-           <div className="text-2xl font-bold text-foreground">{freezeCrystals}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className="shadow-lg animate-fade-in-up"
-        style={{ animationDelay: `${(aggregateStats.length + 2) * 100}ms` }}
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={consistencyLabel}>
