@@ -79,8 +79,8 @@ interface UserRecordsContextType {
   isSkillUnlocked: (skillId: string) => boolean;
   constellations: Constellation[];
   // Insights
-  getTaskDistribution: (startDate: Date, endDate: Date) => TaskDistributionData[];
-  getProductivityByDay: (startDate: Date, endDate: Date) => ProductivityByDayData[];
+  getTaskDistribution: (startDate: Date, endDate: Date, taskId?: string | null) => TaskDistributionData[];
+  getProductivityByDay: (startDate: Date, endDate: Date, taskId?: string | null) => ProductivityByDayData[];
 }
 
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
@@ -696,19 +696,22 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const constellations = useMemo(() => CONSTELLATIONS, []);
 
   // Insights Functions
-  const getTaskDistribution = useCallback((startDate: Date, endDate: Date): TaskDistributionData[] => {
-    const relevantRecords = getRecordsForDateRange(startDate, endDate);
+  const getTaskDistribution = useCallback((startDate: Date, endDate: Date, taskId: string | null = null): TaskDistributionData[] => {
+    let relevantRecords = getRecordsForDateRange(startDate, endDate);
+    if (taskId) {
+        relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    }
     const distribution = new Map<string, { value: number; color: string; name: string }>();
 
     relevantRecords.forEach(record => {
       const taskDef = record.taskType ? getTaskDefinitionById(record.taskType) : undefined;
-      const taskId = taskDef?.id || 'unassigned';
+      const effectiveTaskId = taskDef?.id || 'unassigned';
       const taskName = taskDef?.name || 'Unassigned';
       const taskColor = taskDef?.color || '#8884d8';
 
-      const current = distribution.get(taskId) || { value: 0, color: taskColor, name: taskName };
+      const current = distribution.get(effectiveTaskId) || { value: 0, color: taskColor, name: taskName };
       current.value += record.value;
-      distribution.set(taskId, current);
+      distribution.set(effectiveTaskId, current);
     });
 
     return Array.from(distribution.entries()).map(([_, data]) => ({
@@ -718,8 +721,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }));
   }, [getRecordsForDateRange, getTaskDefinitionById]);
 
-  const getProductivityByDay = useCallback((startDate: Date, endDate: Date): ProductivityByDayData[] => {
-    const relevantRecords = getRecordsForDateRange(startDate, endDate);
+  const getProductivityByDay = useCallback((startDate: Date, endDate: Date, taskId: string | null = null): ProductivityByDayData[] => {
+    let relevantRecords = getRecordsForDateRange(startDate, endDate);
+     if (taskId) {
+        relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    }
     const dayTotals = [
         { day: 'Sun', total: 0 }, { day: 'Mon', total: 0 }, { day: 'Tue', total: 0 }, 
         { day: 'Wed', total: 0 }, { day: 'Thu', total: 0 }, { day: 'Fri', total: 0 }, { day: 'Sat', total: 0 }

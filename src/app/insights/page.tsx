@@ -6,7 +6,7 @@ import Header from '@/components/layout/Header';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart2, Calendar, CornerDownLeft, Search } from 'lucide-react';
+import { BarChart2, Calendar, CornerDownLeft, Search, ListFilter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -24,10 +24,11 @@ import Link from 'next/link';
 type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'custom';
 
 export default function InsightsPage() {
-  const { getUserLevelInfo, getYearlySum } = useUserRecords();
+  const { getUserLevelInfo, getYearlySum, taskDefinitions } = useUserRecords();
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('last_30_days');
   const [customDays, setCustomDays] = useState<number>(7);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
     start: subDays(new Date(), 29),
     end: new Date(),
@@ -76,7 +77,7 @@ export default function InsightsPage() {
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
 
-  const currentYearSum = currentYear ? getYearlySum(currentYear) : 0;
+  const currentYearSum = currentYear ? getYearlySum(currentYear, selectedTaskId) : 0;
   
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -93,6 +94,18 @@ export default function InsightsPage() {
                   <CardTitle>Your Insights</CardTitle>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <ListFilter className="h-4 w-4 text-muted-foreground" />
+                    <Select onValueChange={(value) => setSelectedTaskId(value === 'all' ? null : value)} defaultValue="all">
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Select a task" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Tasks</SelectItem>
+                            {taskDefinitions.map(task => (
+                                <SelectItem key={task.id} value={task.id}>{task.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <Select onValueChange={(value: TimeRange) => setTimeRange(value)} defaultValue={timeRange}>
                         <SelectTrigger className="w-full sm:w-[180px]">
@@ -127,7 +140,9 @@ export default function InsightsPage() {
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
                <Card className="lg:col-span-1">
                  <CardHeader>
-                   <CardTitle className="text-sm font-medium text-muted-foreground">Total This Year ({currentYear})</CardTitle>
+                   <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {selectedTaskId ? `Total This Year for ${taskDefinitions.find(t => t.id === selectedTaskId)?.name}` : `Total This Year (${currentYear})`}
+                   </CardTitle>
                  </CardHeader>
                  <CardContent>
                    <p className="text-3xl font-bold">{currentYearSum.toLocaleString()}</p>
@@ -138,8 +153,8 @@ export default function InsightsPage() {
                 </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <TaskDistributionChart startDate={dateRange.start} endDate={dateRange.end} />
-                <ProductivityByDayChart startDate={dateRange.start} endDate={dateRange.end} />
+                <TaskDistributionChart startDate={dateRange.start} endDate={dateRange.end} taskId={selectedTaskId} />
+                <ProductivityByDayChart startDate={dateRange.start} endDate={dateRange.end} taskId={selectedTaskId} />
             </div>
           </CardContent>
         </Card>

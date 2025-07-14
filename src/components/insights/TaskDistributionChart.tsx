@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PieChart as PieChartIcon } from 'lucide-react';
+import { PieChart as PieChartIcon, Target } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import {
   ChartContainer,
@@ -20,19 +20,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface TaskDistributionChartProps {
   startDate: Date;
   endDate: Date;
+  taskId: string | null;
 }
 
-const TaskDistributionChart: React.FC<TaskDistributionChartProps> = ({ startDate, endDate }) => {
+const TaskDistributionChart: React.FC<TaskDistributionChartProps> = ({ startDate, endDate, taskId }) => {
   const { getTaskDistribution, taskDefinitions } = useUserRecords();
   const [chartData, setChartData] = useState<TaskDistributionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
-    const data = getTaskDistribution(startDate, endDate);
+    const data = getTaskDistribution(startDate, endDate, taskId);
     setChartData(data);
     setIsLoading(false);
-  }, [startDate, endDate, getTaskDistribution]);
+  }, [startDate, endDate, taskId, getTaskDistribution]);
 
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
@@ -54,6 +55,21 @@ const TaskDistributionChart: React.FC<TaskDistributionChartProps> = ({ startDate
     return config;
   }, [chartData, taskDefinitions]);
 
+  const SingleTaskView = () => {
+    const task = taskDefinitions.find(t => t.id === taskId);
+    const totalValue = chartData.length > 0 ? chartData[0].value : 0;
+    if (!task) return null;
+
+    return (
+        <div className="h-[250px] flex flex-col items-center justify-center text-center">
+            <Target className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-bold" style={{color: task.color}}>{task.name}</h3>
+            <p className="text-3xl font-bold">{totalValue.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Total recorded value in selected period.</p>
+        </div>
+    );
+  };
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -68,6 +84,8 @@ const TaskDistributionChart: React.FC<TaskDistributionChartProps> = ({ startDate
           <div className="h-[250px] w-full">
             <Skeleton className="h-full w-full" />
           </div>
+        ) : taskId ? (
+          <SingleTaskView />
         ) : chartData.length === 0 ? (
           <p className="text-center text-muted-foreground py-10 h-[250px] flex items-center justify-center">
             No data to display for this period.

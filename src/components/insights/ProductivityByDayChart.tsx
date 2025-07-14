@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ProductivityByDayChartProps {
   startDate: Date;
   endDate: Date;
+  taskId: string | null;
 }
 
 const chartConfig = {
@@ -27,17 +28,17 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const ProductivityByDayChart: React.FC<ProductivityByDayChartProps> = ({ startDate, endDate }) => {
+const ProductivityByDayChart: React.FC<ProductivityByDayChartProps> = ({ startDate, endDate, taskId }) => {
   const { getProductivityByDay } = useUserRecords();
   const [chartData, setChartData] = useState<ProductivityByDayData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
-    const data = getProductivityByDay(startDate, endDate);
+    const data = getProductivityByDay(startDate, endDate, taskId);
     setChartData(data);
     setIsLoading(false);
-  }, [startDate, endDate, getProductivityByDay]);
+  }, [startDate, endDate, taskId, getProductivityByDay]);
 
   return (
     <Card className="shadow-lg">
