@@ -98,12 +98,12 @@ export default function InsightsPage() {
           </CardHeader>
           <CardContent>
              <div className="p-4 border rounded-lg bg-muted/50 mb-8">
-                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col md:flex-row flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2 w-full md:w-auto">
                         <ListFilter className="h-4 w-4 text-muted-foreground" />
-                        <Label htmlFor="task-filter">Task</Label>
+                        <Label htmlFor="task-filter" className="flex-shrink-0">Task</Label>
                         <Select onValueChange={(value) => setSelectedTaskId(value === 'all' ? null : value)} defaultValue="all" name="task-filter">
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Select a task" />
                             </SelectTrigger>
                             <SelectContent>
@@ -115,11 +115,11 @@ export default function InsightsPage() {
                         </Select>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full md:w-auto">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <Label htmlFor="time-range-filter">Time Range</Label>
+                        <Label htmlFor="time-range-filter" className="flex-shrink-0">Time Range</Label>
                          <Select onValueChange={(value: TimeRange) => setTimeRange(value)} defaultValue={timeRange} name="time-range-filter">
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Select time range" />
                             </SelectTrigger>
                             <SelectContent>
@@ -131,7 +131,7 @@ export default function InsightsPage() {
                         </Select>
                     </div>
                    
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full md:w-auto">
                         <Label htmlFor="custom-days" className="sr-only">Custom Days</Label>
                         <Input 
                             id="custom-days"
@@ -139,7 +139,7 @@ export default function InsightsPage() {
                             value={customDays}
                             onChange={(e) => setCustomDays(e.target.valueAsNumber || 0)}
                             placeholder="Days"
-                            className="w-24"
+                            className="w-full md:w-24"
                             onFocus={() => setTimeRange('custom')}
                         />
                         <Button onClick={handleCustomDaysApply} size="sm" variant="secondary">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -31,7 +32,7 @@ const TodoListCard = () => {
             <p className="text-center text-muted-foreground py-4">All tasks completed! ✨</p>
           </div>
         ) : (
-          <ScrollArea className="h-[180px] pr-3">
+          <ScrollArea className="h-[240px] pr-3">
             <ul className="space-y-3">
               {incompleteItems.map((item) => {
                 const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));

@@ -156,7 +156,7 @@ const RecordModal: React.FC<RecordModalProps> = ({
           {dailyRecords.length > 0 && (
             <>
               <h3 className="mb-2 text-sm font-medium text-muted-foreground">Existing Records</h3>
-              <ScrollArea className="max-h-[150px] pr-4 mb-4">
+              <ScrollArea className="max-h-[200px] pr-4 mb-4">
                 <div className="space-y-2">
                   {dailyRecords.map((rec) => {
                     const task = rec.taskType ? getTaskDefinitionById(rec.taskType) : null;
