@@ -66,6 +66,12 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-2">
+             <Link href="/todo" passHref>
+              <Button variant={isTodoPage ? "secondary" : "ghost"} size="sm">
+                <ListChecks className="mr-1.5 h-4 w-4" />
+                To-Do List
+              </Button>
+            </Link>
              <Link href="/insights" passHref>
               <Button variant={isInsightsPage ? "secondary" : "ghost"} size="sm">
                 <BarChart2 className="mr-1.5 h-4 w-4" />
@@ -82,12 +88,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
               <Button variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
                 <Sparkles className="mr-1.5 h-4 w-4" />
                 Constellations
-              </Button>
-            </Link>
-            <Link href="/todo" passHref>
-              <Button variant={isTodoPage ? "secondary" : "ghost"} size="sm">
-                <ListChecks className="mr-1.5 h-4 w-4" />
-                To-Do List
               </Button>
             </Link>
             {isDashboardPage && (
@@ -118,6 +118,12 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   View Level Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/todo" className="flex items-center w-full">
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    To-Do List
+                  </Link>
+                </DropdownMenuItem>
                  <DropdownMenuItem asChild>
                   <Link href="/insights" className="flex items-center w-full">
                     <BarChart2 className="mr-2 h-4 w-4" />
@@ -134,12 +140,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   <Link href="/constellations" className="flex items-center w-full">
                     <Sparkles className="mr-2 h-4 w-4" />
                     Constellations
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/todo" className="flex items-center w-full">
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    To-Do List
                   </Link>
                 </DropdownMenuItem>
                 {isDashboardPage && (
