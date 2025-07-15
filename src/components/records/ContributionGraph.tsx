@@ -76,7 +76,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
             </div>
           ))}
         </div>
-        {displayMode === 'current_month' ? (
+        {displayMode === 'current_month' && firstMonthData ? (
           <div className="flex flex-col items-center flex-shrink-0">
             <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{firstMonthData.monthLabel}</div>
             <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1">
@@ -89,7 +89,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                         day={day as DayData} 
                         onClick={() => {
                           const clickedDate = parseISO(day.date);
-                          if (!isFuture(clickedDate) || isFuture(new Date(day.date))) {
+                          if (!isFuture(clickedDate) || format(clickedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
                             onDayClick(day.date);
                           }
                         }} 
@@ -121,7 +121,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                             day={day as DayData} 
                             onClick={() => {
                               const clickedDate = parseISO(day.date);
-                              if (!isFuture(clickedDate) || isFuture(new Date(day.date))) {
+                               if (!isFuture(clickedDate) || format(clickedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
                                 onDayClick(day.date);
                               }
                             }} 

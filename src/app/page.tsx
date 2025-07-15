@@ -208,6 +208,7 @@ export default function HomePage() {
         <ContributionGraph
           onDayClick={handleDayClick}
           selectedTaskFilterId={selectedTaskFilterId}
+          displayMode="current_month"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

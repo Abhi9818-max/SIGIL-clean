@@ -5,7 +5,7 @@ import React from 'react';
 import type { DayData } from '@/types';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isFuture } from 'date-fns';
 
 interface DaySquareProps {
   day: DayData;
@@ -27,8 +27,13 @@ const parseHsl = (hslString: string): { h: number; s: number; l: number } | null
 };
 
 const DaySquare: React.FC<DaySquareProps> = ({ day, onClick }) => {
+  const dayDate = parseISO(day.date);
 
   const getSquareStyle = (): React.CSSProperties => {
+    if (isFuture(dayDate) && format(dayDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')) {
+        return { backgroundColor: 'transparent' };
+    }
+
     // Level 0: No activity or placeholder
     if (day.level === 0 || day.value === null) {
       return { backgroundColor: `var(--contribution-level-0)` };
@@ -56,31 +61,24 @@ const DaySquare: React.FC<DaySquareProps> = ({ day, onClick }) => {
             newLightness = Math.max(0, baseLightness - 3 * darknessFactor);
             break;
           default:
-            // Fallback to base task color if level is unexpected (should not happen)
             return { backgroundColor: day.taskColor };
         }
         return { backgroundColor: `hsl(${parsedColor.h}, ${parsedColor.s}%, ${newLightness}%)` };
       } else {
-        // If HSL parsing fails, fallback to the original task color without intensity
-        // or to a generic level color if parsing is critical. For now, original task color.
-        // console.warn(`Failed to parse HSL color: ${day.taskColor}. Using original color.`);
-        // As a safer fallback if parsing is crucial and fails, one might use generic level colors:
-        // return { backgroundColor: `var(--contribution-level-${day.level})` };
         return { backgroundColor: day.taskColor }; // Fallback to original task color
       }
     }
 
     // Fallback: Activity exists (level 1-4) but no taskColor defined for it
-    // This uses the generic contribution level colors from globals.css
     if (day.level > 0 && day.level <= 4) {
       return { backgroundColor: `var(--contribution-level-${day.level})` };
     }
 
-    // Default fallback (should ideally not be reached if logic above is complete)
+    // Default fallback
     return { backgroundColor: `var(--contribution-level-0)` };
   };
 
-  const formattedDate = format(parseISO(day.date), "MMM d, yyyy");
+  const formattedDate = format(dayDate, "MMM d, yyyy");
   let tooltipText = `No records on ${formattedDate}`;
   if (day.value !== null && day.value > 0) { // Ensure value is positive for meaningful record
      if(day.taskName){
@@ -97,10 +95,12 @@ const DaySquare: React.FC<DaySquareProps> = ({ day, onClick }) => {
         <TooltipTrigger asChild>
           <button
             onClick={onClick}
+            disabled={isFuture(dayDate) && format(dayDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')}
             className={cn(
               "aspect-square w-full h-full rounded-sm focus:outline-none focus:ring-2 focus:ring-ring",
               "hover:shadow-md hover:brightness-110",
-              "transition-all duration-200 ease-out"
+              "transition-all duration-200 ease-out",
+              (isFuture(dayDate) && format(dayDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')) ? "cursor-not-allowed" : ""
             )}
             style={getSquareStyle()}
             aria-label={tooltipText}

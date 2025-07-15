@@ -11,6 +11,7 @@ import {
   isAfter,
   startOfDay,
   isSameMonth,
+  isFuture,
 } from 'date-fns';
 import type { RecordEntry, MonthColumn, MonthlyDayData, TaskDefinition } from '@/types';
 import { getContributionLevel, DEFAULT_TASK_COLOR } from './config';
@@ -44,8 +45,8 @@ export const getMonthlyGraphData = (
   for (let monthIndex = startMonth; monthIndex <= endMonth; monthIndex++) { 
     const targetMonthDate = new Date(currentYear, monthIndex, 1);
     
-    // Skip future months if in single month mode and something is off
-    if (displayMode === 'current_month' && !isSameMonth(targetMonthDate, today)) {
+    // Skip future months entirely if they are not the current month
+    if (monthIndex > currentMonthIndex && displayMode === 'full') {
         continue;
     }
     
@@ -74,7 +75,7 @@ export const getMonthlyGraphData = (
       const currentDateObj = setDate(firstDayOfMonth, dayNum);
       const dateStr = format(currentDateObj, 'yyyy-MM-dd');
       
-      if (isAfter(startOfDay(currentDateObj), today)) {
+      if (isFuture(startOfDay(currentDateObj))) {
          currentWeek.push({
           date: dateStr,
           value: null,
