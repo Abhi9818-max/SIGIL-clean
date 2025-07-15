@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Target, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TaskDefinition } from '@/types';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const goalFormSchema = z.object({
   goalValue: z.preprocess(
@@ -116,6 +115,9 @@ const GoalForm: React.FC<GoalFormProps> = ({ task, onSave }) => {
 export default function GoalsPage() {
   const { taskDefinitions, updateTaskDefinition, getUserLevelInfo } = useUserRecords();
   const { toast } = useToast();
+  
+  const defaultTab = taskDefinitions.length > 0 ? taskDefinitions[0].id : "";
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(defaultTab);
 
   const handleSaveGoal = (taskId: string, data: GoalFormData) => {
     const taskToUpdate = taskDefinitions.find(t => t.id === taskId);
@@ -140,7 +142,8 @@ export default function GoalsPage() {
 
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
-  const defaultTab = taskDefinitions.length > 0 ? taskDefinitions[0].id : "";
+  
+  const selectedTask = selectedTaskId ? taskDefinitions.find(t => t.id === selectedTaskId) : null;
 
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -163,20 +166,31 @@ export default function GoalsPage() {
                 <p className="text-sm">Create tasks in "Manage Tasks" on the dashboard to set goals for them.</p>
               </div>
             ) : (
-                <Tabs defaultValue={defaultTab} className="w-full">
-                    <TabsList className="mb-4 grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                         {taskDefinitions.map(task => (
-                            <TabsTrigger key={task.id} value={task.id} style={{color: task.color}}>
-                                {task.name}
-                            </TabsTrigger>
-                         ))}
-                    </TabsList>
-                    {taskDefinitions.map(task => (
-                        <TabsContent key={task.id} value={task.id}>
-                            <GoalForm task={task} onSave={handleSaveGoal} />
-                        </TabsContent>
-                    ))}
-                </Tabs>
+                <div className="w-full space-y-4">
+                  <div>
+                    <Label htmlFor="task-select">Select Task</Label>
+                    <Select onValueChange={setSelectedTaskId} value={selectedTaskId ?? ""}>
+                      <SelectTrigger id="task-select" className="mt-1">
+                        <SelectValue placeholder="Choose a task..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {taskDefinitions.map(task => (
+                          <SelectItem key={task.id} value={task.id} style={{ color: task.color }}>
+                            {task.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {selectedTask ? (
+                    <GoalForm task={selectedTask} onSave={handleSaveGoal} />
+                  ) : (
+                    <div className="text-center text-muted-foreground py-10">
+                      <p>Select a task from the dropdown to set its goal.</p>
+                    </div>
+                  )}
+                </div>
             )}
           </CardContent>
         </Card>
