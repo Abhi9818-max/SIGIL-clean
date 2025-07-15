@@ -868,8 +868,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   // Achievement Check
   const checkAchievements = useCallback(() => {
-    if (!isLoaded) return;
-    
     const levelInfo = getUserLevelInfo();
     const streaks: Record<string, number> = {};
     taskDefinitions.forEach(task => {
@@ -898,16 +896,16 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     });
 
     if (newlyUnlocked.length > 0) {
-      setUnlockedAchievements(prev => [...prev, ...newlyUnlocked]);
+      setUnlockedAchievements(prev => [...new Set([...prev, ...newlyUnlocked])]);
     }
-  }, [isLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast]);
+  }, [getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, toast, unlockedAchievements]);
+
 
   useEffect(() => {
-    // Run achievement check when data is loaded and on certain state changes
     if (isLoaded) {
       checkAchievements();
     }
-  }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
+  }, [isLoaded, records, totalBonusPoints, unlockedSkills, checkAchievements]);
 
 
   return (
@@ -966,4 +964,3 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
-
