@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Target, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TaskDefinition } from '@/types';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const goalFormSchema = z.object({
   goalValue: z.preprocess(
@@ -42,12 +42,12 @@ const goalFormSchema = z.object({
 
 type GoalFormData = z.infer<typeof goalFormSchema>;
 
-interface GoalCardProps {
+interface GoalFormProps {
   task: TaskDefinition;
   onSave: (taskId: string, data: GoalFormData) => void;
 }
 
-const GoalCard: React.FC<GoalCardProps> = ({ task, onSave }) => {
+const GoalForm: React.FC<GoalFormProps> = ({ task, onSave }) => {
   const { register, handleSubmit, control, watch, formState: { errors } } = useForm<GoalFormData>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
@@ -67,62 +67,49 @@ const GoalCard: React.FC<GoalCardProps> = ({ task, onSave }) => {
   const unitLabel = task.unit ? task.unit.charAt(0).toUpperCase() + task.unit.slice(1) : 'Value';
 
   return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-            <div className="w-3 h-10 rounded-sm" style={{ backgroundColor: task.color }} />
-            <div>
-                <CardTitle>{task.name}</CardTitle>
-                <CardDescription>Set your goal for this task.</CardDescription>
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <Label htmlFor={`goalType-${task.id}`}>Goal Type</Label>
+            <Controller name="goalType" control={control} render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value ?? "at_least"} disabled={!watchGoalValue}>
+                <SelectTrigger id={`goalType-${task.id}`} className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                <SelectItem value="at_least">At Least</SelectItem>
+                <SelectItem value="no_more_than">No More Than</SelectItem>
+                </SelectContent>
+            </Select>
+            )} />
         </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={`goalType-${task.id}`}>Goal Type</Label>
-              <Controller name="goalType" control={control} render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value ?? "at_least"} disabled={!watchGoalValue}>
-                  <SelectTrigger id={`goalType-${task.id}`} className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="at_least">At Least</SelectItem>
-                    <SelectItem value="no_more_than">No More Than</SelectItem>
-                  </SelectContent>
-                </Select>
-              )} />
-            </div>
-            <div>
-              <Label htmlFor={`goalValue-${task.id}`}>Target ({unitLabel})</Label>
-              <Input id={`goalValue-${task.id}`} type="number" {...register('goalValue')} className="mt-1" placeholder="e.g., 10" />
-              {errors.goalValue && <p className="text-sm text-destructive mt-1">{errors.goalValue.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor={`goalInterval-${task.id}`}>Interval</Label>
-              <Controller name="goalInterval" control={control} render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue}>
-                  <SelectTrigger id={`goalInterval-${task.id}`} className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              )} />
-            </div>
-            <div>
-              <Label htmlFor={`bonus-${task.id}`}>Bonus %</Label>
-              <Input id={`bonus-${task.id}`} type="number" {...register('goalCompletionBonusPercentage')} className="mt-1" placeholder="e.g., 20" disabled={!watchGoalValue} />
-              {errors.goalCompletionBonusPercentage && <p className="text-sm text-destructive mt-1">{errors.goalCompletionBonusPercentage.message}</p>}
-            </div>
-          </div>
-          <Button type="submit" className="w-full mt-4">
-            <Save className="mr-2 h-4 w-4" />
-            Save Goal
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <div>
+            <Label htmlFor={`goalValue-${task.id}`}>Target ({unitLabel})</Label>
+            <Input id={`goalValue-${task.id}`} type="number" {...register('goalValue')} className="mt-1" placeholder="e.g., 10" />
+            {errors.goalValue && <p className="text-sm text-destructive mt-1">{errors.goalValue.message}</p>}
+        </div>
+        <div>
+            <Label htmlFor={`goalInterval-${task.id}`}>Interval</Label>
+            <Controller name="goalInterval" control={control} render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue}>
+                <SelectTrigger id={`goalInterval-${task.id}`} className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+            </Select>
+            )} />
+        </div>
+        <div>
+            <Label htmlFor={`bonus-${task.id}`}>Bonus %</Label>
+            <Input id={`bonus-${task.id}`} type="number" {...register('goalCompletionBonusPercentage')} className="mt-1" placeholder="e.g., 20" disabled={!watchGoalValue} />
+            {errors.goalCompletionBonusPercentage && <p className="text-sm text-destructive mt-1">{errors.goalCompletionBonusPercentage.message}</p>}
+        </div>
+        </div>
+        <Button type="submit" className="w-full mt-4">
+        <Save className="mr-2 h-4 w-4" />
+        Save Goal
+        </Button>
+    </form>
   );
 };
 
@@ -153,12 +140,13 @@ export default function GoalsPage() {
 
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
+  const defaultTab = taskDefinitions.length > 0 ? taskDefinitions[0].id : "";
 
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
       <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
       <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up">
-        <Card className="shadow-lg w-full max-w-4xl mx-auto">
+        <Card className="shadow-lg w-full max-w-2xl mx-auto">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Target className="h-6 w-6 text-primary" />
@@ -175,13 +163,20 @@ export default function GoalsPage() {
                 <p className="text-sm">Create tasks in "Manage Tasks" on the dashboard to set goals for them.</p>
               </div>
             ) : (
-              <ScrollArea className="h-[calc(100vh-350px)] pr-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {taskDefinitions.map(task => (
-                    <GoalCard key={task.id} task={task} onSave={handleSaveGoal} />
-                  ))}
-                </div>
-              </ScrollArea>
+                <Tabs defaultValue={defaultTab} className="w-full">
+                    <TabsList className="mb-4 grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                         {taskDefinitions.map(task => (
+                            <TabsTrigger key={task.id} value={task.id} style={{color: task.color}}>
+                                {task.name}
+                            </TabsTrigger>
+                         ))}
+                    </TabsList>
+                    {taskDefinitions.map(task => (
+                        <TabsContent key={task.id} value={task.id}>
+                            <GoalForm task={task} onSave={handleSaveGoal} />
+                        </TabsContent>
+                    ))}
+                </Tabs>
             )}
           </CardContent>
         </Card>
