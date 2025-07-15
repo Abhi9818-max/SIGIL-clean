@@ -29,7 +29,7 @@ export default function InsightsPage() {
   const { getUserLevelInfo, getYearlySum, taskDefinitions } = useUserRecords();
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('last_30_days');
-  const [customDays, setCustomDays] = useState<number>(30);
+  const [customDays, setCustomDays] = useState<number | string>(30);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
     start: subDays(new Date(), 29),
@@ -70,9 +70,10 @@ export default function InsightsPage() {
   }, [timeRange]);
 
   const handleCustomDaysApply = () => {
-    if (customDays > 0) {
+    const days = Number(customDays);
+    if (days > 0) {
       setTimeRange('custom'); // Set range to custom to reflect the action
-      calculateDateRange('custom', customDays);
+      calculateDateRange('custom', days);
     }
   };
   
@@ -137,7 +138,12 @@ export default function InsightsPage() {
                             id="custom-days"
                             type="number"
                             value={customDays}
-                            onChange={(e) => setCustomDays(e.target.valueAsNumber || 0)}
+                            onChange={(e) => setCustomDays(e.target.value)}
+                            onBlur={() => {
+                                if (customDays === '' || Number(customDays) <= 0) {
+                                    setCustomDays(30);
+                                }
+                            }}
                             placeholder="Days"
                             className="w-full md:w-24"
                             onFocus={() => setTimeRange('custom')}
