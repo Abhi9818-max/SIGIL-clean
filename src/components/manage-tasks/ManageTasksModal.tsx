@@ -71,19 +71,6 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
       { message: "This task name already exists." }
     ),
   color: z.string().regex(/^(#[0-9A-Fa-f]{6}|hsl\(\s*\d+\s*,\s*\d+%?\s*,\s*\d+%?\s*\))$/, "Color must be a valid hex or HSL string."),
-  goalValue: z.preprocess(
-    val => (val === "" || val === null || val === undefined ? undefined : Number(val)),
-    z.number().positive("Goal must be a positive number.").optional()
-  ),
-  goalInterval: z.preprocess(
-    val => (val === "none" || val === "" || val === null || val === undefined ? undefined : val), 
-    z.enum(['daily', 'weekly', 'monthly']).optional()
-  ),
-  goalType: z.enum(['at_least', 'no_more_than']).optional(),
-  goalCompletionBonusPercentage: z.preprocess(
-    val => (val === "" || val === null || val === undefined ? undefined : Number(val)),
-    z.number().min(0, "Bonus must be non-negative.").max(200, "Bonus can't exceed 200%.").optional()
-  ),
   unit: z.enum(['count', 'minutes', 'hours', 'pages', 'generic']).optional(),
   threshold1: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   threshold2: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
@@ -113,14 +100,6 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
         });
       }
     }
-
-    if (data.goalValue && data.threshold1 && data.goalValue < data.threshold1) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["goalValue"],
-            message: `Goal must be >= Phase 1 value (${data.threshold1}).`,
-        });
-    }
 });
 
 type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
@@ -144,10 +123,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
     defaultValues: {
       name: '',
       color: 'hsl(210, 40%, 96.1%)',
-      goalValue: undefined,
-      goalInterval: undefined,
-      goalType: 'at_least',
-      goalCompletionBonusPercentage: undefined,
       unit: 'count',
       threshold1: undefined,
       threshold2: undefined,
@@ -161,10 +136,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
     form.reset({
       name: task?.name || '',
       color: task?.color || 'hsl(210, 40%, 96.1%)',
-      goalValue: task?.goalValue ?? undefined,
-      goalInterval: task?.goalInterval ?? undefined,
-      goalType: task?.goalType ?? 'at_least',
-      goalCompletionBonusPercentage: task?.goalCompletionBonusPercentage ?? undefined,
       unit: task?.unit ?? 'count',
       threshold1: task?.intensityThresholds?.[0] ?? undefined,
       threshold2: task?.intensityThresholds?.[1] ?? undefined,
@@ -190,20 +161,11 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       intensityThresholds = providedThresholds;
     }
 
-    const goalValue = data.goalValue && Number(data.goalValue) > 0 ? Number(data.goalValue) : undefined;
-    const goalInterval = goalValue ? data.goalInterval : undefined;
-    const goalType = goalValue ? data.goalType : undefined;
-    const goalCompletionBonusPercentage = data.goalCompletionBonusPercentage && Number(data.goalCompletionBonusPercentage) > 0 ? Number(data.goalCompletionBonusPercentage) : undefined;
-
     const taskData = {
       name: data.name,
       color: data.color,
-      goalValue: goalValue,
-      goalInterval: goalInterval,
-      goalType: goalType,
       intensityThresholds: intensityThresholds,
       unit: data.unit,
-      goalCompletionBonusPercentage: goalCompletionBonusPercentage,
       darkStreakEnabled: data.darkStreakEnabled,
     };
 
@@ -225,7 +187,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
     }
   };
   
-  const watchGoalValue = form.watch('goalValue');
   const watchUnit = form.watch('unit');
 
   const unitPlaceholders: Record<TaskUnit, string> = {
@@ -252,7 +213,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       <DialogContent className="sm:max-w-lg p-0 flex flex-col max-h-screen md:max-h-[90vh]">
         <DialogHeader className="p-6 pb-4 flex-shrink-0">
           <DialogTitle>Manage Tasks</DialogTitle>
-          <DialogDescription>Add, edit, or delete your task types, their display properties, and goals.</DialogDescription>
+          <DialogDescription>Add, edit, or delete your task types and their display properties.</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-4">
@@ -288,18 +249,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                 </div>
                 
                 <Accordion type="multiple" className="w-full space-y-2">
-                  <AccordionItem value="goals" className="border-b-0">
-                    <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Goals & Bonuses (Optional)</div></AccordionTrigger>
-                    <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-                        <div className="sm:col-span-1"><Label htmlFor="goalType">Goal Type</Label><Controller name="goalType" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? "at_least"} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="at_least">At Least</SelectItem><SelectItem value="no_more_than">No More Than</SelectItem></SelectContent></Select>)}/></div>
-                        <div className="sm:col-span-1"><Label htmlFor="goalValue">Goal ({unitLabel})</Label><Input id="goalValue" type="number" {...form.register('goalValue')} className="mt-1"/></div>
-                        <div className="sm:col-span-1"><Label htmlFor="goalInterval">Interval</Label><Controller name="goalInterval" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select>)}/></div>
-                        <div className="sm:col-span-1"><Label htmlFor="goalCompletionBonusPercentage">Bonus %</Label><Input id="goalCompletionBonusPercentage" type="number" {...form.register('goalCompletionBonusPercentage')} className="mt-1" disabled={!watchGoalValue || Number(watchGoalValue) <= 0}/></div>
-                      </div>
-                       {form.formState.errors.goalValue && (<p className="text-sm text-destructive mt-1">{form.formState.errors.goalValue.message}</p>)}
-                    </AccordionContent>
-                  </AccordionItem>
                   <AccordionItem value="intensity" className="border-b-0">
                     <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Timer className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
                     <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
@@ -423,3 +372,5 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
+
+    
