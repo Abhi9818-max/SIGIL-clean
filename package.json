@@ -1,9 +1,10 @@
+
 {
     "name": "nextn",
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "npm run genkit:watch & next dev --turbopack",
+        "dev": "npm run genkit:watch & next dev",
         "genkit:dev": "genkit start src/ai/dev.ts",
         "genkit:watch": "genkit watch src/ai/dev.ts",
         "build": "next build",
