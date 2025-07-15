@@ -8,10 +8,8 @@ import {
   setDate,
   getYear,
   getMonth,
-  isAfter,
-  startOfDay,
-  isSameMonth,
   isFuture,
+  startOfDay,
 } from 'date-fns';
 import type { RecordEntry, MonthColumn, MonthlyDayData, TaskDefinition } from '@/types';
 import { getContributionLevel, DEFAULT_TASK_COLOR } from './config';
@@ -45,11 +43,6 @@ export const getMonthlyGraphData = (
   for (let monthIndex = startMonth; monthIndex <= endMonth; monthIndex++) { 
     const targetMonthDate = new Date(currentYear, monthIndex, 1);
     
-    // Skip future months entirely if they are not the current month
-    if (monthIndex > currentMonthIndex && displayMode === 'full') {
-        continue;
-    }
-    
     const year = getYear(targetMonthDate);
     const month = getMonth(targetMonthDate);
 
@@ -75,59 +68,49 @@ export const getMonthlyGraphData = (
       const currentDateObj = setDate(firstDayOfMonth, dayNum);
       const dateStr = format(currentDateObj, 'yyyy-MM-dd');
       
-      if (isFuture(startOfDay(currentDateObj))) {
-         currentWeek.push({
-          date: dateStr,
-          value: null,
-          level: 0,
-          isPlaceholder: false,
-          taskColor: 'hsl(var(--muted) / 0.1)',
-        });
-      } else {
-        const dailyRecords = recordsMap.get(dateStr) || [];
-        const relevantRecords = filterByTaskId 
-          ? dailyRecords.filter(r => r.taskType === filterByTaskId) 
-          : dailyRecords;
+      const dailyRecords = recordsMap.get(dateStr) || [];
+      const relevantRecords = filterByTaskId 
+        ? dailyRecords.filter(r => r.taskType === filterByTaskId) 
+        : dailyRecords;
+      
+      const totalValue = relevantRecords.reduce((sum, r) => sum + r.value, 0);
+
+      let displayValue: number | null = null;
+      let displayLevel = 0;
+      let taskColor: string | undefined = undefined;
+      let taskName: string | undefined = undefined;
+      let taskType: string | undefined = undefined;
+      let taskIntensityThresholds: readonly number[] | undefined = undefined;
+
+      if (relevantRecords.length > 0) {
+        displayValue = totalValue;
+
+        const representativeRecord = relevantRecords[0];
+        const taskDef = representativeRecord.taskType ? taskDefinitionMap.get(representativeRecord.taskType) : undefined;
         
-        const totalValue = relevantRecords.reduce((sum, r) => sum + r.value, 0);
-
-        let displayValue: number | null = null;
-        let displayLevel = 0;
-        let taskColor: string | undefined = undefined;
-        let taskName: string | undefined = undefined;
-        let taskType: string | undefined = undefined;
-        let taskIntensityThresholds: readonly number[] | undefined = undefined;
-
-        if (relevantRecords.length > 0) {
-          displayValue = totalValue;
-
-          const representativeRecord = relevantRecords[0];
-          const taskDef = representativeRecord.taskType ? taskDefinitionMap.get(representativeRecord.taskType) : undefined;
-          
-          if (taskDef) {
-            taskColor = taskDef.color;
-            taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : taskDef.name;
-            taskType = taskDef.id;
-            if (taskDef.intensityThresholds && taskDef.intensityThresholds.length === 4) {
-              taskIntensityThresholds = taskDef.intensityThresholds;
-            }
-          } else {
-            taskColor = DEFAULT_TASK_COLOR;
-            taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : 'Unassigned';
+        if (taskDef) {
+          taskColor = taskDef.color;
+          taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : taskDef.name;
+          taskType = taskDef.id;
+          if (taskDef.intensityThresholds && taskDef.intensityThresholds.length === 4) {
+            taskIntensityThresholds = taskDef.intensityThresholds;
           }
-          displayLevel = getContributionLevel(totalValue, taskIntensityThresholds);
+        } else {
+          taskColor = DEFAULT_TASK_COLOR;
+          taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : 'Unassigned';
         }
-
-        currentWeek.push({
-          date: dateStr,
-          value: displayValue,
-          level: displayLevel,
-          taskType: taskType,
-          taskName: taskName,
-          taskColor: taskColor,
-          isPlaceholder: false,
-        });
+        displayLevel = getContributionLevel(totalValue, taskIntensityThresholds);
       }
+
+      currentWeek.push({
+        date: dateStr,
+        value: displayValue,
+        level: displayLevel,
+        taskType: taskType,
+        taskName: taskName,
+        taskColor: taskColor,
+        isPlaceholder: false,
+      });
 
 
       if (currentWeek.length === 7) {

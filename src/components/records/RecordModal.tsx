@@ -195,8 +195,35 @@ const RecordModal: React.FC<RecordModalProps> = ({
               {editingRecordId ? "Editing Record" : "Add New Record"}
             </h3>
             
-            <input type="hidden" {...form.register('id')} />
-            <input type="hidden" {...form.register('date')} />
+            <Controller
+                name="date"
+                control={form.control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
 
             <div>
               <Label htmlFor="value">Record Value</Label>
