@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2 } from 'lucide-react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -42,6 +42,7 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
   const isTestApiPage = pathname === '/test-api';
   const isInsightsPage = pathname === '/insights';
   const isEchoesPage = pathname === '/echoes';
+  const isAchievementsPage = pathname === '/achievements';
 
   return (
     <>
@@ -78,10 +79,10 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                 Insights
               </Button>
             </Link>
-             <Link href="/echoes" passHref>
-              <Button variant={isEchoesPage ? "secondary" : "ghost"} size="sm">
-                <Share2 className="mr-1.5 h-4 w-4" />
-                Echoes
+             <Link href="/achievements" passHref>
+              <Button variant={isAchievementsPage ? "secondary" : "ghost"} size="sm">
+                <Trophy className="mr-1.5 h-4 w-4" />
+                Achievements
               </Button>
             </Link>
              <Link href="/constellations" passHref>
@@ -131,15 +132,21 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   </Link>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>
-                  <Link href="/echoes" className="flex items-center w-full">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Echoes
+                  <Link href="/achievements" className="flex items-center w-full">
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Achievements
                   </Link>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>
                   <Link href="/constellations" className="flex items-center w-full">
                     <Sparkles className="mr-2 h-4 w-4" />
                     Constellations
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/echoes" className="flex items-center w-full">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Echoes
                   </Link>
                 </DropdownMenuItem>
                 {isDashboardPage && (

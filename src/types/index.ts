@@ -1,6 +1,7 @@
 
 
 export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic';
+export type GoalType = 'at_least' | 'no_more_than';
 
 export interface RecordEntry {
   id: string; // Unique identifier for each record
@@ -40,6 +41,7 @@ export interface TaskDefinition {
   intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
   goalValue?: number; // Optional: A numerical goal for the task (e.g., hours)
   goalInterval?: 'daily' | 'weekly' | 'monthly'; // Optional: The interval for the goal
+  goalType?: GoalType; // Optional: 'at_least' or 'no_more_than'
   goalCompletionBonusPercentage?: number; // Optional: Percentage of goalValue to award as bonus points
   darkStreakEnabled?: boolean; // Optional: Enable high-stakes daily streak for this task
 }
@@ -86,6 +88,7 @@ export type AutomatedGoalCheckResult =
       periodName: string; // e.g., "yesterday", "last week (May 20 - May 26)"
       periodIdentifier: string; // YYYY-MM-DD representing the end of the checked period
       taskName: string;
+      goalType: GoalType;
       error?: never;
     }
   | {
@@ -97,6 +100,7 @@ export type AutomatedGoalCheckResult =
       periodName?: never;
       periodIdentifier?: never;
       taskName?: never;
+      goalType?: never;
     };
     
 // For Consistency Breach Modal
@@ -166,4 +170,22 @@ export interface DarkStreakCheckResult {
   streakBroken: boolean;
   penalty: number;
   dare?: string;
+}
+
+// For Achievements
+export type AchievementCategory = 'level' | 'streak' | 'skills' | 'creation';
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  category: AchievementCategory;
+  icon: React.ElementType;
+  isSecret?: boolean; // If true, hide details until unlocked
+  check: (context: {
+    levelInfo: UserLevelInfo;
+    streaks: Record<string, number>;
+    unlockedSkillCount: number;
+    loreEntryCount: number;
+  }) => boolean;
 }

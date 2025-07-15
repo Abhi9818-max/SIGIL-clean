@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult, Achievement } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
@@ -11,11 +11,13 @@ import {
   LOCAL_STORAGE_MET_GOALS_KEY,
   LOCAL_STORAGE_HANDLED_STREAKS_KEY,
   LOCAL_STORAGE_TODO_KEY,
+  LOCAL_STORAGE_LORE_KEY,
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
   LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY,
   LOCAL_STORAGE_FREEZE_CRYSTALS_KEY,
   LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
+  LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
   CONSISTENCY_BREACH_DAYS,
@@ -24,6 +26,7 @@ import {
   STREAK_MILESTONES_FOR_CRYSTALS
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
+import { ACHIEVEMENTS } from '@/lib/achievements';
 import {
   format,
   parseISO,
@@ -88,6 +91,8 @@ interface UserRecordsContextType {
   // Freeze Crystals
   freezeCrystals: number;
   useFreezeCrystal: () => void;
+  // Achievements
+  unlockedAchievements: string[];
 }
 
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
@@ -103,6 +108,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
   const [freezeCrystals, setFreezeCrystals] = useState<number>(0);
   const [awardedStreakMilestones, setAwardedStreakMilestones] = useState<Record<string, number[]>>({});
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
 
@@ -129,6 +135,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
                 id: task.id || uuidv4(),
                 goalValue: task.goalValue,
                 goalInterval: task.goalInterval,
+                goalType: task.goalType ?? 'at_least',
                 intensityThresholds: task.intensityThresholds,
                 goalCompletionBonusPercentage: task.goalCompletionBonusPercentage,
                 darkStreakEnabled: task.darkStreakEnabled ?? false,
@@ -218,6 +225,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
     } catch (error) {
         console.error("Failed to load awarded streak milestones from localStorage:", error);
+    }
+
+    try {
+      const storedAchievements = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY);
+      if (storedAchievements) {
+        setUnlockedAchievements(JSON.parse(storedAchievements));
+      }
+    } catch (error) {
+      console.error("Failed to load unlocked achievements from localStorage:", error);
     }
 
 
@@ -324,6 +340,17 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
             }
         }
     }, [awardedStreakMilestones, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY, JSON.stringify(unlockedAchievements));
+      } catch (error) {
+        console.error("Failed to save unlocked achievements to localStorage:", error);
+      }
+    }
+  }, [unlockedAchievements, isLoaded]);
+
 
   const getCurrentStreak = useCallback((taskId: string | null = null): number => {
     if (!isLoaded) return 0;
@@ -470,6 +497,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       id: newId,
       goalValue: goalValue,
       goalInterval: goalValue ? taskData.goalInterval : undefined,
+      goalType: goalValue ? (taskData.goalType ?? 'at_least') : undefined,
     };
     setTaskDefinitions(prevTasks => [...prevTasks, newTask]);
     return newId;
@@ -482,6 +510,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         ...updatedTask,
         goalValue: goalValue,
         goalInterval: goalValue ? updatedTask.goalInterval : undefined,
+        goalType: goalValue ? (updatedTask.goalType ?? 'at_least') : undefined,
       } : task)
     );
   }, []);
@@ -574,7 +603,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     if (!task || !task.goalValue || !task.goalInterval || task.goalValue <= 0) {
       return { error: "Goal not properly configured for this task." };
     }
-
+    const goalType = task.goalType ?? 'at_least';
     const today = new Date();
     let periodStart: Date;
     let periodEnd: Date;
@@ -605,8 +634,13 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     let metGoal = false;
     const periodIdentifierStr = format(periodEnd, 'yyyy-MM-dd');
 
-    if (actualValue >= task.goalValue) {
+    if (goalType === 'at_least' && actualValue >= task.goalValue) {
       metGoal = true;
+    } else if (goalType === 'no_more_than' && actualValue <= task.goalValue) {
+      metGoal = true;
+    }
+
+    if (metGoal) {
       if (task.goalCompletionBonusPercentage && task.goalCompletionBonusPercentage > 0) {
         bonusAwarded = awardGoalCompletionBonus(taskId);
       }
@@ -622,6 +656,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       periodName,
       periodIdentifier: periodIdentifierStr,
       taskName: task.name,
+      goalType,
     };
   }, [getTaskDefinitionById, getAggregateSum, awardGoalCompletionBonus]);
 
@@ -831,6 +866,47 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return dayTotals;
   }, [getRecordsForDateRange]);
 
+  // Achievement Check
+  const checkAchievements = useCallback(() => {
+    if (!isLoaded) return;
+    
+    const levelInfo = getUserLevelInfo();
+    const streaks: Record<string, number> = {};
+    taskDefinitions.forEach(task => {
+        streaks[task.id] = getCurrentStreak(task.id);
+    });
+    const unlockedSkillCount = unlockedSkills.length;
+    let loreEntryCount = 0;
+    try {
+        const storedLore = localStorage.getItem(LOCAL_STORAGE_LORE_KEY);
+        if (storedLore) {
+            loreEntryCount = JSON.parse(storedLore).length;
+        }
+    } catch {}
+
+    const context = { levelInfo, streaks, unlockedSkillCount, loreEntryCount };
+    
+    const newlyUnlocked: string[] = [];
+    ACHIEVEMENTS.forEach(ach => {
+      if (!unlockedAchievements.includes(ach.id) && ach.check(context)) {
+        newlyUnlocked.push(ach.id);
+        toast({
+          title: `🏆 Achievement Unlocked!`,
+          description: ach.name,
+        });
+      }
+    });
+
+    if (newlyUnlocked.length > 0) {
+      setUnlockedAchievements(prev => [...prev, ...newlyUnlocked]);
+    }
+  }, [isLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast]);
+
+  useEffect(() => {
+    // Run achievement check when data is loaded and on certain state changes
+    checkAchievements();
+  }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
+
 
   return (
     <UserRecordsContext.Provider value={{
@@ -873,6 +949,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       // Freeze Crystals
       freezeCrystals,
       useFreezeCrystal,
+      // Achievements
+      unlockedAchievements,
     }}>
       {children}
     </UserRecordsContext.Provider>

@@ -39,20 +39,30 @@ const AISuggestionsCard: React.FC = () => {
           variant: "destructive",
         });
       } else if (result) {
+        let description = '';
         if (result.metGoal) {
-          let description = `Goal Met for ${result.taskName}! You recorded ${result.actualValue} / ${result.goalValue} for ${result.periodName}.`;
+          if (result.goalType === 'at_least') {
+            description = `Goal Met! You recorded ${result.actualValue} / ${result.goalValue} for ${result.periodName}.`;
+          } else {
+            description = `Goal Met! You recorded ${result.actualValue}, staying under the max of ${result.goalValue} for ${result.periodName}.`;
+          }
           if (result.bonusAwarded !== null && result.bonusAwarded > 0) {
             description += ` You earned ${result.bonusAwarded} bonus points!`;
           }
           toast({
-            title: "🎉 Goal Achieved!",
+            title: `🎉 Goal Achieved: ${result.taskName}`,
             description: description,
             duration: 7000,
           });
         } else {
+           if (result.goalType === 'at_least') {
+            description = `Goal not met for ${result.periodName}. You recorded ${result.actualValue} / ${result.goalValue}. Keep pushing!`;
+          } else {
+            description = `Goal failed for ${result.periodName}. You recorded ${result.actualValue}, exceeding the max of ${result.goalValue}.`;
+          }
           toast({
             title: `🎯 Goal Update: ${result.taskName}`,
-            description: `Goal not met for ${result.periodName}. You recorded ${result.actualValue} / ${result.goalValue}. Keep pushing!`,
+            description: description,
             duration: 7000,
           });
         }
@@ -145,7 +155,7 @@ const AISuggestionsCard: React.FC = () => {
                       <p className="text-sm font-medium text-foreground mb-2">
                         Task: {task.name}
                         <span className="text-xs text-muted-foreground ml-1">
-                           (Goal: {task.goalValue} / {task.goalInterval?.replace('ly', '')}
+                           (Goal: {task.goalType === 'no_more_than' ? 'Max ' : ''}{task.goalValue} / {task.goalInterval?.replace('ly', '')}
                            {task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''})
                         </span>
                       </p>

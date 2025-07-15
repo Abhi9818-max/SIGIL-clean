@@ -50,7 +50,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import type { TaskDefinition, TaskUnit } from '@/types';
+import type { TaskDefinition, TaskUnit, GoalType } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { VALUE_THRESHOLDS } from '@/lib/config'; 
 import { Switch } from '@/components/ui/switch';
@@ -79,6 +79,7 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
     val => (val === "none" || val === "" || val === null || val === undefined ? undefined : val), 
     z.enum(['daily', 'weekly', 'monthly']).optional()
   ),
+  goalType: z.enum(['at_least', 'no_more_than']).optional(),
   goalCompletionBonusPercentage: z.preprocess(
     val => (val === "" || val === null || val === undefined ? undefined : Number(val)),
     z.number().min(0, "Bonus must be non-negative.").max(200, "Bonus can't exceed 200%.").optional()
@@ -145,6 +146,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       color: 'hsl(210, 40%, 96.1%)',
       goalValue: undefined,
       goalInterval: undefined,
+      goalType: 'at_least',
       goalCompletionBonusPercentage: undefined,
       unit: 'count',
       threshold1: undefined,
@@ -161,6 +163,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       color: task?.color || 'hsl(210, 40%, 96.1%)',
       goalValue: task?.goalValue ?? undefined,
       goalInterval: task?.goalInterval ?? undefined,
+      goalType: task?.goalType ?? 'at_least',
       goalCompletionBonusPercentage: task?.goalCompletionBonusPercentage ?? undefined,
       unit: task?.unit ?? 'count',
       threshold1: task?.intensityThresholds?.[0] ?? undefined,
@@ -189,6 +192,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 
     const goalValue = data.goalValue && Number(data.goalValue) > 0 ? Number(data.goalValue) : undefined;
     const goalInterval = goalValue ? data.goalInterval : undefined;
+    const goalType = goalValue ? data.goalType : undefined;
     const goalCompletionBonusPercentage = data.goalCompletionBonusPercentage && Number(data.goalCompletionBonusPercentage) > 0 ? Number(data.goalCompletionBonusPercentage) : undefined;
 
     const taskData = {
@@ -196,6 +200,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       color: data.color,
       goalValue: goalValue,
       goalInterval: goalInterval,
+      goalType: goalType,
       intensityThresholds: intensityThresholds,
       unit: data.unit,
       goalCompletionBonusPercentage: goalCompletionBonusPercentage,
@@ -286,7 +291,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   <AccordionItem value="goals" className="border-b-0">
                     <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" />Goals & Bonuses (Optional)</div></AccordionTrigger>
                     <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                        <div className="sm:col-span-1"><Label htmlFor="goalType">Goal Type</Label><Controller name="goalType" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? "at_least"} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="at_least">At Least</SelectItem><SelectItem value="no_more_than">No More Than</SelectItem></SelectContent></Select>)}/></div>
                         <div className="sm:col-span-1"><Label htmlFor="goalValue">Goal ({unitLabel})</Label><Input id="goalValue" type="number" {...form.register('goalValue')} className="mt-1"/></div>
                         <div className="sm:col-span-1"><Label htmlFor="goalInterval">Interval</Label><Controller name="goalInterval" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!watchGoalValue || Number(watchGoalValue) <= 0}><SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select>)}/></div>
                         <div className="sm:col-span-1"><Label htmlFor="goalCompletionBonusPercentage">Bonus %</Label><Input id="goalCompletionBonusPercentage" type="number" {...form.register('goalCompletionBonusPercentage')} className="mt-1" disabled={!watchGoalValue || Number(watchGoalValue) <= 0}/></div>
@@ -363,8 +369,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                                     <Tooltip><TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger><TooltipContent><p>Dark Streak Enabled</p></TooltipContent></Tooltip>
                                 )}
                                 {task.goalValue && (
-                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalValue}{task.unit ? ` ${task.unit}` : ''}{task.goalInterval ? `/${task.goalInterval.charAt(0)}` : ''}</span></TooltipTrigger><TooltipContent>
-                                    <p>Goal: {task.goalValue}{task.unit ? ` ${task.unit}` : ''}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
+                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalType === 'no_more_than' ? '<= ' : ''}{task.goalValue}{task.unit ? ` ${task.unit}` : ''}{task.goalInterval ? `/${task.goalInterval.charAt(0)}` : ''}</span></TooltipTrigger><TooltipContent>
+                                    <p>Goal: {task.goalType === 'no_more_than' ? 'No More Than' : 'At Least'} {task.goalValue}{task.unit ? ` ${task.unit}` : ''}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
                                     </TooltipContent></Tooltip>
                                 )}
                                 {task.intensityThresholds && (
