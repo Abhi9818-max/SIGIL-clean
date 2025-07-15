@@ -10,6 +10,7 @@ import {
   getMonth,
   isAfter,
   startOfDay,
+  isSameMonth,
 } from 'date-fns';
 import type { RecordEntry, MonthColumn, MonthlyDayData, TaskDefinition } from '@/types';
 import { getContributionLevel, DEFAULT_TASK_COLOR } from './config';
@@ -18,10 +19,12 @@ export const getMonthlyGraphData = (
   records: RecordEntry[], 
   taskDefinitions: TaskDefinition[],
   filterByTaskId: string | null = null,
-  currentSystemDate: Date // Pass the current date to compare against
+  currentSystemDate: Date,
+  displayMode: 'full' | 'current_month' = 'current_month'
 ): MonthColumn[] => {
-  const today = startOfDay(currentSystemDate); // Use startOfDay for consistent comparison
+  const today = startOfDay(currentSystemDate);
   const currentYear = getYear(today);
+  const currentMonthIndex = getMonth(today);
   const monthlyData: MonthColumn[] = [];
   
   const recordsMap = new Map<string, RecordEntry[]>();
@@ -35,12 +38,19 @@ export const getMonthlyGraphData = (
   const taskDefinitionMap = new Map<string, TaskDefinition>();
   taskDefinitions.forEach(task => taskDefinitionMap.set(task.id, task));
 
-  // Generate data for all 12 months of the current year
-  for (let monthIndex = 0; monthIndex < 12; monthIndex++) { 
+  const startMonth = displayMode === 'current_month' ? currentMonthIndex : 0;
+  const endMonth = displayMode === 'current_month' ? currentMonthIndex : 11;
+
+  for (let monthIndex = startMonth; monthIndex <= endMonth; monthIndex++) { 
     const targetMonthDate = new Date(currentYear, monthIndex, 1);
     
+    // Skip future months if in single month mode and something is off
+    if (displayMode === 'current_month' && !isSameMonth(targetMonthDate, today)) {
+        continue;
+    }
+    
     const year = getYear(targetMonthDate);
-    const currentMonthLoopIndex = getMonth(targetMonthDate);
+    const month = getMonth(targetMonthDate);
 
     const firstDayOfMonth = startOfMonth(targetMonthDate);
     const daysInMonth = getDaysInMonth(targetMonthDate);
@@ -53,7 +63,7 @@ export const getMonthlyGraphData = (
 
     for (let j = 0; j < firstDayOfMonthWeekDay; j++) {
       currentWeek.push({
-        date: `placeholder-start-${year}-${currentMonthLoopIndex}-${j}`,
+        date: `placeholder-start-${year}-${month}-${j}`,
         value: null,
         level: 0,
         isPlaceholder: true,
@@ -64,14 +74,13 @@ export const getMonthlyGraphData = (
       const currentDateObj = setDate(firstDayOfMonth, dayNum);
       const dateStr = format(currentDateObj, 'yyyy-MM-dd');
       
-      // Skip processing for days that are in the future
       if (isAfter(startOfDay(currentDateObj), today)) {
          currentWeek.push({
           date: dateStr,
           value: null,
-          level: 0, // Or a specific "future" level if needed for styling
-          isPlaceholder: false, // It's a real date, but in the future
-          taskColor: 'hsl(var(--muted) / 0.1)', // Dimmer for future dates
+          level: 0,
+          isPlaceholder: false,
+          taskColor: 'hsl(var(--muted) / 0.1)',
         });
       } else {
         const dailyRecords = recordsMap.get(dateStr) || [];
@@ -91,7 +100,6 @@ export const getMonthlyGraphData = (
         if (relevantRecords.length > 0) {
           displayValue = totalValue;
 
-          // If filtered, use that task's info. If not, use the info from the first record of the day.
           const representativeRecord = relevantRecords[0];
           const taskDef = representativeRecord.taskType ? taskDefinitionMap.get(representativeRecord.taskType) : undefined;
           
@@ -131,7 +139,7 @@ export const getMonthlyGraphData = (
       const remainingCells = 7 - currentWeek.length;
       for (let j = 0; j < remainingCells; j++) {
         currentWeek.push({
-          date: `placeholder-end-${year}-${currentMonthLoopIndex}-${j}`,
+          date: `placeholder-end-${year}-${month}-${j}`,
           value: null,
           level: 0,
           isPlaceholder: true,
@@ -144,7 +152,7 @@ export const getMonthlyGraphData = (
       const placeholderWeek: MonthlyDayData[] = [];
       for (let j = 0; j < 7; j++) {
         placeholderWeek.push({
-          date: `placeholder-fill-${year}-${currentMonthLoopIndex}-${currentMonthWeeks.length}-${j}`,
+          date: `placeholder-fill-${year}-${month}-${currentMonthWeeks.length}-${j}`,
           value: null,
           level: 0,
           isPlaceholder: true,
@@ -156,7 +164,7 @@ export const getMonthlyGraphData = (
     monthlyData.push({
       monthLabel,
       year, 
-      month: currentMonthLoopIndex,
+      month: month,
       weeks: currentMonthWeeks,
     });
   }
