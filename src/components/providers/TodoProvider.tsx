@@ -58,25 +58,29 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (isLoaded) {
       let itemsToUpdate = [...todoItems];
-      let penaltyApplied = false;
+      let wasPenaltyApplied = false;
 
       itemsToUpdate.forEach(item => {
         if (item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate))) && !item.penaltyApplied) {
-          applyPenalty(item);
-          penaltyApplied = true;
+          if (item.penalty && item.penalty > 0) {
+            userRecords.deductBonusPoints(item.penalty);
+            toast({
+              title: "Pact Broken",
+              description: `Your pact "${item.text}" was not honored in time. A penalty of ${item.penalty} XP has been deducted.`,
+              variant: "destructive",
+              duration: 7000,
+            });
+            item.penaltyApplied = true;
+            wasPenaltyApplied = true;
+          }
         }
       });
       
-      if(penaltyApplied) {
-        // This check is to avoid an unnecessary state update if no penalties were applied
-        try {
-          localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(itemsToUpdate));
-        } catch (error) {
-          console.error("Failed to save to-do items to localStorage:", error);
-        }
+      if(wasPenaltyApplied) {
+        setTodoItems(itemsToUpdate);
       }
     }
-  }, [isLoaded, applyPenalty]);
+  }, [isLoaded, todoItems]); // Removed dependencies that cause loops
 
 
   useEffect(() => {
