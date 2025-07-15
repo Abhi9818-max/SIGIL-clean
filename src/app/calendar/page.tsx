@@ -7,7 +7,7 @@ import ContributionGraph from '@/components/records/ContributionGraph';
 import RecordModal from '@/components/records/RecordModal';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CornerDownLeft, Calendar } from 'lucide-react';
+import { CornerDownLeft, ListFilter } from 'lucide-react';
 import { format, getYear } from 'date-fns';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ export default function CalendarPage() {
   const [selectedDateForModal, setSelectedDateForModal] = useState<string | null>(null);
   const { getUserLevelInfo, taskDefinitions, records } = useUserRecords();
   const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
+  const [selectedTaskFilterId, setSelectedTaskFilterId] = useState<string | null>(null);
 
   const handleDayClick = (date: string) => {
     setSelectedDateForModal(date);
@@ -61,18 +62,34 @@ export default function CalendarPage() {
                     <CardTitle>Contribution Calendar</CardTitle>
                     <CardDescription>A full overview of your activity. Click any day to add or edit a record.</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="year-select" className="flex-shrink-0">Year</Label>
-                    <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-                      <SelectTrigger className="w-[120px]" id="year-select">
-                        <SelectValue placeholder="Select year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableYears.map(year => (
-                          <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="task-filter" className="flex-shrink-0"><ListFilter className="h-4 w-4 inline-block mr-1" />Task</Label>
+                        <Select onValueChange={(value) => setSelectedTaskFilterId(value === 'all' ? null : value)} defaultValue="all">
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Select a task" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Tasks</SelectItem>
+                                {taskDefinitions.map(task => (
+                                    <SelectItem key={task.id} value={task.id}>{task.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="year-select" className="flex-shrink-0">Year</Label>
+                      <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+                        <SelectTrigger className="w-[120px]" id="year-select">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableYears.map(year => (
+                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
              </CardHeader>
@@ -80,7 +97,7 @@ export default function CalendarPage() {
                 <ContributionGraph
                     year={selectedYear}
                     onDayClick={handleDayClick}
-                    selectedTaskFilterId={null} // Show all tasks on this view
+                    selectedTaskFilterId={selectedTaskFilterId}
                     displayMode="full"
                 />
              </CardContent>
