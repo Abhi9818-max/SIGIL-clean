@@ -82,9 +82,9 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
                         ? `ph-${monthCol.monthLabel}-${weekIdx}-${dayInWeekIdx}`
                         : day.date;
                       return day.isPlaceholder ? (
-                        <div key={key} className="w-6 h-6 sm:w-7 sm:h-7 rounded-sm" />
+                        <div key={key} className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm" />
                       ) : (
-                        <div key={key} className="w-6 h-6 sm:w-7 sm:h-7">
+                        <div key={key} className="w-7 h-7 sm:w-8 sm:h-8">
                           <DaySquare 
                             day={day as DayData} 
                             onClick={() => {
