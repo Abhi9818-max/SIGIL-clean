@@ -18,12 +18,8 @@ const DaySquare: React.FC<DaySquareProps> = ({ day, onClick }) => {
   const isDayInTheFuture = isFuture(dayDate) && !isToday;
 
   const getSquareStyle = (): React.CSSProperties => {
-    if (isDayInTheFuture) {
-      return { backgroundColor: 'transparent', border: '1px dashed hsl(var(--border) / 0.5)' };
-    }
-
-    // Level 0: No activity
-    if (day.level === 0 || day.value === null) {
+    // Level 0 or future: No activity
+    if (day.level === 0 || day.value === null || isDayInTheFuture) {
       return { backgroundColor: `var(--contribution-level-0)` };
     }
 
