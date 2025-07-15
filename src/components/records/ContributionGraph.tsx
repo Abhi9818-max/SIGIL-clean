@@ -61,7 +61,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
     <div className="p-4 rounded-lg shadow-md bg-card">
       <div className="flex gap-3">
         <ScrollArea className="w-full whitespace-nowrap" ref={scrollAreaRef}>
-          <div className="flex gap-x-3.5 sm:gap-x-8"> 
+          <div className="flex gap-x-5 sm:gap-x-8">
             {monthlyGraphData.map((monthCol, monthIdx) => (
               <div
                 key={monthCol.monthLabel}
@@ -81,9 +81,9 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({ onDayClick, selec
                         ? `ph-${monthCol.monthLabel}-${weekIdx}-${dayInWeekIdx}`
                         : day.date;
                       return day.isPlaceholder ? (
-                        <div key={key} className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm" />
+                        <div key={key} className="w-8 h-8 sm:w-8 sm:h-8 rounded-sm" />
                       ) : (
-                        <div key={key} className="w-7 h-7 sm:w-8 sm:h-8">
+                        <div key={key} className="w-8 h-8 sm:w-8 sm:h-8">
                           <DaySquare 
                             day={day as DayData} 
                             onClick={() => {
