@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy } from 'lucide-react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -43,6 +43,7 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
   const isInsightsPage = pathname === '/insights';
   const isEchoesPage = pathname === '/echoes';
   const isAchievementsPage = pathname === '/achievements';
+  const isGoalsPage = pathname === '/goals';
 
   return (
     <>
@@ -70,7 +71,13 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
              <Link href="/todo" passHref>
               <Button variant={isTodoPage ? "secondary" : "ghost"} size="sm">
                 <ListChecks className="mr-1.5 h-4 w-4" />
-                To-Do List
+                Pacts
+              </Button>
+            </Link>
+             <Link href="/goals" passHref>
+              <Button variant={isGoalsPage ? "secondary" : "ghost"} size="sm">
+                <Target className="mr-1.5 h-4 w-4" />
+                Goals
               </Button>
             </Link>
              <Link href="/insights" passHref>
@@ -122,7 +129,13 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                 <DropdownMenuItem asChild>
                   <Link href="/todo" className="flex items-center w-full">
                     <ListChecks className="mr-2 h-4 w-4" />
-                    To-Do List
+                    Pacts
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/goals" className="flex items-center w-full">
+                    <Target className="mr-2 h-4 w-4" />
+                    Goals
                   </Link>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>

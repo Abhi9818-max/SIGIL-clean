@@ -91,7 +91,7 @@ export default function TodoPage() {
                     className="w-full sm:w-auto"
                     disabled={newItemText.trim() === ''}
                   >
-                    Add Task
+                    Add Pact
                   </Button>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -137,7 +137,7 @@ export default function TodoPage() {
             </div>
 
             {todoItems.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">No tasks yet. Add some!</p>
+              <p className="text-center text-muted-foreground py-4">No pacts yet. Add some!</p>
             ) : (
               <ScrollArea className="h-[400px] pr-3">
                 <ul className="space-y-3">
