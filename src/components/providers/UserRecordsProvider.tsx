@@ -904,7 +904,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   useEffect(() => {
     // Run achievement check when data is loaded and on certain state changes
-    checkAchievements();
+    if (isLoaded) {
+      checkAchievements();
+    }
   }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
 
 
@@ -964,3 +966,4 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
+
