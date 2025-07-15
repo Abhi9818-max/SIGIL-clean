@@ -57,20 +57,26 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check for overdue tasks on load
   useEffect(() => {
     if (isLoaded) {
-      const today = startOfDay(new Date());
-      todoItems.forEach(item => {
+      let itemsToUpdate = [...todoItems];
+      let penaltyApplied = false;
+
+      itemsToUpdate.forEach(item => {
         if (item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate))) && !item.penaltyApplied) {
           applyPenalty(item);
+          penaltyApplied = true;
         }
       });
-      // Save any changes from penalty applications
-      try {
-        localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(todoItems));
-      } catch (error) {
-        console.error("Failed to save to-do items to localStorage:", error);
+      
+      if(penaltyApplied) {
+        // This check is to avoid an unnecessary state update if no penalties were applied
+        try {
+          localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(itemsToUpdate));
+        } catch (error) {
+          console.error("Failed to save to-do items to localStorage:", error);
+        }
       }
     }
-  }, [isLoaded, applyPenalty]); // Removed todoItems dependency to avoid loop
+  }, [isLoaded, applyPenalty]);
 
 
   useEffect(() => {
