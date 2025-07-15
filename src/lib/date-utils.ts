@@ -13,6 +13,8 @@ import {
   eachDayOfInterval,
   subWeeks,
   endOfDay,
+  startOfYear,
+  endOfYear
 } from 'date-fns';
 import type { RecordEntry, MonthColumn, MonthlyDayData, TaskDefinition } from '@/types';
 import { getContributionLevel, DEFAULT_TASK_COLOR, NUM_WEEKS_TO_DISPLAY } from './config';
@@ -22,14 +24,29 @@ export const getMonthlyGraphData = (
   taskDefinitions: TaskDefinition[],
   filterByTaskId: string | null = null,
   currentSystemDate: Date,
-  displayMode: 'full' | 'current_month' = 'current_month'
+  displayMode: 'full' | 'current_month' = 'current_month',
+  year?: number
 ): MonthColumn[] => {
   const today = startOfDay(currentSystemDate);
   const monthlyDataMap = new Map<string, { monthLabel: string; year: number; month: number; days: MonthlyDayData[] }>();
 
   // Determine the date range
-  const endDate = endOfDay(today);
-  const startDate = startOfDay(displayMode === 'current_month' ? startOfMonth(today) : subWeeks(today, NUM_WEEKS_TO_DISPLAY -1));
+  let startDate: Date;
+  let endDate: Date;
+
+  if (year) {
+    // If a specific year is provided, show the whole year
+    startDate = startOfYear(new Date(year, 0, 1));
+    endDate = endOfYear(new Date(year, 11, 31));
+  } else if (displayMode === 'full') {
+    // Default full view: 52-week rolling period
+    endDate = endOfDay(today);
+    startDate = startOfDay(subWeeks(today, NUM_WEEKS_TO_DISPLAY - 1));
+  } else {
+    // Current month view for the dashboard
+    startDate = startOfMonth(today);
+    endDate = endOfDay(today);
+  }
   
   const allDaysInRange = eachDayOfInterval({ start: startDate, end: endDate });
 
@@ -52,7 +69,7 @@ export const getMonthlyGraphData = (
 
     if (!monthlyDataMap.has(monthKey)) {
       monthlyDataMap.set(monthKey, {
-        monthLabel: format(dateObj, 'MMM yyyy'),
+        monthLabel: format(dateObj, 'MMM'),
         year,
         month,
         days: [],

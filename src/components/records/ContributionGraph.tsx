@@ -10,12 +10,14 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { getMonth, parseISO, isFuture, format, getYear } from 'date-fns';
 
 interface ContributionGraphProps {
+  year?: number; // Optional: for selecting a specific year
   onDayClick: (date: string) => void;
   selectedTaskFilterId: string | null;
   displayMode?: 'full' | 'current_month';
 }
 
 const ContributionGraph: React.FC<ContributionGraphProps> = ({ 
+  year,
   onDayClick, 
   selectedTaskFilterId,
   displayMode = 'current_month'
@@ -31,15 +33,16 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
 
   const monthlyGraphData: MonthColumn[] = React.useMemo(() => {
     if (!clientToday || taskDefinitions.length === 0) return [];
-    return getMonthlyGraphData(records, taskDefinitions, selectedTaskFilterId, clientToday, displayMode); 
-  }, [records, taskDefinitions, clientToday, selectedTaskFilterId, displayMode]);
+    return getMonthlyGraphData(records, taskDefinitions, selectedTaskFilterId, clientToday, displayMode, year); 
+  }, [records, taskDefinitions, clientToday, selectedTaskFilterId, displayMode, year]);
 
   useEffect(() => {
     if (clientToday && monthlyGraphData.length > 0 && displayMode === 'full') {
-      const currentMonthKey = `${getYear(clientToday)}-${getMonth(clientToday)}`;
+      const currentMonthKey = `${year || getYear(clientToday)}-${getMonth(clientToday)}`;
       const targetMonthEl = monthColumnRefs.current.get(currentMonthKey);
+      const isViewingCurrentYear = (year || getYear(clientToday)) === getYear(new Date());
 
-      if (targetMonthEl && scrollAreaRef.current) {
+      if (targetMonthEl && scrollAreaRef.current && isViewingCurrentYear) {
         const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (viewport) {
             const scrollAreaWidth = viewport.clientWidth;
@@ -54,7 +57,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
         }
       }
     }
-  }, [monthlyGraphData, clientToday, displayMode]); 
+  }, [monthlyGraphData, clientToday, displayMode, year]); 
 
   if (!clientToday || (monthlyGraphData.length === 0 && taskDefinitions.length > 0)) {
     return <div className="p-4 text-center text-muted-foreground">Loading graph data...</div>;
@@ -67,68 +70,44 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
 
   return (
     <div className="p-4 rounded-lg shadow-md bg-card">
-      <div className="flex gap-x-8">
-        {displayMode === 'current_month' && firstMonthData ? (
-          <div className="flex flex-col items-center flex-shrink-0">
-            <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{firstMonthData.monthLabel}</div>
-            <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1">
-              {firstMonthData.weeks.flat().map((day, dayIdx) => (
-                 day.isPlaceholder ? (
-                    <div key={`ph-${dayIdx}`} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm" />
-                  ) : (
-                    <div key={day.date} className="w-4 h-4 sm:w-5 sm:h-5">
-                      <DaySquare 
-                        day={day as DayData} 
-                        onClick={() => {
-                          const clickedDate = parseISO(day.date);
-                          if (!isFuture(clickedDate) || format(clickedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
-                            onDayClick(day.date);
-                          }
-                        }} 
-                      />
-                    </div>
-                  )
-              ))}
-            </div>
-          </div>
-        ) : (
-          <ScrollArea className="w-full whitespace-nowrap" ref={scrollAreaRef}>
-            <div className="flex gap-x-8">
-              {monthlyGraphData.map((monthCol) => (
-                <div
-                  key={monthCol.monthLabel}
-                  className="flex flex-col items-center flex-shrink-0"
-                  ref={el => {
-                    const monthKey = `${monthCol.year}-${monthCol.month}`;
-                    if (el) monthColumnRefs.current.set(monthKey, el);
-                    else monthColumnRefs.current.delete(monthKey);
-                  }}>
-                  <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{monthCol.monthLabel}</div>
-                  <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1"> 
-                    {monthCol.weeks.flat().map((day, dayIdx) => (
-                      day.isPlaceholder ? (
-                        <div key={`ph-${day.date}-${dayIdx}`} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm" />
-                      ) : (
-                        <div key={day.date} className="w-4 h-4 sm:w-5 sm:h-5">
-                          <DaySquare 
-                            day={day as DayData} 
-                            onClick={() => {
-                              const clickedDate = parseISO(day.date);
-                               if (!isFuture(clickedDate) || format(clickedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
-                                onDayClick(day.date);
-                              }
-                            }} 
-                          />
-                        </div>
-                      )
-                    ))}
-                  </div>
+      <div className="flex gap-x-5 sm:gap-x-8">
+        
+        <ScrollArea className="w-full whitespace-nowrap" ref={scrollAreaRef}>
+          <div className="flex gap-x-5 sm:gap-x-8">
+            {monthlyGraphData.map((monthCol) => (
+              <div
+                key={monthCol.monthLabel}
+                className="flex flex-col items-center flex-shrink-0"
+                ref={el => {
+                  const monthKey = `${monthCol.year}-${monthCol.month}`;
+                  if (el) monthColumnRefs.current.set(monthKey, el);
+                  else monthColumnRefs.current.delete(monthKey);
+                }}>
+                <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{monthCol.monthLabel}</div>
+                <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1"> 
+                  {monthCol.weeks.flat().map((day, dayIdx) => (
+                    day.isPlaceholder ? (
+                      <div key={`ph-${day.date}-${dayIdx}`} className="w-5 h-5 sm:w-5 sm:h-5 rounded-sm" />
+                    ) : (
+                      <div key={day.date} className="w-5 h-5 sm:w-5 sm:h-5">
+                        <DaySquare 
+                          day={day as DayData} 
+                          onClick={() => {
+                            const clickedDate = parseISO(day.date);
+                              if (!isFuture(clickedDate) || format(clickedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
+                              onDayClick(day.date);
+                            }
+                          }} 
+                        />
+                      </div>
+                    )
+                  ))}
                 </div>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        )}
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
     </div>
   );
