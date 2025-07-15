@@ -8,7 +8,6 @@ import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { getMonthlyGraphData } from '@/lib/date-utils';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { getMonth, parseISO, isFuture, format } from 'date-fns';
-import { DAY_LABELS, DAY_LABELS_VISIBLE_INDICES } from '@/lib/date-utils';
 
 interface ContributionGraphProps {
   onDayClick: (date: string) => void;
@@ -69,13 +68,6 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
   return (
     <div className="p-4 rounded-lg shadow-md bg-card">
       <div className="flex gap-3">
-        <div className="flex flex-col justify-around text-xs text-muted-foreground">
-          {DAY_LABELS.map((label, i) => (
-            <div key={label} className={DAY_LABELS_VISIBLE_INDICES.includes(i) ? 'visible' : 'invisible'}>
-              {label}
-            </div>
-          ))}
-        </div>
         {displayMode === 'current_month' && firstMonthData ? (
           <div className="flex flex-col items-center flex-shrink-0">
             <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{firstMonthData.monthLabel}</div>

@@ -171,7 +171,3 @@ export const getMonthlyGraphData = (
   }
   return monthlyData;
 };
-
-
-export const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const DAY_LABELS_VISIBLE_INDICES = [1, 3, 5];
