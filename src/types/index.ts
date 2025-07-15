@@ -59,6 +59,15 @@ export interface WeeklyProgressStats {
   endDate: Date;
 }
 
+export interface GoalProgress {
+  current: number;
+  goal: number;
+  percentage: number;
+  isMet: boolean;
+  unit: TaskUnit;
+}
+
+
 // For User Leveling System
 // totalAccumulatedValue here represents the total experience points (base record values + bonuses)
 export interface UserLevelInfo {

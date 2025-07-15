@@ -14,7 +14,7 @@ import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useTodos } from '@/components/providers/TodoProvider';
 import { format, addDays } from 'date-fns';
 import WeeklyProgressCard from '@/components/progress/WeeklyProgressCard';
-import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
+import GoalProgressCard from '@/components/progress/GoalProgressCard';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import type { UserLevelInfo, BreachCheckResult, DarkStreakCheckResult } from '@/types';
@@ -220,7 +220,7 @@ export default function HomePage() {
               <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-              <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
+               <GoalProgressCard />
             </div>
             <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
               <AISuggestionsCard />

@@ -13,25 +13,34 @@ interface WeeklyProgressCardProps {
 }
 
 const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({ selectedTaskFilterId }) => {
-  const { getStatsForCompletedWeek } = useUserRecords(); // Removed getTaskDefinitionById as title is static
-  const [lastWeekStats, setLastWeekStats] = useState<WeeklyProgressStats | null>(null);
+  const { getStatsForCompletedWeek } = useUserRecords();
+  const [currentWeekStats, setCurrentWeekStats] = useState<WeeklyProgressStats | null>(null);
   const [prevWeekStats, setPrevWeekStats] = useState<WeeklyProgressStats | null>(null);
   const [percentageChange, setPercentageChange] = useState<number | null>(null);
-  const staticTitle = "Last Week's Overall Progress"; // Static title from image
+
+  const selectedTaskName = selectedTaskFilterId
+    ? useUserRecords().getTaskDefinitionById(selectedTaskFilterId)?.name
+    : null;
+
+  const cardTitle = selectedTaskName
+    ? `This Week's ${selectedTaskName}`
+    : "This Week's Overall Progress";
 
   useEffect(() => {
-    const lwStats = getStatsForCompletedWeek(0, selectedTaskFilterId);
+    // Offset 0 for the current week (in progress)
+    const cwStats = getStatsForCompletedWeek(0, selectedTaskFilterId);
+    // Offset 1 for the previous completed week
     const pwStats = getStatsForCompletedWeek(1, selectedTaskFilterId);
 
-    setLastWeekStats(lwStats);
+    setCurrentWeekStats(cwStats);
     setPrevWeekStats(pwStats);
 
-    if (lwStats && pwStats) {
+    if (cwStats && pwStats) {
       if (pwStats.total > 0) {
-        const change = ((lwStats.total - pwStats.total) / pwStats.total) * 100;
+        const change = ((cwStats.total - pwStats.total) / pwStats.total) * 100;
         setPercentageChange(parseFloat(change.toFixed(1)));
-      } else if (lwStats.total > 0) {
-        setPercentageChange(100); // Infinite growth if prev week was 0 and last week > 0
+      } else if (cwStats.total > 0) {
+        setPercentageChange(100); // Infinite growth if prev week was 0 and current week > 0
       } else {
         setPercentageChange(0); // No change if both are 0
       }
@@ -63,23 +72,23 @@ const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({ selectedTaskFil
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg h-full flex flex-col">
       <CardHeader>
         <div className="flex items-center gap-2">
           <CalendarCheck2 className="h-6 w-6 text-accent" />
-          <CardTitle>{staticTitle}</CardTitle>
+          <CardTitle>{cardTitle}</CardTitle>
         </div>
-        {lastWeekStats && (
+        {currentWeekStats && (
             <CardDescription>
-                Week of {format(lastWeekStats.startDate, 'MMM d')} - {format(lastWeekStats.endDate, 'MMM d, yyyy')}
+                Week of {format(currentWeekStats.startDate, 'MMM d')} - {format(currentWeekStats.endDate, 'MMM d, yyyy')}
             </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-grow flex flex-col justify-center">
         <div>
-          <p className="text-sm text-muted-foreground">Last Week Total</p>
+          <p className="text-sm text-muted-foreground">This Week's Total</p>
           <p className="text-2xl font-bold text-foreground">
-            {lastWeekStats !== null ? lastWeekStats.total.toLocaleString() : 'N/A'}
+            {currentWeekStats !== null ? currentWeekStats.total.toLocaleString() : 'N/A'}
           </p>
         </div>
         <div>

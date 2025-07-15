@@ -2,8 +2,8 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult, Achievement } from '@/types';
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult, Achievement, GoalProgress } from '@/types';
+import React, { useMemo, createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   LOCAL_STORAGE_KEY,
   LOCAL_STORAGE_TASKS_KEY,
@@ -68,6 +68,7 @@ interface UserRecordsContextType {
   deleteTaskDefinition: (taskId: string) => void;
   getTaskDefinitionById: (taskId: string) => TaskDefinition | undefined;
   getStatsForCompletedWeek: (weekOffset: number, taskId?: string | null) => WeeklyProgressStats | null;
+  getProgressForCurrentGoal: (taskId: string) => GoalProgress | null;
   getWeeklyAggregatesForChart: (numberOfWeeks: number, taskId?: string | null) => AggregatedTimeDataPoint[];
   getUserLevelInfo: () => UserLevelInfo;
   awardGoalCompletionBonus: (taskId: string) => number | null;
@@ -538,17 +539,64 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     if (!isLoaded) return null;
     const today = new Date();
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const targetWeekStart = subWeeks(currentWeekStart, weekOffset + 1);
-    const targetWeekEnd = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
+    const targetWeekStart = subWeeks(currentWeekStart, weekOffset);
+    let targetWeekEnd = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
 
-     if (targetWeekStart >= currentWeekStart && !isSameDay(targetWeekStart, currentWeekStart)) {
-        return null;
+    if (targetWeekEnd > today) {
+        targetWeekEnd = today;
+    }
+    
+    if (targetWeekStart > today) {
+        return { total: 0, startDate: targetWeekStart, endDate: targetWeekEnd };
     }
 
     const sum = getAggregateSum(targetWeekStart, targetWeekEnd, taskId);
     return { total: sum, startDate: targetWeekStart, endDate: targetWeekEnd };
 
   }, [isLoaded, getAggregateSum]);
+
+  const getProgressForCurrentGoal = useCallback((taskId: string): GoalProgress | null => {
+    const task = getTaskDefinitionById(taskId);
+    if (!task || !task.goalValue || !task.goalInterval) {
+      return null;
+    }
+
+    const today = new Date();
+    let periodStart: Date;
+    let periodEnd: Date;
+
+    switch (task.goalInterval) {
+      case 'weekly':
+        periodStart = startOfWeek(today, { weekStartsOn: 1 });
+        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
+        break;
+      // Add cases for 'daily' and 'monthly' if needed for this component
+      default:
+        return null;
+    }
+    
+    const currentTotal = getAggregateSum(periodStart, periodEnd, taskId);
+    const goalValue = task.goalValue;
+    const goalType = task.goalType || 'at_least';
+    const unit = task.unit || 'units';
+
+    const isMet = goalType === 'at_least' 
+      ? currentTotal >= goalValue 
+      : currentTotal <= goalValue;
+      
+    const percentage = goalType === 'at_least'
+      ? Math.min((currentTotal / goalValue) * 100, 100)
+      : Math.min((goalValue - currentTotal) / goalValue * 100, 100);
+
+
+    return {
+      current: currentTotal,
+      goal: goalValue,
+      percentage: isMet ? 100 : percentage,
+      isMet,
+      unit,
+    };
+  }, [getTaskDefinitionById, getAggregateSum]);
 
   const getWeeklyAggregatesForChart = useCallback((numberOfWeeks: number, taskId?: string | null): AggregatedTimeDataPoint[] => {
     if (!isLoaded) return [];
@@ -902,8 +950,10 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [isLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast]);
 
   useEffect(() => {
-    checkAchievements();
-  }, [records, totalBonusPoints, unlockedSkills, isLoaded]);
+    if (isLoaded) {
+      checkAchievements();
+    }
+  }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
 
 
   return (
@@ -925,6 +975,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       deleteTaskDefinition,
       getTaskDefinitionById,
       getStatsForCompletedWeek,
+      getProgressForCurrentGoal,
       getWeeklyAggregatesForChart,
       getUserLevelInfo,
       awardGoalCompletionBonus,
@@ -951,7 +1002,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       unlockedAchievements,
     }}>
       {children}
-    </UserRecordsContext.Provider>
+    </UserRecords.Provider>
   );
 };
 
