@@ -337,7 +337,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
             try {
                 localStorage.setItem(LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY, JSON.stringify(awardedStreakMilestones));
             } catch (error) {
-                console.error("Failed to save awarded streak milestones to localStorage:", error);
+                console.error("Failed to save awarded streak milestones from localStorage:", error);
             }
         }
     }, [awardedStreakMilestones, isLoaded]);
@@ -1002,7 +1002,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       unlockedAchievements,
     }}>
       {children}
-    </UserRecords.Provider>
+    </UserRecordsContext.Provider>
   );
 };
 
