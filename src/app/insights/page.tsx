@@ -16,18 +16,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
-import { subDays, startOfYear, getYear } from 'date-fns';
+import { subDays, startOfYear, getYear, endOfYear } from 'date-fns';
 import TaskDistributionChart from '@/components/insights/TaskDistributionChart';
 import ProductivityByDayChart from '@/components/insights/ProductivityByDayChart';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 
-type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'custom';
+type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'last_year' | 'custom';
 
 export default function InsightsPage() {
   const { getUserLevelInfo, getYearlySum, taskDefinitions } = useUserRecords();
-  const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const [yearForSum, setYearForSum] = useState<number>(new Date().getFullYear());
   const [timeRange, setTimeRange] = useState<TimeRange>('last_30_days');
   const [customDays, setCustomDays] = useState<number | string>(30);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -37,27 +37,41 @@ export default function InsightsPage() {
   });
 
   useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-  }, []);
+    const currentYear = new Date().getFullYear();
+    if (timeRange === 'this_year') {
+      setYearForSum(currentYear);
+    } else if (timeRange === 'last_year') {
+      setYearForSum(currentYear - 1);
+    }
+  }, [timeRange]);
 
   const calculateDateRange = (range: TimeRange, days?: number) => {
     const now = new Date();
-    let start;
-    const end = now;
+    let start: Date;
+    let end: Date;
 
     switch (range) {
       case 'last_90_days':
         start = subDays(now, 89);
+        end = now;
         break;
       case 'this_year':
         start = startOfYear(now);
+        end = now;
+        break;
+      case 'last_year':
+        const lastYear = getYear(now) - 1;
+        start = startOfYear(new Date(lastYear, 0, 1));
+        end = endOfYear(new Date(lastYear, 11, 31));
         break;
       case 'custom':
         start = subDays(now, (days || 30) - 1);
+        end = now;
         break;
       case 'last_30_days':
       default:
         start = subDays(now, 29);
+        end = now;
         break;
     }
     setDateRange({ start, end });
@@ -80,7 +94,7 @@ export default function InsightsPage() {
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
 
-  const currentYearSum = currentYear ? getYearlySum(currentYear, selectedTaskId) : 0;
+  const displayedYearSum = getYearlySum(yearForSum, selectedTaskId);
   
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -127,6 +141,7 @@ export default function InsightsPage() {
                                 <SelectItem value="last_30_days">Last 30 Days</SelectItem>
                                 <SelectItem value="last_90_days">Last 90 Days</SelectItem>
                                 <SelectItem value="this_year">This Year</SelectItem>
+                                <SelectItem value="last_year">Last Year</SelectItem>
                                 <SelectItem value="custom">Custom</SelectItem>
                             </SelectContent>
                         </Select>
@@ -159,11 +174,11 @@ export default function InsightsPage() {
                <Card className="lg:col-span-1">
                  <CardHeader>
                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {selectedTaskId ? `Total This Year for ${taskDefinitions.find(t => t.id === selectedTaskId)?.name}` : `Total This Year (${currentYear})`}
+                    {selectedTaskId ? `Total for ${taskDefinitions.find(t => t.id === selectedTaskId)?.name}` : `Total for ${yearForSum}`}
                    </CardTitle>
                  </CardHeader>
                  <CardContent>
-                   <p className="text-3xl font-bold">{currentYearSum.toLocaleString()}</p>
+                   <p className="text-3xl font-bold">{displayedYearSum.toLocaleString()}</p>
                  </CardContent>
                </Card>
                 <div className="lg:col-span-2">
@@ -186,7 +201,7 @@ export default function InsightsPage() {
         </div>
       </main>
       <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border">
-        S.I.G.I.L. Insights &copy; {currentYear}
+        S.I.G.I.L. Insights &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );
