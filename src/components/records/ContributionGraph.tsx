@@ -7,7 +7,7 @@ import type { DayData, MonthColumn } from '@/types';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { getMonthlyGraphData } from '@/lib/date-utils';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { getMonth, parseISO, isFuture, format } from 'date-fns';
+import { getMonth, parseISO, isFuture, format, getYear } from 'date-fns';
 
 interface ContributionGraphProps {
   onDayClick: (date: string) => void;
@@ -23,7 +23,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
   const { records, taskDefinitions } = useUserRecords();
   const [clientToday, setClientToday] = React.useState<Date | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null); 
-  const monthColumnRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const monthColumnRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     setClientToday(new Date()); 
@@ -36,8 +36,8 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
 
   useEffect(() => {
     if (clientToday && monthlyGraphData.length > 0 && displayMode === 'full') {
-      const currentMonthIndex = getMonth(clientToday); 
-      const targetMonthEl = monthColumnRefs.current.get(currentMonthIndex);
+      const currentMonthKey = `${getYear(clientToday)}-${getMonth(clientToday)}`;
+      const targetMonthEl = monthColumnRefs.current.get(currentMonthKey);
 
       if (targetMonthEl && scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -67,16 +67,16 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
 
   return (
     <div className="p-4 rounded-lg shadow-md bg-card">
-      <div className="flex gap-3">
+      <div className="flex gap-x-8">
         {displayMode === 'current_month' && firstMonthData ? (
           <div className="flex flex-col items-center flex-shrink-0">
             <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{firstMonthData.monthLabel}</div>
             <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1">
               {firstMonthData.weeks.flat().map((day, dayIdx) => (
                  day.isPlaceholder ? (
-                    <div key={`ph-${dayIdx}`} className="w-8 h-8 sm:w-8 sm:h-8 rounded-sm" />
+                    <div key={`ph-${dayIdx}`} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm" />
                   ) : (
-                    <div key={day.date} className="w-8 h-8 sm:w-8 sm:h-8">
+                    <div key={day.date} className="w-4 h-4 sm:w-5 sm:h-5">
                       <DaySquare 
                         day={day as DayData} 
                         onClick={() => {
@@ -93,22 +93,23 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
           </div>
         ) : (
           <ScrollArea className="w-full whitespace-nowrap" ref={scrollAreaRef}>
-            <div className="flex gap-x-5 sm:gap-x-8">
+            <div className="flex gap-x-8">
               {monthlyGraphData.map((monthCol) => (
                 <div
                   key={monthCol.monthLabel}
                   className="flex flex-col items-center flex-shrink-0"
                   ref={el => {
-                    if (el) monthColumnRefs.current.set(monthCol.month, el);
-                    else monthColumnRefs.current.delete(monthCol.month);
+                    const monthKey = `${monthCol.year}-${monthCol.month}`;
+                    if (el) monthColumnRefs.current.set(monthKey, el);
+                    else monthColumnRefs.current.delete(monthKey);
                   }}>
                   <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{monthCol.monthLabel}</div>
                   <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1"> 
                     {monthCol.weeks.flat().map((day, dayIdx) => (
                       day.isPlaceholder ? (
-                        <div key={`ph-${day.date}-${dayIdx}`} className="w-8 h-8 sm:w-8 sm:h-8 rounded-sm" />
+                        <div key={`ph-${day.date}-${dayIdx}`} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm" />
                       ) : (
-                        <div key={day.date} className="w-8 h-8 sm:w-8 sm:h-8">
+                        <div key={day.date} className="w-4 h-4 sm:w-5 sm:h-5">
                           <DaySquare 
                             day={day as DayData} 
                             onClick={() => {
