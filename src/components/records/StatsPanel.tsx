@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -24,37 +23,41 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     getCurrentStreak,
     freezeCrystals 
   } = useUserRecords();
+
   const [consistency, setConsistency] = useState(0);
   const [consistencyLabel, setConsistencyLabel] = useState("Consistency (Last 30D)");
   const [consistencyCircleColor, setConsistencyCircleColor] = useState<string | undefined>(undefined);
   const [currentStreak, setCurrentStreak] = useState(0);
 
-  const selectedTask = useMemo(() => {
-    return selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+  const isDarkStreakSelected = useMemo(() => {
+    const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+    return task?.darkStreakEnabled === true;
   }, [selectedTaskFilterId, getTaskDefinitionById]);
 
-  const isDarkStreakSelected = selectedTask?.darkStreakEnabled === true;
-
   useEffect(() => {
-    const newConsistency = getDailyConsistencyLast30Days(selectedTaskFilterId);
-    setConsistency(newConsistency);
+    const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+
+    setConsistency(getDailyConsistencyLast30Days(selectedTaskFilterId));
     setCurrentStreak(getCurrentStreak(selectedTaskFilterId));
 
-    if (selectedTask) {
-      setConsistencyLabel(`Consistency for ${selectedTask.name}`);
-      setConsistencyCircleColor(selectedTask.color);
+    if (task) {
+      setConsistencyLabel(`Consistency for ${task.name}`);
+      setConsistencyCircleColor(task.color);
     } else {
       setConsistencyLabel("Consistency (Last 30D)");
       setConsistencyCircleColor(undefined);
     }
-  }, [getDailyConsistencyLast30Days, selectedTaskFilterId, selectedTask, getCurrentStreak]);
+  }, [getDailyConsistencyLast30Days, selectedTaskFilterId, getCurrentStreak, getTaskDefinitionById]);
 
   const aggregateStats = useMemo(() => {
     const today = new Date();
     const last30DaysStart = subDays(today, 29);
     
     return [
-      { title: "Total Last 30 Days", value: getAggregateSum(last30DaysStart, today, selectedTaskFilterId) },
+      {
+        title: "Total Last 30 Days",
+        value: getAggregateSum(last30DaysStart, today, selectedTaskFilterId)
+      },
     ];
   }, [getAggregateSum, selectedTaskFilterId]);
 
@@ -73,50 +76,68 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-foreground">
+                {stat.value.toLocaleString()}
+              </div>
             </CardContent>
           </Card>
         ))}
-         <Card
+
+        <Card
           className={cn(
-              "shadow-lg animate-fade-in-up transition-all relative",
-              isDarkStreakSelected && "bg-orange-950/70 border-orange-400/50"
+            "shadow-lg animate-fade-in-up transition-all relative",
+            isDarkStreakSelected && "bg-orange-950/70 border-orange-400/50"
           )}
           style={{ animationDelay: `${aggregateStats.length * 100}ms` }}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
-              </CardTitle>
-              <div className="flex items-center gap-3">
-                <Flame className={cn("h-4 w-4 text-orange-400", isDarkStreakSelected && "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]")} />
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1">
-                        <Snowflake className="h-4 w-4 text-blue-300" />
-                        <span className="text-sm font-bold">{freezeCrystals}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Freeze Crystals available</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              <Flame
+                className={cn(
+                  "h-4 w-4 text-orange-400",
+                  isDarkStreakSelected &&
+                    "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]"
+                )}
+              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1">
+                      <Snowflake className="h-4 w-4 text-blue-300" />
+                      <span className="text-sm font-bold">{freezeCrystals}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Freeze Crystals available</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
-              <div className={cn("text-2xl font-bold text-foreground", isDarkStreakSelected && "text-yellow-400")}>
-                  {currentStreak} Day{currentStreak !== 1 ? 's' : ''}
-              </div>
+            <div
+              className={cn(
+                "text-2xl font-bold text-foreground",
+                isDarkStreakSelected && "text-yellow-400"
+              )}
+            >
+              {currentStreak} Day{currentStreak !== 1 ? "s" : ""}
+            </div>
           </CardContent>
         </Card>
+
         <Card
           className="shadow-lg animate-fade-in-up"
           style={{ animationDelay: `${(aggregateStats.length + 1) * 100}ms` }}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={consistencyLabel}>
+            <CardTitle
+              className="text-sm font-medium text-muted-foreground truncate"
+              title={consistencyLabel}
+            >
               {consistencyLabel}
             </CardTitle>
           </CardHeader>
@@ -130,6 +151,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
           </CardContent>
         </Card>
       </div>
+
       <div className="mb-6 -mt-2 text-center">
         <Button asChild variant="outline" size="sm">
           <Link href="/calendar">
