@@ -1,6 +1,5 @@
-
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
@@ -29,10 +28,15 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
   const [isLevelDetailsModalOpen, setIsLevelDetailsModalOpen] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => {
-    setLevelInfo(getUserLevelInfo());
-  }, [getUserLevelInfo, records, totalBonusPoints]); 
+  // Memoize the level info calculation to prevent infinite re-renders
+  const updateLevelInfo = useCallback(() => {
+    const newLevelInfo = getUserLevelInfo();
+    setLevelInfo(newLevelInfo);
+  }, [getUserLevelInfo]);
 
+  useEffect(() => {
+    updateLevelInfo();
+  }, [records, totalBonusPoints, updateLevelInfo]);
 
   const headerTierClass = levelInfo ? `header-tier-group-${levelInfo.tierGroup}` : 'header-tier-group-1';
   const isDashboardPage = pathname === '/';
