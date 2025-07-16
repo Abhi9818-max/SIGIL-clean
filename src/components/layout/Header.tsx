@@ -24,19 +24,18 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick }) => {
   const { getUserLevelInfo, records, totalBonusPoints } = useUserRecords(); 
-  const [levelInfo, setLevelInfo] = useState<UserLevelInfo | null>(null);
   const [isLevelDetailsModalOpen, setIsLevelDetailsModalOpen] = useState(false);
   const pathname = usePathname();
 
-  // Memoize the level info calculation to prevent infinite re-renders
-  const updateLevelInfo = useCallback(() => {
-    const newLevelInfo = getUserLevelInfo();
-    setLevelInfo(newLevelInfo);
-  }, [getUserLevelInfo]);
-
-  useEffect(() => {
-    updateLevelInfo();
-  }, [records, totalBonusPoints, updateLevelInfo]);
+  // Calculate level info directly without useEffect to prevent infinite loops
+  const levelInfo = React.useMemo(() => {
+    try {
+      return getUserLevelInfo();
+    } catch (error) {
+      console.error('Error getting level info:', error);
+      return null;
+    }
+  }, [records, totalBonusPoints]);
 
   const headerTierClass = levelInfo ? `header-tier-group-${levelInfo.tierGroup}` : 'header-tier-group-1';
   const isDashboardPage = pathname === '/';
