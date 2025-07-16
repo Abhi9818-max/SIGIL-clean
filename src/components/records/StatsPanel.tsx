@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
@@ -9,7 +9,7 @@ import { subDays } from 'date-fns';
 import PerformanceCircle from './PerformanceCircle';
 import { Flame, Snowflake, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '../ui/button';
 
 interface StatsPanelProps {
@@ -25,17 +25,12 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     freezeCrystals 
   } = useUserRecords();
   
-  const [consistency, setConsistency] = useState(0);
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [aggregate, setAggregate] = useState(0);
-
-  useEffect(() => {
-    const today = new Date();
-    const last30DaysStart = subDays(today, 29);
-    setAggregate(getAggregateSum(last30DaysStart, today, selectedTaskFilterId));
-    setConsistency(getDailyConsistencyLast30Days(selectedTaskFilterId));
-    setCurrentStreak(getCurrentStreak(selectedTaskFilterId));
-  }, [selectedTaskFilterId, getAggregateSum, getDailyConsistencyLast30Days, getCurrentStreak]);
+  // Calculate values directly instead of using useEffect to prevent re-render loops
+  const today = new Date();
+  const last30DaysStart = subDays(today, 29);
+  const aggregate = getAggregateSum(last30DaysStart, today, selectedTaskFilterId);
+  const consistency = getDailyConsistencyLast30Days(selectedTaskFilterId);
+  const currentStreak = getCurrentStreak(selectedTaskFilterId);
 
   const { task, isDarkStreakSelected, consistencyLabel, consistencyCircleColor } = useMemo(() => {
     const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
