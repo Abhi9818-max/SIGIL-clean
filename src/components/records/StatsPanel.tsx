@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
@@ -24,30 +24,18 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     freezeCrystals 
   } = useUserRecords();
 
-  const [consistency, setConsistency] = useState(0);
-  const [consistencyLabel, setConsistencyLabel] = useState("Consistency (Last 30D)");
-  const [consistencyCircleColor, setConsistencyCircleColor] = useState<string | undefined>(undefined);
-  const [currentStreak, setCurrentStreak] = useState(0);
-
-  const isDarkStreakSelected = useMemo(() => {
+  // Memoize all derived values to prevent unnecessary re-renders
+  const taskData = useMemo(() => {
     const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
-    return task?.darkStreakEnabled === true;
-  }, [selectedTaskFilterId, getTaskDefinitionById]);
-
-  useEffect(() => {
-    const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
-
-    setConsistency(getDailyConsistencyLast30Days(selectedTaskFilterId));
-    setCurrentStreak(getCurrentStreak(selectedTaskFilterId));
-
-    if (task) {
-      setConsistencyLabel(`Consistency for ${task.name}`);
-      setConsistencyCircleColor(task.color);
-    } else {
-      setConsistencyLabel("Consistency (Last 30D)");
-      setConsistencyCircleColor(undefined);
-    }
-  }, [getDailyConsistencyLast30Days, selectedTaskFilterId, getCurrentStreak, getTaskDefinitionById]);
+    return {
+      task,
+      isDarkStreakSelected: task?.darkStreakEnabled === true,
+      consistency: getDailyConsistencyLast30Days(selectedTaskFilterId),
+      currentStreak: getCurrentStreak(selectedTaskFilterId),
+      consistencyLabel: task ? `Consistency for ${task.name}` : "Consistency (Last 30D)",
+      consistencyCircleColor: task?.color
+    };
+  }, [selectedTaskFilterId, getTaskDefinitionById, getDailyConsistencyLast30Days, getCurrentStreak]);
 
   const aggregateStats = useMemo(() => {
     const today = new Date();
@@ -86,45 +74,43 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
         <Card
           className={cn(
             "shadow-lg animate-fade-in-up transition-all relative",
-            isDarkStreakSelected && "bg-orange-950/70 border-orange-400/50"
+            taskData.isDarkStreakSelected && "bg-orange-950/70 border-orange-400/50"
           )}
           style={{ animationDelay: `${aggregateStats.length * 100}ms` }}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
+              {taskData.isDarkStreakSelected ? "Dark Streak" : "Current Streak"}
             </CardTitle>
             <div className="flex items-center gap-3">
               <Flame
                 className={cn(
                   "h-4 w-4 text-orange-400",
-                  isDarkStreakSelected &&
+                  taskData.isDarkStreakSelected &&
                     "text-yellow-400 drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]"
                 )}
               />
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1">
-                      <Snowflake className="h-4 w-4 text-blue-300" />
-                      <span className="text-sm font-bold">{freezeCrystals}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Freeze Crystals available</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1">
+                    <Snowflake className="h-4 w-4 text-blue-300" />
+                    <span className="text-sm font-bold">{freezeCrystals}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Freeze Crystals available</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </CardHeader>
           <CardContent>
             <div
               className={cn(
                 "text-2xl font-bold text-foreground",
-                isDarkStreakSelected && "text-yellow-400"
+                taskData.isDarkStreakSelected && "text-yellow-400"
               )}
             >
-              {currentStreak} Day{currentStreak !== 1 ? "s" : ""}
+              {taskData.currentStreak} Day{taskData.currentStreak !== 1 ? "s" : ""}
             </div>
           </CardContent>
         </Card>
@@ -136,17 +122,17 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className="text-sm font-medium text-muted-foreground truncate"
-              title={consistencyLabel}
+              title={taskData.consistencyLabel}
             >
-              {consistencyLabel}
+              {taskData.consistencyLabel}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-center pt-2">
             <PerformanceCircle
-              percentage={consistency}
+              percentage={taskData.consistency}
               size={80}
               strokeWidth={8}
-              progressColor={consistencyCircleColor}
+              progressColor={taskData.consistencyCircleColor}
             />
           </CardContent>
         </Card>
