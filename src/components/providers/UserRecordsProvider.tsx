@@ -327,7 +327,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         try {
             localStorage.setItem(LOCAL_STORAGE_FREEZE_CRYSTALS_KEY, JSON.stringify(freezeCrystals));
         } catch (error) {
-            console.error("Failed to save freeze crystals to localStorage:", error);
+            console.error("Failed to save freeze crystals from localStorage:", error);
         }
     }
     }, [freezeCrystals, isLoaded]);
