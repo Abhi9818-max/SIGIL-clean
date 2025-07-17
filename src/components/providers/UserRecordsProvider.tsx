@@ -3,7 +3,7 @@
 "use client";
 
 import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult, Achievement, GoalProgress } from '@/types';
-import React, { useMemo, createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
   LOCAL_STORAGE_TASKS_KEY,
@@ -955,52 +955,89 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
 
+  const contextValue = useMemo(() => ({
+    records,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    getRecordsByDate,
+    getRecordsForDateRange,
+    getAggregateSum,
+    getYearlySum,
+    getAllRecordsStringified,
+    getDailyConsistencyLast30Days,
+    getCurrentStreak,
+    taskDefinitions,
+    addTaskDefinition,
+    updateTaskDefinition,
+    deleteTaskDefinition,
+    getTaskDefinitionById,
+    getStatsForCompletedWeek,
+    getProgressForCurrentGoal,
+    getWeeklyAggregatesForChart,
+    getUserLevelInfo,
+    awardGoalCompletionBonus,
+    totalBonusPoints,
+    checkAndAwardAutomatedGoal,
+    awardTierEntryBonus,
+    deductBonusPoints,
+    handleConsistencyCheck,
+    isGoalMetForLastPeriod,
+    checkDarkStreaks,
+    markDarkStreakHandled,
+    getAvailableSkillPoints,
+    unlockSkill,
+    isSkillUnlocked,
+    constellations,
+    getTaskDistribution,
+    getProductivityByDay,
+    freezeCrystals,
+    useFreezeCrystal,
+    unlockedAchievements,
+  }), [
+    records,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    getRecordsByDate,
+    getRecordsForDateRange,
+    getAggregateSum,
+    getYearlySum,
+    getAllRecordsStringified,
+    getDailyConsistencyLast30Days,
+    getCurrentStreak,
+    taskDefinitions,
+    addTaskDefinition,
+    updateTaskDefinition,
+    deleteTaskDefinition,
+    getTaskDefinitionById,
+    getStatsForCompletedWeek,
+    getProgressForCurrentGoal,
+    getWeeklyAggregatesForChart,
+    getUserLevelInfo,
+    awardGoalCompletionBonus,
+    totalBonusPoints,
+    checkAndAwardAutomatedGoal,
+    awardTierEntryBonus,
+    deductBonusPoints,
+    handleConsistencyCheck,
+    isGoalMetForLastPeriod,
+    checkDarkStreaks,
+    markDarkStreakHandled,
+    getAvailableSkillPoints,
+    unlockSkill,
+    isSkillUnlocked,
+    constellations,
+    getTaskDistribution,
+    getProductivityByDay,
+    freezeCrystals,
+    useFreezeCrystal,
+    unlockedAchievements,
+  ]);
+
 
   return (
-    <UserRecordsContext.Provider value={{
-      records,
-      addRecord,
-      updateRecord,
-      deleteRecord,
-      getRecordsByDate,
-      getRecordsForDateRange,
-      getAggregateSum,
-      getYearlySum,
-      getAllRecordsStringified,
-      getDailyConsistencyLast30Days,
-      getCurrentStreak,
-      taskDefinitions,
-      addTaskDefinition,
-      updateTaskDefinition,
-      deleteTaskDefinition,
-      getTaskDefinitionById,
-      getStatsForCompletedWeek,
-      getProgressForCurrentGoal,
-      getWeeklyAggregatesForChart,
-      getUserLevelInfo,
-      awardGoalCompletionBonus,
-      totalBonusPoints,
-      checkAndAwardAutomatedGoal,
-      awardTierEntryBonus,
-      deductBonusPoints,
-      handleConsistencyCheck,
-      isGoalMetForLastPeriod,
-      checkDarkStreaks,
-      markDarkStreakHandled,
-      // Constellations
-      getAvailableSkillPoints,
-      unlockSkill,
-      isSkillUnlocked,
-      constellations,
-      // Insights
-      getTaskDistribution,
-      getProductivityByDay,
-      // Freeze Crystals
-      freezeCrystals,
-      useFreezeCrystal,
-      // Achievements
-      unlockedAchievements,
-    }}>
+    <UserRecordsContext.Provider value={contextValue}>
       {children}
     </UserRecordsContext.Provider>
   );
@@ -1013,4 +1050,3 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
-
