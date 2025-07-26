@@ -129,14 +129,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
         </Card>
       </div>
 
-      <div className="mb-6 -mt-2 text-center">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/calendar">
-            <Calendar className="mr-2 h-4 w-4" />
-            View Full Calendar
-          </Link>
-        </Button>
-      </div>
+      
     </>
   );
 };

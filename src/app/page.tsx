@@ -25,6 +25,9 @@ import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
 import ConsistencyBreachModal from '@/components/features/ConsistencyBreachModal';
 import PunishmentModal from '@/components/features/PunishmentModal';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Calendar } from 'lucide-react';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
 
@@ -210,7 +213,14 @@ export default function HomePage() {
           selectedTaskFilterId={selectedTaskFilterId}
           displayMode="full"
         />
-
+        <div className="text-center -mt-4">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/calendar">
+                <Calendar className="mr-2 h-4 w-4" />
+                View Full Calendar
+              </Link>
+            </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             <TodoListCard />
