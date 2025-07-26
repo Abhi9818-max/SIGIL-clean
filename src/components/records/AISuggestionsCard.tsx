@@ -21,17 +21,26 @@ const AISuggestionsCard: React.FC = () => {
     getAllRecordsStringified,
   } = useUserRecords();
   
-  const [checkingGoals, setCheckingGoals] = useState<Record<string, boolean>>({});
+  const [isCheckingAllGoals, setIsCheckingAllGoals] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [suggestionError, setSuggestionError] = useState<string | null>("AI features are temporarily unavailable due to high demand. Please try again later.");
   const { toast } = useToast();
 
-  const handleCheckGoal = async (taskId: string) => {
-    setCheckingGoals(prev => ({ ...prev, [taskId]: true }));
-    try {
-      const result = await checkAndAwardAutomatedGoal(taskId);
+  const eligibleGoalTasks = useMemo(() => {
+    return taskDefinitions.filter(
+      task => task.goalValue && task.goalValue > 0 && task.goalInterval && !isGoalMetForLastPeriod(task.id)
+    );
+  }, [taskDefinitions, isGoalMetForLastPeriod]);
 
+  const handleCheckAllGoals = async () => {
+    setIsCheckingAllGoals(true);
+
+    const goalPromises = eligibleGoalTasks.map(task => checkAndAwardAutomatedGoal(task.id));
+    const results = await Promise.all(goalPromises);
+    
+    let goalsChecked = 0;
+    results.forEach(result => {
       if (result.error) {
         toast({
           title: `Goal Check: ${result.taskName || 'Task'}`,
@@ -39,6 +48,7 @@ const AISuggestionsCard: React.FC = () => {
           variant: "destructive",
         });
       } else if (result) {
+        goalsChecked++;
         let description = '';
         if (result.metGoal) {
           if (result.goalType === 'at_least') {
@@ -67,27 +77,21 @@ const AISuggestionsCard: React.FC = () => {
           });
         }
       }
-    } catch (e) {
-      console.error("Error checking goal:", e);
-      toast({
-        title: "Error Checking Goal",
-        description: "Could not check goal status. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckingGoals(prev => ({ ...prev, [taskId]: false }));
+    });
+
+    if (goalsChecked === 0) {
+        toast({
+            title: "No New Goals to Check",
+            description: "All your past goals have already been evaluated.",
+        });
     }
+
+    setIsCheckingAllGoals(false);
   };
 
   const handleGenerateSuggestion = useCallback(async () => {
     // This function is now disabled
   }, []);
-
-  const eligibleGoalTasks = useMemo(() => {
-    return taskDefinitions.filter(
-      task => task.goalValue && task.goalValue > 0 && task.goalInterval && !isGoalMetForLastPeriod(task.id)
-    );
-  }, [taskDefinitions, isGoalMetForLastPeriod]);
 
   const hasConfiguredGoals = useMemo(() => {
     return taskDefinitions.some(task => task.goalValue && task.goalValue > 0 && task.goalInterval);
@@ -148,36 +152,22 @@ const AISuggestionsCard: React.FC = () => {
               <p className="text-xs text-muted-foreground mb-3">
                 Check your performance against set goals for the last completed period (daily, weekly, or monthly). Bonuses are awarded automatically if criteria are met.
               </p>
-              {eligibleGoalTasks.length > 0 ? (
-                <div className="space-y-3">
-                  {eligibleGoalTasks.map(task => (
-                    <div key={task.id} className="p-3 border rounded-md bg-card-foreground/5 hover:bg-card-foreground/10 transition-colors">
-                      <p className="text-sm font-medium text-foreground mb-2">
-                        Task: {task.name}
-                        <span className="text-xs text-muted-foreground ml-1">
-                           (Goal: {task.goalType === 'no_more_than' ? 'Max ' : ''}{task.goalValue} / {task.goalInterval?.replace('ly', '')}
-                           {task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''})
-                        </span>
-                      </p>
-                      <Button
-                        onClick={() => handleCheckGoal(task.id)}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        disabled={checkingGoals[task.id]}
-                      >
-                        {checkingGoals[task.id] ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckSquare className="mr-2 h-4 w-4" />
-                        )}
-                        Check {task.name} Goal
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                 <p className="text-sm text-muted-foreground">All eligible goals for the last completed periods have been checked. New periods will be checkable soon!</p>
+              <Button
+                onClick={handleCheckAllGoals}
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={isCheckingAllGoals || eligibleGoalTasks.length === 0}
+              >
+                {isCheckingAllGoals ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                )}
+                {isCheckingAllGoals ? 'Checking...' : (eligibleGoalTasks.length > 0 ? 'Check All Completed Goals' : 'All Goals Checked')}
+              </Button>
+              {eligibleGoalTasks.length === 0 && (
+                 <p className="text-xs text-muted-foreground text-center mt-2">All eligible goals for the last completed periods have been checked.</p>
               )}
             </div>
           </>
