@@ -85,12 +85,12 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                     else monthColumnRefs.current.delete(monthKey);
                   }}>
                   <div className="text-sm font-medium mb-2 text-center h-5 flex items-center">{monthCol.monthLabel}</div>
-                  <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-1"> 
+                  <div className="grid grid-cols-7 grid-rows-6 gap-2"> 
                     {monthCol.weeks.flat().map((day, dayIdx) => (
                       day.isPlaceholder ? (
-                        <div key={`ph-${day.date}-${dayIdx}`} className="w-5 h-5 sm:w-5 sm:h-5 rounded-sm" />
+                        <div key={`ph-${day.date}-${dayIdx}`} className="w-7 h-7 rounded-sm" />
                       ) : (
-                        <div key={day.date} className="w-5 h-5 sm:w-5 sm:h-5">
+                        <div key={day.date} className="w-7 h-7">
                           <DaySquare 
                             day={day as DayData} 
                             onClick={() => {
