@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
       console.error('Error getting level info:', error);
       return null;
     }
-  }, [records, totalBonusPoints]);
+  }, [records, totalBonusPoints, getUserLevelInfo]);
 
   const headerTierClass = levelInfo ? `header-tier-group-${levelInfo.tierGroup}` : 'header-tier-group-1';
   const isDashboardPage = pathname === '/';
