@@ -6,7 +6,7 @@ export interface Quote {
 }
 
 export const QUOTES: Quote[] = [
-  // Motivation & Inspiration
+  // Motivation
   {
     text: "The only way to do great work is to love what you do.",
     author: "Steve Jobs",
@@ -18,39 +18,24 @@ export const QUOTES: Quote[] = [
     category: "Motivation",
   },
   {
-    text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-    author: "Winston Churchill",
-    category: "Inspiration",
-  },
-  {
-    text: "Believe you can and you're halfway there.",
-    author: "Theodore Roosevelt",
-    category: "Inspiration",
-  },
-   {
-    text: "It does not do to dwell on dreams and forget to live.",
-    author: "J.K. Rowling, Harry Potter and the Sorcerer's Stone",
-    category: "Inspiration",
-  },
-  {
-    text: "Our lives are defined by opportunities, even the ones we miss.",
-    author: "F. Scott Fitzgerald",
-    category: "Inspiration"
-  },
-  {
-    text: "The man who has a why to live can bear almost any how.",
-    author: "Friedrich Nietzsche",
-    category: "Motivation"
-  },
-  {
-    text: "What you get by achieving your goals is not as important as what you become by achieving your goals.",
-    author: "Zig Ziglar",
+    text: "The secret of getting ahead is getting started.",
+    author: "Mark Twain",
     category: "Motivation",
   },
   {
-    text: "The journey of a thousand miles begins with a single step.",
-    author: "Lao Tzu",
-    category: "Inspiration",
+    text: "Don't watch the clock; do what it does. Keep going.",
+    author: "Sam Levenson",
+    category: "Motivation",
+  },
+  {
+    text: "The will to win, the desire to succeed, the urge to reach your full potential... these are the keys that will unlock the door to personal excellence.",
+    author: "Confucius",
+    category: "Motivation",
+  },
+  {
+    text: "Either you run the day or the day runs you.",
+    author: "Jim Rohn",
+    category: "Motivation",
   },
   {
     text: "The only limit to our realization of tomorrow will be our doubts of today.",
@@ -63,14 +48,41 @@ export const QUOTES: Quote[] = [
     category: "Motivation",
   },
   {
-    text: "The secret of getting ahead is getting started.",
-    author: "Mark Twain",
+    text: "What you get by achieving your goals is not as important as what you become by achieving your goals.",
+    author: "Zig Ziglar",
     category: "Motivation",
   },
   {
-    text: "Your time is limited, don't waste it living someone else's life.",
-    author: "Steve Jobs",
-    category: "Motivation",
+    text: "The man who has a why to live can bear almost any how.",
+    author: "Friedrich Nietzsche",
+    category: "Motivation"
+  },
+  {
+    text: "Build your own dreams, or someone else will hire you to build theirs.",
+    author: "Farrah Gray",
+    category: "Motivation"
+  },
+  {
+    text: "Act as if what you do makes a difference. It does.",
+    author: "William James",
+    category: "Motivation"
+  },
+
+  // Inspiration
+  {
+    text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    author: "Winston Churchill",
+    category: "Inspiration",
+  },
+  {
+    text: "Believe you can and you're halfway there.",
+    author: "Theodore Roosevelt",
+    category: "Inspiration",
+  },
+  {
+    text: "The journey of a thousand miles begins with a single step.",
+    author: "Lao Tzu",
+    category: "Inspiration",
   },
   {
     text: "The future belongs to those who believe in the beauty of their dreams.",
@@ -78,9 +90,39 @@ export const QUOTES: Quote[] = [
     category: "Inspiration",
   },
   {
+    text: "It does not do to dwell on dreams and forget to live.",
+    author: "J.K. Rowling, Harry Potter and the Sorcerer's Stone",
+    category: "Inspiration",
+  },
+  {
+    text: "Our lives are defined by opportunities, even the ones we miss.",
+    author: "F. Scott Fitzgerald",
+    category: "Inspiration"
+  },
+  {
     text: "Hardships often prepare ordinary people for an extraordinary destiny.",
     author: "C.S. Lewis",
     category: "Inspiration",
+  },
+  {
+    text: "Your time is limited, don't waste it living someone else's life.",
+    author: "Steve Jobs",
+    category: "Inspiration",
+  },
+  {
+    text: "The only thing standing between you and your goal is the story you keep telling yourself as to why you can't achieve it.",
+    author: "Jordan Belfort",
+    category: "Inspiration"
+  },
+  {
+    text: "If you are not willing to risk the usual, you will have to settle for the ordinary.",
+    author: "Jim Rohn",
+    category: "Inspiration"
+  },
+  {
+    text: "The only person you are destined to become is the person you decide to be.",
+    author: "Ralph Waldo Emerson",
+    category: "Inspiration"
   },
 
   // Fighting & Stoicism
@@ -129,9 +171,100 @@ export const QUOTES: Quote[] = [
     author: "Marcus Aurelius",
     category: "Fighting",
   },
+  {
+    text: "The first rule of Fight Club is: you do not talk about Fight Club.",
+    author: "Chuck Palahniuk, Fight Club",
+    category: "Fighting",
+  },
+  {
+    text: "Difficulties strengthen the mind, as labor does the body.",
+    author: "Seneca",
+    category: "Fighting"
+  },
+  {
+    text: "A gem cannot be polished without friction, nor a man perfected without trials.",
+    author: "Seneca",
+    category: "Fighting"
+  },
+  {
+    text: "Do not pray for an easy life, pray for the strength to endure a difficult one.",
+    author: "Bruce Lee",
+    category: "Fighting"
+  },
+  {
+    text: "I hated every minute of training, but I said, 'Don't quit. Suffer now and live the rest of your life as a champion.'",
+    author: "Muhammad Ali",
+    category: "Fighting"
+  },
+  {
+    text: "The art of being wise is the art of knowing what to overlook.",
+    author: "William James",
+    category: "Wisdom",
+  },
+  {
+    text: "Knowing yourself is the beginning of all wisdom.",
+    author: "Aristotle",
+    category: "Wisdom",
+  },
+  {
+    text: "The only true wisdom is in knowing you know nothing.",
+    author: "Socrates",
+    category: "Wisdom",
+  },
+  {
+    text: "Waste no more time arguing about what a good man should be. Be one.",
+    author: "Marcus Aurelius",
+    category: "Wisdom"
+  },
+  {
+    text: "Yesterday I was clever, so I wanted to change the world. Today I am wise, so I am changing myself.",
+    author: "Rumi",
+    category: "Wisdom"
+  },
+  {
+    text: "Never let your sense of morals prevent you from doing what is right.",
+    author: "Isaac Asimov, Foundation",
+    category: "Wisdom"
+  },
 
+  // Perseverance
+  {
+    text: "It's not whether you get knocked down, it's whether you get up.",
+    author: "Vince Lombardi",
+    category: "Perseverance",
+  },
+  {
+    text: "Perseverance is not a long race; it is many short races one after the other.",
+    author: "Walter Elliot",
+    category: "Perseverance",
+  },
+  {
+    text: "The difference between a successful person and others is not a lack of strength, not a lack of knowledge, but rather a lack in will.",
+    author: "Vince Lombardi",
+    category: "Perseverance",
+  },
+  {
+    text: "A river cuts through rock, not because of its power, but because of its persistence.",
+    author: "Jim Watkins",
+    category: "Perseverance"
+  },
+  {
+    text: "Energy and persistence conquer all things.",
+    author: "Benjamin Franklin",
+    category: "Perseverance"
+  },
+  {
+    text: "Fall seven times, stand up eight.",
+    author: "Japanese Proverb",
+    category: "Perseverance"
+  },
+  {
+    text: "I am not afraid of storms, for I am learning how to sail my ship.",
+    author: "Louisa May Alcott, Little Women",
+    category: "Perseverance"
+  },
 
-  // Banned Books & Freedom of Thought
+  // Literature & Banned Books
   {
     text: "If you have a book you want to read but it hasn't been written yet, then you must write it.",
     author: "Toni Morrison",
@@ -183,11 +316,6 @@ export const QUOTES: Quote[] = [
     category: "Banned Books",
   },
   {
-    text: "I am not afraid of storms, for I am learning how to sail my ship.",
-    author: "Louisa May Alcott, Little Women",
-    category: "Banned Books",
-  },
-  {
     text: "There is some good in this world, and it's worth fighting for.",
     author: "J.R.R. Tolkien, The Two Towers",
     category: "Banned Books",
@@ -200,11 +328,6 @@ export const QUOTES: Quote[] = [
   {
     text: "‘You’re mad, bonkers, completely off your head. But I’ll tell you a secret: all the best people are.’",
     author: "Lewis Carroll, Alice in Wonderland",
-    category: "Banned Books",
-  },
-  {
-    text: "The first rule of Fight Club is: you do not talk about Fight Club.",
-    author: "Chuck Palahniuk, Fight Club",
     category: "Banned Books",
   },
   {
@@ -231,5 +354,245 @@ export const QUOTES: Quote[] = [
     text: "I took a deep breath and listened to the old brag of my heart. I am, I am, I am.",
     author: "Sylvia Plath, The Bell Jar",
     category: "Banned Books",
+  },
+  {
+    text: "The mystery of human existence lies not in just staying alive, but in finding something to live for.",
+    author: "Fyodor Dostoevsky, The Brothers Karamazov",
+    category: "Literature"
+  },
+  {
+    text: "It is a far, far better thing that I do, than I have ever done; it is a far, far better rest that I go to than I have ever known.",
+    author: "Charles Dickens, A Tale of Two Cities",
+    category: "Literature"
+  },
+  {
+    text: "All that is gold does not glitter, not all those who wander are lost; the old that is strong does not wither, deep roots are not reached by the frost.",
+    author: "J.R.R. Tolkien, The Fellowship of the Ring",
+    category: "Literature"
+  },
+  {
+    text: "The only thing we have to fear is fear itself.",
+    author: "Franklin D. Roosevelt, Inaugural Address",
+    category: "Wisdom"
+  },
+  {
+    text: "I can resist everything except temptation.",
+    author: "Oscar Wilde",
+    category: "Humor"
+  },
+  {
+    text: "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment.",
+    author: "Ralph Waldo Emerson",
+    category: "Inspiration"
+  },
+  {
+    text: "Two things are infinite: the universe and human stupidity; and I'm not sure about the universe.",
+    author: "Albert Einstein",
+    category: "Humor"
+  },
+  {
+    text: "The fool doth think he is wise, but the wise man knows himself to be a fool.",
+    author: "William Shakespeare, As You Like It",
+    category: "Wisdom"
+  },
+  {
+    text: "We are all in the gutter, but some of us are looking at the stars.",
+    author: "Oscar Wilde, Lady Windermere's Fan",
+    category: "Inspiration"
+  },
+  {
+    text: "Be the change that you wish to see in the world.",
+    author: "Mahatma Gandhi",
+    category: "Inspiration"
+  },
+  {
+    text: "If you want to live a happy life, tie it to a goal, not to people or things.",
+    author: "Albert Einstein",
+    category: "Wisdom"
+  },
+  {
+    text: "If you tell the truth, you don't have to remember anything.",
+    author: "Mark Twain",
+    category: "Wisdom"
+  },
+  {
+    text: "A friend is someone who knows all about you and still loves you.",
+    author: "Elbert Hubbard",
+    category: "Wisdom"
+  },
+  {
+    text: "To live is the rarest thing in the world. Most people exist, that is all.",
+    author: "Oscar Wilde",
+    category: "Inspiration"
+  },
+  {
+    text: "The purpose of our lives is to be happy.",
+    author: "Dalai Lama",
+    category: "Inspiration"
+  },
+  {
+    text: "Get busy living or get busy dying.",
+    author: "Stephen King, The Shawshank Redemption",
+    category: "Motivation"
+  },
+  {
+    text: "You only live once, but if you do it right, once is enough.",
+    author: "Mae West",
+    category: "Motivation"
+  },
+  {
+    text: "Life is what happens when you're busy making other plans.",
+    author: "John Lennon",
+    category: "Wisdom"
+  },
+  {
+    text: "The unexamined life is not worth living.",
+    author: "Socrates",
+    category: "Wisdom"
+  },
+  {
+    text: "Turn your wounds into wisdom.",
+    author: "Oprah Winfrey",
+    category: "Wisdom"
+  },
+  {
+    text: "The greatest glory in living lies not in never falling, but in rising every time we fall.",
+    author: "Nelson Mandela",
+    category: "Perseverance"
+  },
+  {
+    text: "In the end, it's not the years in your life that count. It's the life in your years.",
+    author: "Abraham Lincoln",
+    category: "Inspiration"
+  },
+  {
+    text: "Never let the fear of striking out keep you from playing the game.",
+    author: "Babe Ruth",
+    category: "Motivation"
+  },
+  {
+    text: "Keep smiling, because life is a beautiful thing and there's so much to smile about.",
+    author: "Marilyn Monroe",
+    category: "Inspiration"
+  },
+  {
+    text: "Life is a long lesson in humility.",
+    author: "James M. Barrie",
+    category: "Wisdom"
+  },
+  {
+    text: "In three words I can sum up everything I've learned about life: it goes on.",
+    author: "Robert Frost",
+    category: "Wisdom"
+  },
+  {
+    text: "Love the life you live. Live the life you love.",
+    author: "Bob Marley",
+    category: "Inspiration"
+  },
+  {
+    text: "Life is either a daring adventure or nothing at all.",
+    author: "Helen Keller",
+    category: "Motivation"
+  },
+  {
+    text: "You will face many defeats in life, but never let yourself be defeated.",
+    author: "Maya Angelou",
+    category: "Perseverance"
+  },
+  {
+    text: "Life is really simple, but we insist on making it complicated.",
+    author: "Confucius",
+    category: "Wisdom"
+  },
+  {
+    text: "May you live all the days of your life.",
+    author: "Jonathan Swift",
+    category: "Inspiration"
+  },
+  {
+    text: "Life itself is the most wonderful fairy tale.",
+    author: "Hans Christian Andersen",
+    category: "Inspiration"
+  },
+  {
+    text: "Do not go where the path may lead, go instead where there is no path and leave a trail.",
+    author: "Ralph Waldo Emerson",
+    category: "Motivation"
+  },
+  {
+    text: "Success is how high you bounce when you hit bottom.",
+    author: "George S. Patton",
+    category: "Perseverance"
+  },
+  {
+    text: "The two most important days in your life are the day you are born and the day you find out why.",
+    author: "Mark Twain",
+    category: "Wisdom"
+  },
+  {
+    text: "When you reach the end of your rope, tie a knot in it and hang on.",
+    author: "Franklin D. Roosevelt",
+    category: "Perseverance"
+  },
+  {
+    text: "The best time to plant a tree was 20 years ago. The second best time is now.",
+    author: "Chinese Proverb",
+    category: "Motivation"
+  },
+  {
+    text: "It is our choices, Harry, that show what we truly are, far more than our abilities.",
+    author: "J.K. Rowling, Harry Potter and the Chamber of Secrets",
+    category: "Wisdom"
+  },
+  {
+    text: "The mind is everything. What you think you become.",
+    author: "Buddha",
+    category: "Wisdom"
+  },
+  {
+    text: "An unexamined life is not worth living.",
+    author: "Socrates",
+    category: "Wisdom"
+  },
+  {
+    text: "Eighty percent of success is showing up.",
+    author: "Woody Allen",
+    category: "Motivation"
+  },
+  {
+    text: "Your talent determines what you can do. Your motivation determines how much you are willing to do. Your attitude determines how well you do it.",
+    author: "Lou Holtz",
+    category: "Motivation"
+  },
+  {
+    text: "The pessimist sees difficulty in every opportunity. The optimist sees opportunity in every difficulty.",
+    author: "Winston Churchill",
+    category: "Inspiration"
+  },
+  {
+    text: "You learn more from failure than from success. Don’t let it stop you. Failure builds character.",
+    author: "Unknown",
+    category: "Perseverance"
+  },
+  {
+    text: "If you are working on something that you really care about, you don’t have to be pushed. The vision pulls you.",
+    author: "Steve Jobs",
+    category: "Motivation"
+  },
+  {
+    text: "People who are crazy enough to think they can change the world, are the ones who do.",
+    author: "Rob Siltanen",
+    category: "Inspiration"
+  },
+  {
+    text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+    author: "Aristotle",
+    category: "Motivation"
+  },
+  {
+    text: "You may be disappointed if you fail, but you are doomed if you don't try.",
+    author: "Beverly Sills",
+    category: "Perseverance"
   },
 ];
