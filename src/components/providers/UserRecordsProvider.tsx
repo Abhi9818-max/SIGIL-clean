@@ -104,12 +104,12 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
   const [metGoals, setMetGoals] = useState<Record<string, string>>({}); // New state for met goals
   const [handledStreaks, setHandledStreaks] = useState<Record<string, boolean>>({});
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
   const [handledDarkStreaks, setHandledDarkStreaks] = useState<Record<string, string>>({});
   const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
   const [freezeCrystals, setFreezeCrystals] = useState<number>(0);
   const [awardedStreakMilestones, setAwardedStreakMilestones] = useState<Record<string, number[]>>({});
-  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
 
@@ -184,6 +184,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
     
     try {
+      const storedUnlockedAchievements = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY);
+      if (storedUnlockedAchievements) {
+        setUnlockedAchievements(JSON.parse(storedUnlockedAchievements));
+      }
+    } catch (error) {
+        console.error("Failed to load unlocked achievements from localStorage:", error);
+    }
+    
+    try {
       const storedHandledDarkStreaks = localStorage.getItem(LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY);
       if (storedHandledDarkStreaks) {
         setHandledDarkStreaks(JSON.parse(storedHandledDarkStreaks));
@@ -226,15 +235,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
     } catch (error) {
         console.error("Failed to load awarded streak milestones from localStorage:", error);
-    }
-
-    try {
-      const storedAchievements = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY);
-      if (storedAchievements) {
-        setUnlockedAchievements(JSON.parse(storedAchievements));
-      }
-    } catch (error) {
-      console.error("Failed to load unlocked achievements from localStorage:", error);
     }
 
 
@@ -290,6 +290,16 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     }
   }, [handledStreaks, isLoaded]);
+  
+   useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY, JSON.stringify(unlockedAchievements));
+      } catch (error) {
+        console.error("Failed to save unlocked achievements to localStorage:", error);
+      }
+    }
+  }, [unlockedAchievements, isLoaded]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -342,17 +352,20 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
     }, [awardedStreakMilestones, isLoaded]);
 
-  useEffect(() => {
-    if (isLoaded) {
+  const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
+    const start = startOfDay(startDate);
+    const end = startOfDay(endDate);
+
+    return records.filter(r => {
       try {
-        localStorage.setItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY, JSON.stringify(unlockedAchievements));
-      } catch (error) {
-        console.error("Failed to save unlocked achievements to localStorage:", error);
+        const recordDate = startOfDay(parseISO(r.date));
+        return recordDate >= start && recordDate <= end;
+      } catch (e) {
+        return false;
       }
-    }
-  }, [unlockedAchievements, isLoaded]);
-
-
+    });
+  }, [records]);
+    
   const getCurrentStreak = useCallback((taskId: string | null = null): number => {
     if (!isLoaded) return 0;
 
@@ -437,20 +450,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const getRecordsByDate = useCallback((date: string): RecordEntry[] => {
     return records.filter(r => r.date === date);
-  }, [records]);
-
-  const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
-    const start = startOfDay(startDate);
-    const end = startOfDay(endDate);
-
-    return records.filter(r => {
-      try {
-        const recordDate = startOfDay(parseISO(r.date));
-        return recordDate >= start && recordDate <= end;
-      } catch (e) {
-        return false;
-      }
-    });
   }, [records]);
 
   const getAggregateSum = useCallback((startDate: Date, endDate: Date, taskId: string | null = null): number => {
@@ -1050,3 +1049,5 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
+
+    
