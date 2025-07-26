@@ -352,19 +352,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
     }, [awardedStreakMilestones, isLoaded]);
 
-  const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
-    const start = startOfDay(startDate);
-    const end = startOfDay(endDate);
-
-    return records.filter(r => {
-      try {
-        const recordDate = startOfDay(parseISO(r.date));
-        return recordDate >= start && recordDate <= end;
-      } catch (e) {
-        return false;
-      }
-    });
-  }, [records]);
+  const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
+    return taskDefinitions.find(task => task.id === taskId);
+  }, [taskDefinitions]);
     
   const getCurrentStreak = useCallback((taskId: string | null = null): number => {
     if (!isLoaded) return 0;
@@ -452,6 +442,20 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return records.filter(r => r.date === date);
   }, [records]);
 
+  const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
+    const start = startOfDay(startDate);
+    const end = startOfDay(endDate);
+
+    return records.filter(r => {
+      try {
+        const recordDate = startOfDay(parseISO(r.date));
+        return recordDate >= start && recordDate <= end;
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [records]);
+
   const getAggregateSum = useCallback((startDate: Date, endDate: Date, taskId: string | null = null): number => {
     let relevantRecords = getRecordsForDateRange(startDate, endDate);
     if (taskId) {
@@ -529,10 +533,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         return newMetGoals;
     });
   }, []);
-
-  const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
-    return taskDefinitions.find(task => task.id === taskId);
-  }, [taskDefinitions]);
 
   const getStatsForCompletedWeek = useCallback((weekOffset: number, taskId?: string | null): WeeklyProgressStats | null => {
     if (!isLoaded) return null;
@@ -995,43 +995,18 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     unlockedAchievements,
   }), [
     records,
-    addRecord,
-    updateRecord,
-    deleteRecord,
-    getRecordsByDate,
-    getRecordsForDateRange,
-    getAggregateSum,
-    getYearlySum,
-    getAllRecordsStringified,
-    getDailyConsistencyLast30Days,
-    getCurrentStreak,
     taskDefinitions,
-    addTaskDefinition,
-    updateTaskDefinition,
-    deleteTaskDefinition,
-    getTaskDefinitionById,
-    getStatsForCompletedWeek,
-    getProgressForCurrentGoal,
-    getWeeklyAggregatesForChart,
-    getUserLevelInfo,
-    awardGoalCompletionBonus,
     totalBonusPoints,
-    checkAndAwardAutomatedGoal,
-    awardTierEntryBonus,
-    deductBonusPoints,
-    handleConsistencyCheck,
-    isGoalMetForLastPeriod,
-    checkDarkStreaks,
-    markDarkStreakHandled,
-    getAvailableSkillPoints,
-    unlockSkill,
-    isSkillUnlocked,
-    constellations,
-    getTaskDistribution,
-    getProductivityByDay,
-    freezeCrystals,
-    useFreezeCrystal,
+    metGoals,
+    handledStreaks,
     unlockedAchievements,
+    handledDarkStreaks,
+    spentSkillPoints,
+    unlockedSkills,
+    freezeCrystals,
+    awardedStreakMilestones,
+    isLoaded,
+    toast
   ]);
 
 
@@ -1049,5 +1024,3 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
-
-    
