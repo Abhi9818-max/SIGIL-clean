@@ -1,9 +1,11 @@
+
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import type { TaskDefinition } from '@/types';
-import { ListFilter, ChevronUp, ChevronDown } from 'lucide-react';
+import { ListFilter } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TaskFilterBarProps {
   taskDefinitions: TaskDefinition[];
@@ -12,51 +14,48 @@ interface TaskFilterBarProps {
 }
 
 const TaskFilterBar: React.FC<TaskFilterBarProps> = ({ taskDefinitions, selectedTaskId, onSelectTask }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div className="mb-4 p-3 rounded-lg shadow-md bg-card">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center">
-          <ListFilter className="h-4 w-4 mr-2 text-primary" />
-          <h3 className="text-base font-semibold text-foreground">Filter by Task</h3>
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)} className="h-7 w-7">
-          <span className="sr-only">{isOpen ? "Hide filters" : "Show filters"}</span>
-          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
+      <div className="flex items-center mb-3">
+        <ListFilter className="h-4 w-4 mr-2 text-primary" />
+        <h3 className="text-base font-semibold text-foreground">Filter by Task</h3>
       </div>
 
-      {isOpen && (
-        <div className="flex flex-wrap gap-2 pt-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={selectedTaskId === null ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => onSelectTask(null)}
+          className={cn(
+            "transition-all",
+            selectedTaskId === null && "shadow-md"
+          )}
+        >
+          All Tasks
+        </Button>
+        {taskDefinitions.map((task) => (
           <Button
-            variant={selectedTaskId === null ? 'default' : 'outline'}
+            key={task.id}
+            variant={selectedTaskId === task.id ? 'default' : 'outline'}
             size="sm"
-            onClick={() => onSelectTask(null)}
+            onClick={() => onSelectTask(task.id)}
+            className={cn(
+                "transition-all text-foreground/90",
+                selectedTaskId === task.id && "shadow-md text-primary-foreground brightness-110"
+            )}
+            style={
+              selectedTaskId === task.id
+                ? {
+                    backgroundColor: task.color,
+                    borderColor: task.color,
+                  }
+                : {}
+            }
           >
-            All Tasks
+            {task.name}
           </Button>
-          {taskDefinitions.map((task) => (
-            <Button
-              key={task.id}
-              variant={selectedTaskId === task.id ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onSelectTask(task.id)}
-              style={
-                selectedTaskId === task.id
-                  ? {
-                      backgroundColor: task.color,
-                      borderColor: task.color,
-                      color: 'hsl(var(--foreground))',
-                    }
-                  : {}
-              }
-            >
-              {task.name}
-            </Button>
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 };
