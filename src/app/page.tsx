@@ -21,6 +21,7 @@ import type { Quote } from '@/lib/quotes';
 import { QUOTES } from '@/lib/quotes';
 import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
+import HighGoalsCard from '@/components/high-goals/HighGoalsCard';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
@@ -171,11 +172,20 @@ export default function HomePage() {
             )}
         </div>
 
-        {dashboardSettings.showAISuggestions && (
-            <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                <AISuggestionsCard />
-            </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {dashboardSettings.showHighGoals && (
+                <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                    <HighGoalsCard />
+                </div>
+            )}
+            {dashboardSettings.showAISuggestions && (
+                <div className={cn("animate-fade-in-up",
+                  dashboardSettings.showHighGoals ? "" : "md:col-span-2"
+                )} style={{ animationDelay: '400ms' }}>
+                    <AISuggestionsCard />
+                </div>
+            )}
+        </div>
 
       </main>
       <RecordModal

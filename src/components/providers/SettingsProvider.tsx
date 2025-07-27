@@ -12,6 +12,7 @@ const defaultSettings: DashboardSettings = {
   showTodoList: true,
   showProgressChart: true,
   showAISuggestions: true,
+  showHighGoals: true,
 };
 
 interface SettingsContextType {

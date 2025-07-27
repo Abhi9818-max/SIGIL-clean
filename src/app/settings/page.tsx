@@ -151,6 +151,7 @@ export default function SettingsPage() {
       { key: 'showTodoList', label: 'Pacts Card' },
       { key: 'showProgressChart', label: 'Progress Chart' },
       { key: 'showAISuggestions', label: 'AI Coach Card' },
+      { key: 'showHighGoals', label: 'High Goals Card' },
   ];
 
   return (
