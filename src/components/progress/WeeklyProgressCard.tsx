@@ -13,13 +13,13 @@ interface WeeklyProgressCardProps {
 }
 
 const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({ selectedTaskFilterId }) => {
-  const { getStatsForCompletedWeek } = useUserRecords();
+  const { getStatsForCompletedWeek, getTaskDefinitionById } = useUserRecords();
   const [currentWeekStats, setCurrentWeekStats] = useState<WeeklyProgressStats | null>(null);
   const [prevWeekStats, setPrevWeekStats] = useState<WeeklyProgressStats | null>(null);
   const [percentageChange, setPercentageChange] = useState<number | null>(null);
 
   const selectedTaskName = selectedTaskFilterId
-    ? useUserRecords().getTaskDefinitionById(selectedTaskFilterId)?.name
+    ? getTaskDefinitionById(selectedTaskFilterId)?.name
     : null;
 
   const cardTitle = selectedTaskName
