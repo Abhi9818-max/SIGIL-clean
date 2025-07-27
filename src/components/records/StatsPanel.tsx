@@ -144,38 +144,39 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             </CardContent>
         </Card>
         
-        <Card className="shadow-lg animate-fade-in-up" style={{ animationDelay: `300ms` }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={activeHighGoal?.name ?? "High Goal"}>
-                    {activeHighGoal?.name ?? "High Goal"}
-                </CardTitle>
-                <ShieldCheck className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-                {activeHighGoal ? (
-                    (() => {
-                        const goalTask = getTaskDefinitionById(activeHighGoal.taskId);
-                        const progress = getHighGoalProgress(activeHighGoal);
-                        const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
-                        const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
-                        return (
-                             <div className="flex items-center justify-between gap-4">
-                                <div className="flex flex-col">
-                                    <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
-                                    <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
+        <Link href="/high-goals">
+            <Card className="shadow-lg animate-fade-in-up h-full hover:bg-muted/50 transition-colors" style={{ animationDelay: `300ms` }}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={activeHighGoal?.name ?? "High Goal"}>
+                        {activeHighGoal?.name ?? "High Goal"}
+                    </CardTitle>
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                    {activeHighGoal ? (
+                        (() => {
+                            const goalTask = getTaskDefinitionById(activeHighGoal.taskId);
+                            const progress = getHighGoalProgress(activeHighGoal);
+                            const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
+                            const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
+                            return (
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex flex-col">
+                                        <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
+                                        <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
+                                    </div>
+                                    <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
                                 </div>
-                                <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
-                            </div>
-                        )
-                    })()
-                ) : (
-                    <div className="text-center text-muted-foreground pt-3">
-                        <p>No active high goals.</p>
-                        <Link href="/high-goals" className="text-xs text-primary hover:underline">Set one now</Link>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                            )
+                        })()
+                    ) : (
+                        <div className="text-center text-muted-foreground pt-4 flex items-center justify-center h-full">
+                            <p className="text-sm">No active high goals.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </Link>
       </div>
   );
 };
