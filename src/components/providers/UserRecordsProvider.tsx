@@ -995,6 +995,18 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     unlockedAchievements,
   }), [
     records,
+    taskDefinitions,
+    totalBonusPoints,
+    metGoals,
+    handledStreaks,
+    unlockedAchievements,
+    handledDarkStreaks,
+    spentSkillPoints,
+    unlockedSkills,
+    freezeCrystals,
+    awardedStreakMilestones,
+    isLoaded,
+    toast,
     addRecord,
     updateRecord,
     deleteRecord,
@@ -1005,7 +1017,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getAllRecordsStringified,
     getDailyConsistencyLast30Days,
     getCurrentStreak,
-    taskDefinitions,
     addTaskDefinition,
     updateTaskDefinition,
     deleteTaskDefinition,
@@ -1015,7 +1026,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getWeeklyAggregatesForChart,
     getUserLevelInfo,
     awardGoalCompletionBonus,
-    totalBonusPoints,
     checkAndAwardAutomatedGoal,
     awardTierEntryBonus,
     deductBonusPoints,
@@ -1029,9 +1039,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     constellations,
     getTaskDistribution,
     getProductivityByDay,
-    freezeCrystals,
     useFreezeCrystal,
-    unlockedAchievements,
+    checkAchievements
   ]);
 
 
