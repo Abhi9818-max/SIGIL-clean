@@ -20,11 +20,14 @@ interface ProgressOverTimeChartProps {
 }
 
 const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedTaskFilterId }) => {
-  const { getWeeklyAggregatesForChart, getTaskDefinitionById } = useUserRecords();
+  const { getWeeklyAggregatesForChart, taskDefinitions } = useUserRecords();
   const [chartData, setChartData] = useState<AggregatedTimeDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+  const task = useMemo(() => {
+    return selectedTaskFilterId ? taskDefinitions.find(t => t.id === selectedTaskFilterId) : null;
+  }, [selectedTaskFilterId, taskDefinitions]);
+  
   const chartTitle = task ? `${task.name} Progress` : "Overall Progress";
   const defaultChartColor = "hsl(var(--primary))";
 
