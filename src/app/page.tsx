@@ -172,7 +172,7 @@ export default function HomePage() {
             )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {dashboardSettings.showHighGoals && (
                 <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
                     <HighGoalsCard />
@@ -180,7 +180,7 @@ export default function HomePage() {
             )}
             {dashboardSettings.showAISuggestions && (
                 <div className={cn("animate-fade-in-up",
-                  !dashboardSettings.showHighGoals ? "md:col-span-2" : ""
+                  !dashboardSettings.showHighGoals ? "lg:col-span-2" : ""
                 )} style={{ animationDelay: '400ms' }}>
                     <AISuggestionsCard />
                 </div>

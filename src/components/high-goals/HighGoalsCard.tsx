@@ -27,7 +27,7 @@ const HighGoalsCard = () => {
       case 'generic':
         return '';
       default:
-        return task.unit.charAt(0).toUpperCase() + task.unit.slice(1);
+        return task.unit;
     }
   };
 
@@ -42,8 +42,8 @@ const HighGoalsCard = () => {
       </CardHeader>
       <CardContent className="flex-grow">
         {recentGoals.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-center text-muted-foreground py-4">No high goals set. Aim high!</p>
+          <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
+            <p>No high goals set. Aim high!</p>
           </div>
         ) : (
           <div className="space-y-4">

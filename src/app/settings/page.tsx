@@ -148,7 +148,7 @@ export default function SettingsPage() {
       { key: 'showStatsPanel', label: 'Stats Panel' },
       { key: 'showTaskFilterBar', label: 'Task Filter Bar' },
       { key: 'showContributionGraph', label: 'Contribution Graph' },
-      { key: 'showTodoList', label: 'Pacts Card' },
+      { key: 'showTodoList', label: 'Pacts Card (To-Do)' },
       { key: 'showProgressChart', label: 'Progress Chart' },
       { key: 'showAISuggestions', label: 'AI Coach Card' },
       { key: 'showHighGoals', label: 'High Goals Card' },
