@@ -1,6 +1,7 @@
 
 
 export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic' | 'custom';
+export type TaskFrequency = 'daily' | 'weekly';
 
 export interface RecordEntry {
   id: string; // Unique identifier for each record
@@ -40,6 +41,8 @@ export interface TaskDefinition {
   customUnitName?: string; // Optional: name for the custom unit
   intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
   darkStreakEnabled?: boolean; // Optional: Enable high-stakes daily streak for this task
+  frequencyType?: TaskFrequency; // 'daily' or 'weekly'
+  frequencyCount?: number; // e.g., for 'weekly', how many times per week
 }
 
 // For progress charts

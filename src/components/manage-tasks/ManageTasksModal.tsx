@@ -48,7 +48,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from '@/components/ui/separator';
-import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer } from 'lucide-react';
+import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer, CalendarCheck } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import type { TaskDefinition, TaskUnit } from '@/types';
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,11 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
   threshold3: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   threshold4: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   darkStreakEnabled: z.boolean().optional(),
+  frequencyType: z.enum(['daily', 'weekly']).optional(),
+  frequencyCount: z.preprocess(
+    val => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    z.number().min(1, "Must be at least 1").max(7, "Cannot be more than 7").optional()
+  ),
 }).superRefine((data, ctx) => {
     const thresholds = [data.threshold1, data.threshold2, data.threshold3, data.threshold4];
     const providedThresholds = thresholds.filter(t => t !== undefined) as number[];
@@ -109,6 +114,13 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
             message: "Custom unit name is required.",
         });
     }
+    if (data.frequencyType === 'weekly' && (data.frequencyCount === undefined || data.frequencyCount === null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["frequencyCount"],
+        message: "Count is required for weekly frequency.",
+      });
+    }
 });
 
 type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
@@ -139,6 +151,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       threshold3: undefined,
       threshold4: undefined,
       darkStreakEnabled: false,
+      frequencyType: 'daily',
+      frequencyCount: undefined,
     },
   });
 
@@ -153,6 +167,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       threshold3: task?.intensityThresholds?.[2] ?? undefined,
       threshold4: task?.intensityThresholds?.[3] ?? undefined,
       darkStreakEnabled: task?.darkStreakEnabled ?? false,
+      frequencyType: task?.frequencyType ?? 'daily',
+      frequencyCount: task?.frequencyCount ?? undefined,
     });
     setEditingTask(task);
   };
@@ -179,6 +195,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       unit: data.unit,
       customUnitName: data.unit === 'custom' ? data.customUnitName : undefined,
       darkStreakEnabled: data.darkStreakEnabled,
+      frequencyType: data.frequencyType,
+      frequencyCount: data.frequencyType === 'weekly' ? data.frequencyCount : undefined,
     };
 
     if (editingTask) {
@@ -200,6 +218,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
   };
   
   const watchUnit = form.watch('unit');
+  const watchFrequencyType = form.watch('frequencyType');
+
 
   const getUnitLabel = (task: TaskDefinition) => {
     if (task.unit === 'custom' && task.customUnitName) {
@@ -217,6 +237,12 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
   };
   const currentUnitLabel = watchUnit === 'custom' ? (form.getValues('customUnitName') || 'Custom') : (watchUnit ? watchUnit.charAt(0).toUpperCase() + watchUnit.slice(1) : 'Value');
 
+  const getFrequencyLabel = (task: TaskDefinition) => {
+    if (task.frequencyType === 'weekly') {
+      return `${task.frequencyCount}x a week`;
+    }
+    return 'Daily';
+  };
 
   if (!isOpen) {
     return null;
@@ -268,6 +294,35 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                 </div>
                 
                 <Accordion type="multiple" className="w-full space-y-2">
+                  <AccordionItem value="scheduling" className="border-b-0">
+                    <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none">
+                      <div className="flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-muted-foreground" />Task Scheduling</div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
+                      <p className="text-xs text-muted-foreground">Set how often this task should be completed to affect streak and consistency calculations.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="frequencyType">Frequency</Label>
+                          <Controller name="frequencyType" control={form.control} render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value ?? 'daily'}>
+                              <SelectTrigger className="mt-1"><SelectValue placeholder="Select frequency" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Every Day</SelectItem>
+                                <SelectItem value="weekly">X times a week</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )} />
+                        </div>
+                        {watchFrequencyType === 'weekly' && (
+                          <div className="animate-fade-in-up">
+                            <Label htmlFor="frequencyCount">Times per week</Label>
+                            <Input id="frequencyCount" type="number" {...form.register('frequencyCount')} className="mt-1" placeholder="e.g., 3" />
+                            {form.formState.errors.frequencyCount && (<p className="text-sm text-destructive mt-1">{form.formState.errors.frequencyCount.message}</p>)}
+                          </div>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                   <AccordionItem value="intensity" className="border-b-0">
                     <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Timer className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
                     <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
@@ -342,6 +397,8 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                             <div>
                                 <p className="font-semibold">{task.name}</p>
                                 <div className="flex items-center gap-4 text-muted-foreground text-xs mt-1">
+                                <Tooltip><TooltipTrigger className="flex items-center gap-1"><CalendarCheck className="h-4 w-4" /><span>{getFrequencyLabel(task)}</span></TooltipTrigger><TooltipContent><p>Task Frequency</p></TooltipContent></Tooltip>
+
                                 {task.darkStreakEnabled && (
                                     <Tooltip><TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger><TooltipContent><p>Dark Streak Enabled</p></TooltipContent></Tooltip>
                                 )}

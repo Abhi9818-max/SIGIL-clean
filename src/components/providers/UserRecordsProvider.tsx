@@ -40,6 +40,7 @@ import {
   subMonths,
   getDay,
   differenceInDays,
+  isWithinInterval,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
@@ -307,27 +308,53 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     
   const getCurrentStreak = useCallback((taskId: string | null = null): number => {
     if (!isLoaded) return 0;
-
+  
     const allRecords = [...records];
-    const taskRelevantRecords = taskId ? allRecords.filter(r => r.taskType === taskId) : allRecords;
-
-    if (taskRelevantRecords.length === 0) return 0;
-
+    let taskRelevantRecords = taskId ? allRecords.filter(r => r.taskType === taskId) : allRecords;
     const recordDates = new Set(taskRelevantRecords.map(r => r.date));
-    let streak = 0;
+  
+    const taskDef = taskId ? getTaskDefinitionById(taskId) : null;
+    const isDaily = !taskDef || !taskDef.frequencyType || taskDef.frequencyType === 'daily';
+  
     let currentDate = startOfDay(new Date());
-
+    let streak = 0;
+  
+    // If today has no record, start checking from yesterday
     if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
-        currentDate = subDays(currentDate, 1);
+      currentDate = subDays(currentDate, 1);
     }
-
-    while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+  
+    if (isDaily) {
+      // Daily streak logic
+      while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
         streak++;
         currentDate = subDays(currentDate, 1);
+      }
+    } else {
+      // Weekly streak logic
+      const freqCount = taskDef?.frequencyCount || 1;
+      let consecutiveWeeks = 0;
+      let continueStreak = true;
+  
+      while (continueStreak) {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+        const recordsThisWeek = [...recordDates].filter(d => 
+          isWithinInterval(parseISO(d), { start: weekStart, end: weekEnd })
+        ).length;
+        
+        if (recordsThisWeek >= freqCount) {
+          consecutiveWeeks++;
+          currentDate = subDays(weekStart, 1); // Move to the previous week
+        } else {
+          continueStreak = false;
+        }
+      }
+      streak = consecutiveWeeks; // For weekly tasks, streak is in weeks
     }
-
+  
     return streak;
-  }, [isLoaded, records]);
+  }, [isLoaded, records, getTaskDefinitionById]);
 
   const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
     const newRecord: RecordEntry = {
@@ -409,21 +436,54 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const getDailyConsistency = useCallback((days: number, taskId: string | null = null): number => {
     if (!isLoaded || days <= 0) return 0;
+  
     const today = startOfDay(new Date());
     const startDate = startOfDay(subDays(today, days - 1));
-
+  
     let relevantRecords = getRecordsForDateRange(startDate, today);
-    if (taskId) {
-      relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    const recordDates = new Set(relevantRecords.map(r => r.date));
+  
+    if (!taskId) {
+      // Overall consistency: any activity on a day counts
+      const activeDays = new Set(relevantRecords.map(r => r.date)).size;
+      return Math.round((activeDays / days) * 100);
     }
-
-    const uniqueDaysWithRecords = new Set(relevantRecords.map(r => r.date)).size;
-
-    const daysInPeriod = eachDayOfInterval({ start: startDate, end: today }).length;
-    if (daysInPeriod === 0) return 0;
-
-    return Math.round((uniqueDaysWithRecords / daysInPeriod) * 100);
-  }, [getRecordsForDateRange, isLoaded]);
+  
+    const taskDef = getTaskDefinitionById(taskId);
+    if (!taskDef || taskDef.frequencyType === 'daily' || !taskDef.frequencyType) {
+      // Daily task consistency
+      const activeDays = new Set(relevantRecords.filter(r => r.taskType === taskId).map(r => r.date)).size;
+      return Math.round((activeDays / days) * 100);
+    } else {
+      // Weekly task consistency
+      const freqCount = taskDef.frequencyCount || 1;
+      let totalWeeks = 0;
+      let successfulWeeks = 0;
+      let currentDate = today;
+  
+      while(currentDate >= startDate) {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+  
+        const recordsThisWeek = [...recordDates].filter(dateStr => {
+          const d = parseISO(dateStr);
+          return isWithinInterval(d, { start: weekStart, end: weekEnd })
+        }).length;
+  
+        if(isWithinInterval(weekStart, {start: startDate, end: today}) || isWithinInterval(weekEnd, {start: startDate, end: today})) {
+            totalWeeks++;
+            if (recordsThisWeek >= freqCount) {
+                successfulWeeks++;
+            }
+        }
+        currentDate = subDays(weekStart, 1);
+      }
+      
+      if (totalWeeks === 0) return 100; // or 0, depending on desired behavior for no full weeks
+      return Math.round((successfulWeeks / totalWeeks) * 100);
+    }
+  
+  }, [getRecordsForDateRange, isLoaded, getTaskDefinitionById]);
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
