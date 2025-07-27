@@ -40,13 +40,19 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     return getCurrentStreak(selectedTaskFilterId);
   }, [records, selectedTaskFilterId, getCurrentStreak]);
 
-  const { task, isDarkStreakSelected, consistencyLabel, consistencyCircleColor } = useMemo(() => {
+  const { task, isDarkStreakSelected, consistencyLabel, consistencyCircleColor, unitLabel } = useMemo(() => {
     const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+    let unitLabel = '';
+    if (task?.unit && task.unit !== 'count' && task.unit !== 'generic') {
+      unitLabel = task.unit;
+    }
+
     return {
       task,
       isDarkStreakSelected: task?.darkStreakEnabled === true,
       consistencyLabel: task ? `Consistency for ${task.name}` : "Consistency (Last 30D)",
-      consistencyCircleColor: task?.color
+      consistencyCircleColor: task?.color,
+      unitLabel
     };
   }, [selectedTaskFilterId, getTaskDefinitionById]);
 
@@ -65,6 +71,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
               {aggregate.toLocaleString()}
+              {unitLabel && <span className="text-lg text-muted-foreground ml-2">{unitLabel}</span>}
             </div>
           </CardContent>
         </Card>
