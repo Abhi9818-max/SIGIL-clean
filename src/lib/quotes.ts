@@ -117,6 +117,41 @@ export const QUOTES: Quote[] = [
     author: "Helen Keller",
     category: "Motivation"
   },
+  {
+    text: "Everything you’ve ever wanted is on the other side of fear.",
+    author: "George Addair",
+    category: "Motivation",
+  },
+  {
+    text: "Don’t be pushed around by the fears in your mind. Be led by the dreams in your heart.",
+    author: "Roy T. Bennett",
+    category: "Motivation",
+  },
+  {
+    text: "It's hard to beat a person who never gives up.",
+    author: "Babe Ruth",
+    category: "Motivation",
+  },
+  {
+    text: "I’ve missed more than 9000 shots in my career. I’ve lost almost 300 games. 26 times I’ve been trusted to take the game winning shot and missed. I’ve failed over and over and over again in my life. And that is why I succeed.",
+    author: "Michael Jordan",
+    category: "Motivation",
+  },
+  {
+    text: "If you're going through hell, keep going.",
+    author: "Winston Churchill",
+    category: "Motivation",
+  },
+  {
+    text: "The way to get started is to quit talking and begin doing.",
+    author: "Walt Disney",
+    category: "Motivation",
+  },
+  {
+    text: "Success usually comes to those who are too busy to be looking for it.",
+    author: "Henry David Thoreau",
+    category: "Motivation",
+  },
 
   // Inspiration
   {
@@ -234,6 +269,26 @@ export const QUOTES: Quote[] = [
     author: "Winston Churchill",
     category: "Inspiration"
   },
+  {
+    text: "Nothing is impossible, the word itself says 'I'm possible'!",
+    author: "Audrey Hepburn",
+    category: "Inspiration",
+  },
+  {
+    text: "You can't use up creativity. The more you use, the more you have.",
+    author: "Maya Angelou",
+    category: "Inspiration",
+  },
+  {
+    text: "What lies behind us and what lies before us are tiny matters compared to what lies within us.",
+    author: "Ralph Waldo Emerson",
+    category: "Inspiration",
+  },
+  {
+    text: "Not all who wander are lost.",
+    author: "J.R.R. Tolkien",
+    category: "Inspiration",
+  },
 
   // Fighting & Stoicism
   {
@@ -305,6 +360,16 @@ export const QUOTES: Quote[] = [
     text: "I hated every minute of training, but I said, 'Don't quit. Suffer now and live the rest of your life as a champion.'",
     author: "Muhammad Ali",
     category: "Fighting"
+  },
+  {
+    text: "He who has a why to live for can bear almost any how.",
+    author: "Friedrich Nietzsche",
+    category: "Fighting",
+  },
+  {
+    text: "The only thing that is constant is change.",
+    author: "Heraclitus",
+    category: "Fighting",
   },
 
   // Wisdom
@@ -409,9 +474,24 @@ export const QUOTES: Quote[] = [
     category: "Wisdom"
   },
   {
-    text: "An unexamined life is not worth living.",
-    author: "Socrates",
-    category: "Wisdom"
+    text: "Count your age by friends, not years. Count your life by smiles, not tears.",
+    author: "John Lennon",
+    category: "Wisdom",
+  },
+  {
+    text: "Any fool can know. The point is to understand.",
+    author: "Albert Einstein",
+    category: "Wisdom",
+  },
+  {
+    text: "It is not the man who has too little, but the man who craves more, that is poor.",
+    author: "Seneca",
+    category: "Wisdom",
+  },
+  {
+    text: "You will not be punished for your anger, you will be punished by your anger.",
+    author: "Buddha",
+    category: "Wisdom",
   },
 
   // Perseverance
@@ -479,6 +559,16 @@ export const QUOTES: Quote[] = [
     text: "You may be disappointed if you fail, but you are doomed if you don't try.",
     author: "Beverly Sills",
     category: "Perseverance"
+  },
+  {
+    text: "Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+    author: "Thomas A. Edison",
+    category: "Perseverance",
+  },
+  {
+    text: "Persistence is the twin sister of excellence. One is a matter of quality; the other, a matter of time.",
+    author: "Marabel Morgan",
+    category: "Perseverance",
   },
 
   // Literature & Banned Books
@@ -587,6 +677,16 @@ export const QUOTES: Quote[] = [
     author: "J.R.R. Tolkien, The Fellowship of the Ring",
     category: "Literature"
   },
+  {
+    text: "A reader lives a thousand lives before he dies . . . The man who never reads lives only one.",
+    author: "George R.R. Martin, A Dance with Dragons",
+    category: "Literature",
+  },
+  {
+    text: "Stay gold, Ponyboy. Stay gold.",
+    author: "S.E. Hinton, The Outsiders",
+    category: "Literature",
+  },
 
   // Humor
   {
@@ -598,5 +698,35 @@ export const QUOTES: Quote[] = [
     text: "Two things are infinite: the universe and human stupidity; and I'm not sure about the universe.",
     author: "Albert Einstein",
     category: "Humor"
+  },
+  {
+    text: "I'm not superstitious, but I am a little stitious.",
+    author: "Michael Scott, The Office",
+    category: "Humor",
+  },
+  {
+    text: "I find that a duck’s opinion of me is very much influenced by whether or not I have bread.",
+    author: "Mitch Hedberg",
+    category: "Humor",
+  },
+  {
+    text: "Before you criticize someone, you should walk a mile in their shoes. That way, when you criticize them, you're a mile away and you have their shoes.",
+    author: "Jack Handey",
+    category: "Humor",
+  },
+  {
+    text: "I am so clever that sometimes I don't understand a single word of what I am saying.",
+    author: "Oscar Wilde",
+    category: "Humor",
+  },
+  {
+    text: "I have not failed. I've just found 10,000 ways that won't work.",
+    author: "Thomas A. Edison",
+    category: "Humor",
+  },
+  {
+    text: "We don't make mistakes, just happy little accidents.",
+    author: "Bob Ross",
+    category: "Humor",
   },
 ];
