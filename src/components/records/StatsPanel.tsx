@@ -160,12 +160,15 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
                             const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
                             const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
                             return (
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex flex-col">
-                                        <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
-                                        <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
+                                <div className="flex flex-col justify-between gap-1 h-full">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex flex-col">
+                                            <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
+                                             <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
+                                        </div>
+                                        <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
                                     </div>
-                                    <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
+                                    <p className="text-xs text-center text-muted-foreground mt-1">{progress.toLocaleString()} / {activeHighGoal.targetValue.toLocaleString()}</p>
                                 </div>
                             )
                         })()
