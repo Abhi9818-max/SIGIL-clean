@@ -81,12 +81,12 @@ const TaskDistributionChart: React.FC<TaskDistributionChartProps> = ({ startDate
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[250px] w-full">
+          <div className="h-[250px] w-full p-4">
             <Skeleton className="h-full w-full" />
           </div>
         ) : taskId ? (
           <SingleTaskView />
-        ) : chartData.length === 0 ? (
+        ) : chartData.length === 0 || chartData.every(d => d.value === 0) ? (
           <p className="text-center text-muted-foreground py-10 h-[250px] flex items-center justify-center">
             No data to display for this period.
           </p>
@@ -105,7 +105,7 @@ const TaskDistributionChart: React.FC<TaskDistributionChartProps> = ({ startDate
                 strokeWidth={5}
               >
                 {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell key={`cell-${index}`} fill={`var(--color-${entry.name})`} />
                 ))}
               </Pie>
               <ChartLegend

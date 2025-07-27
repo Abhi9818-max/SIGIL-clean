@@ -24,7 +24,7 @@ interface ProductivityByDayChartProps {
 const chartConfig = {
   total: {
     label: "Total Value",
-    color: "hsl(var(--primary))",
+    color: "hsl(var(--accent))",
   },
 } satisfies ChartConfig;
 
@@ -51,7 +51,7 @@ const ProductivityByDayChart: React.FC<ProductivityByDayChartProps> = ({ startDa
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[250px] w-full">
+          <div className="h-[250px] w-full p-4">
             <Skeleton className="h-full w-full" />
           </div>
         ) : chartData.length === 0 || chartData.every(d => d.total === 0) ? (

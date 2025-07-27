@@ -20,14 +20,12 @@ import { subDays, startOfYear, getYear, endOfYear } from 'date-fns';
 import TaskDistributionChart from '@/components/insights/TaskDistributionChart';
 import ProductivityByDayChart from '@/components/insights/ProductivityByDayChart';
 import Link from 'next/link';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 
 type TimeRange = 'last_30_days' | 'last_90_days' | 'this_year' | 'last_year' | 'custom';
 
 export default function InsightsPage() {
-  const { getUserLevelInfo, getYearlySum, taskDefinitions } = useUserRecords();
-  const [yearForSum, setYearForSum] = useState<number>(new Date().getFullYear());
+  const { getUserLevelInfo, getAggregateSum, taskDefinitions } = useUserRecords();
   const [timeRange, setTimeRange] = useState<TimeRange>('last_30_days');
   const [customDays, setCustomDays] = useState<number | string>(30);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -35,15 +33,6 @@ export default function InsightsPage() {
     start: subDays(new Date(), 29),
     end: new Date(),
   });
-
-  useEffect(() => {
-    const currentYear = new Date().getFullYear();
-    if (timeRange === 'this_year') {
-      setYearForSum(currentYear);
-    } else if (timeRange === 'last_year') {
-      setYearForSum(currentYear - 1);
-    }
-  }, [timeRange]);
 
   const calculateDateRange = (range: TimeRange, days?: number) => {
     const now = new Date();
@@ -65,7 +54,7 @@ export default function InsightsPage() {
         end = endOfYear(new Date(lastYear, 11, 31));
         break;
       case 'custom':
-        start = subDays(now, (days || 30) - 1);
+        start = subDays(now, (Number(days) || 30) - 1);
         end = now;
         break;
       case 'last_30_days':
@@ -76,7 +65,8 @@ export default function InsightsPage() {
     }
     setDateRange({ start, end });
   };
-
+  
+  // This effect recalculates the date range whenever the timeRange filter changes
   useEffect(() => {
     if (timeRange !== 'custom') {
       calculateDateRange(timeRange);
@@ -86,7 +76,6 @@ export default function InsightsPage() {
   const handleCustomDaysApply = () => {
     const days = Number(customDays);
     if (days > 0) {
-      setTimeRange('custom'); // Set range to custom to reflect the action
       calculateDateRange('custom', days);
     }
   };
@@ -94,7 +83,7 @@ export default function InsightsPage() {
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
 
-  const displayedYearSum = getYearlySum(yearForSum, selectedTaskId);
+  const displayedSum = getAggregateSum(dateRange.start, dateRange.end, selectedTaskId);
   
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -147,26 +136,28 @@ export default function InsightsPage() {
                         </Select>
                     </div>
                    
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        <Label htmlFor="custom-days" className="sr-only">Custom Days</Label>
-                        <Input 
-                            id="custom-days"
-                            type="number"
-                            value={customDays}
-                            onChange={(e) => setCustomDays(e.target.value)}
-                            onBlur={() => {
-                                if (customDays === '' || Number(customDays) <= 0) {
-                                    setCustomDays(30);
-                                }
-                            }}
-                            placeholder="Days"
-                            className="w-full md:w-24"
-                            onFocus={() => setTimeRange('custom')}
-                        />
-                        <Button onClick={handleCustomDaysApply} size="sm" variant="secondary">
-                            <Search className="h-4 w-4"/>
-                        </Button>
-                    </div>
+                    {timeRange === 'custom' && (
+                        <div className="flex items-center gap-2 w-full md:w-auto animate-fade-in-up">
+                            <Label htmlFor="custom-days" className="sr-only">Custom Days</Label>
+                            <Input 
+                                id="custom-days"
+                                type="number"
+                                value={customDays}
+                                onChange={(e) => setCustomDays(e.target.value)}
+                                onBlur={() => {
+                                    if (customDays === '' || Number(customDays) <= 0) {
+                                        setCustomDays(30);
+                                    }
+                                }}
+                                placeholder="Days"
+                                className="w-full md:w-24"
+                                onFocus={() => setTimeRange('custom')}
+                            />
+                            <Button onClick={handleCustomDaysApply} size="sm" variant="secondary">
+                                <Search className="h-4 w-4"/>
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -174,16 +165,16 @@ export default function InsightsPage() {
                <Card className="lg:col-span-1">
                  <CardHeader>
                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {selectedTaskId ? `Total for ${taskDefinitions.find(t => t.id === selectedTaskId)?.name}` : `Total for ${yearForSum}`}
+                    Total for Selected Period
                    </CardTitle>
+                    <CardDescription>
+                      {dateRange.start.toLocaleDateString()} - {dateRange.end.toLocaleDateString()}
+                    </CardDescription>
                  </CardHeader>
                  <CardContent>
-                   <p className="text-3xl font-bold">{displayedYearSum.toLocaleString()}</p>
+                   <p className="text-3xl font-bold">{displayedSum.toLocaleString()}</p>
                  </CardContent>
                </Card>
-                <div className="lg:col-span-2">
-                    {/* Placeholder for potential future cards */}
-                </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <TaskDistributionChart startDate={dateRange.start} endDate={dateRange.end} taskId={selectedTaskId} />
