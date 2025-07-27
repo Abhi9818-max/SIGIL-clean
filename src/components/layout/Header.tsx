@@ -43,7 +43,6 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
 
   const navLinks = [
     { href: "/todo", label: "Pacts", icon: ListChecks },
-    { href: "/goals", label: "Goals", icon: Target },
     { href: "/high-goals", label: "High Goals", icon: ShieldCheck },
     { href: "/insights", label: "Insights", icon: BarChart2 },
     { href: "/achievements", label: "Achievements", icon: Trophy },

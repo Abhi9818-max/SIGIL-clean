@@ -1,7 +1,6 @@
 
 
 export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic' | 'custom';
-export type GoalType = 'at_least' | 'no_more_than';
 
 export interface RecordEntry {
   id: string; // Unique identifier for each record
@@ -40,10 +39,6 @@ export interface TaskDefinition {
   unit?: TaskUnit; // The unit of measurement for this task's value
   customUnitName?: string; // Optional: name for the custom unit
   intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
-  goalValue?: number; // Optional: A numerical goal for the task (e.g., hours)
-  goalInterval?: 'daily' | 'weekly' | 'monthly'; // Optional: The interval for the goal
-  goalType?: GoalType; // Optional: 'at_least' or 'no_more_than'
-  goalCompletionBonusPercentage?: number; // Optional: Percentage of goalValue to award as bonus points
   darkStreakEnabled?: boolean; // Optional: Enable high-stakes daily streak for this task
 }
 
@@ -59,15 +54,6 @@ export interface WeeklyProgressStats {
   startDate: Date;
   endDate: Date;
 }
-
-export interface GoalProgress {
-  current: number;
-  goal: number;
-  percentage: number;
-  isMet: boolean;
-  unit: TaskUnit;
-}
-
 
 // For User Leveling System
 // totalAccumulatedValue here represents the total experience points (base record values + bonuses)
@@ -87,31 +73,6 @@ export interface UserLevelInfo {
   valueTowardsNextLevel: number; // Experience points earned within the current level
   pointsForNextLevel: number | null; // Total experience points needed to reach the next level from start of current level
 }
-
-// For Automated Goal Check Results
-export type AutomatedGoalCheckResult =
-  | {
-      metGoal: boolean;
-      bonusAwarded: number | null;
-      actualValue: number;
-      goalValue: number;
-      periodName: string; // e.g., "yesterday", "last week (May 20 - May 26)"
-      periodIdentifier: string; // YYYY-MM-DD representing the end of the checked period
-      taskName: string;
-      goalType: GoalType;
-      error?: never;
-    }
-  | {
-      error: string;
-      metGoal?: never;
-      bonusAwarded?: never;
-      actualValue?: never;
-      goalValue?: never;
-      periodName?: never;
-      periodIdentifier?: never;
-      taskName?: never;
-      goalType?: never;
-    };
     
 // Specific for TIER_INFO in config.ts
 export interface TierConfig {
@@ -204,5 +165,4 @@ export interface DashboardSettings {
   showTodoList: boolean;
   showProgressChart: boolean;
   showAISuggestions: boolean;
-  showHighGoalsCard: boolean;
 }

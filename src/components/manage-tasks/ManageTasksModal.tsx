@@ -50,7 +50,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import type { TaskDefinition, TaskUnit, GoalType } from '@/types';
+import type { TaskDefinition, TaskUnit } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { VALUE_THRESHOLDS } from '@/lib/config'; 
 import { Switch } from '@/components/ui/switch';
@@ -344,11 +344,6 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                                 <div className="flex items-center gap-4 text-muted-foreground text-xs mt-1">
                                 {task.darkStreakEnabled && (
                                     <Tooltip><TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger><TooltipContent><p>Dark Streak Enabled</p></TooltipContent></Tooltip>
-                                )}
-                                {task.goalValue && (
-                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalType === 'no_more_than' ? '<= ' : ''}{task.goalValue}{task.unit ? ` ${getUnitLabel(task)}` : ''}{task.goalInterval ? `/${task.goalInterval.charAt(0)}` : ''}</span></TooltipTrigger><TooltipContent>
-                                    <p>Goal: {task.goalType === 'no_more_than' ? 'No More Than' : 'At Least'} {task.goalValue}{task.unit ? ` ${getUnitLabel(task)}` : ''}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
-                                    </TooltipContent></Tooltip>
                                 )}
                                 {task.intensityThresholds && (
                                      <Tooltip><TooltipTrigger className="flex items-center gap-1"><Timer className="h-4 w-4" /><span>Phases ({getUnitLabel(task)})</span></TooltipTrigger><TooltipContent>

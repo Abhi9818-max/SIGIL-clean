@@ -2,14 +2,12 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
   LOCAL_STORAGE_TASKS_KEY,
   LOCAL_STORAGE_BONUS_POINTS_KEY,
-  LOCAL_STORAGE_MET_GOALS_KEY,
-  LOCAL_STORAGE_TODO_KEY,
   LOCAL_STORAGE_LORE_KEY,
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
@@ -17,6 +15,7 @@ import {
   LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
   LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY,
   LOCAL_STORAGE_HIGH_GOALS_KEY,
+  LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
   STREAK_MILESTONES_FOR_CRYSTALS
@@ -66,11 +65,8 @@ interface UserRecordsContextType {
   getStatsForCompletedWeek: (weekOffset: number, taskId?: string | null) => WeeklyProgressStats | null;
   getWeeklyAggregatesForChart: (numberOfWeeks: number, taskId?: string | null) => AggregatedTimeDataPoint[];
   getUserLevelInfo: () => UserLevelInfo;
-  awardGoalCompletionBonus: (taskId: string) => number | null;
   totalBonusPoints: number;
-  checkAndAwardAutomatedGoal: (taskId: string) => Promise<AutomatedGoalCheckResult>;
   awardTierEntryBonus: (bonusAmount: number) => void;
-  isGoalMetForLastPeriod: (taskId: string) => boolean;
   deductBonusPoints: (penalty: number) => void;
   // Constellations
   getAvailableSkillPoints: (taskId: string) => number;
@@ -99,7 +95,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [records, setRecords] = useState<RecordEntry[]>([]);
   const [taskDefinitions, setTaskDefinitions] = useState<TaskDefinition[]>([]);
   const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
-  const [metGoals, setMetGoals] = useState<Record<string, string>>({}); // New state for met goals
   const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
   const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
@@ -130,11 +125,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
             setTaskDefinitions(parsedTasks.map(task => ({
                 ...task,
                 id: task.id || uuidv4(),
-                goalValue: task.goalValue,
-                goalInterval: task.goalInterval,
-                goalType: task.goalType ?? 'at_least',
                 intensityThresholds: task.intensityThresholds,
-                goalCompletionBonusPercentage: task.goalCompletionBonusPercentage,
                 darkStreakEnabled: task.darkStreakEnabled ?? false,
             })));
         } else {
@@ -159,15 +150,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     } catch (error) {
       console.error("Failed to load bonus points from localStorage:", error);
-    }
-
-    try {
-      const storedMetGoals = localStorage.getItem(LOCAL_STORAGE_MET_GOALS_KEY);
-      if (storedMetGoals) {
-        setMetGoals(JSON.parse(storedMetGoals));
-      }
-    } catch (error) {
-      console.error("Failed to load met goals from localStorage:", error);
     }
     
     try {
@@ -257,16 +239,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     }
   }, [totalBonusPoints, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_MET_GOALS_KEY, JSON.stringify(metGoals));
-      } catch (error) {
-        console.error("Failed to save met goals to localStorage:", error);
-      }
-    }
-  }, [metGoals, isLoaded]);
 
    useEffect(() => {
     if (isLoaded) {
@@ -455,26 +427,18 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
-    const goalValue = taskData.goalValue === undefined || taskData.goalValue === null || Number(taskData.goalValue) <= 0 ? undefined : Number(taskData.goalValue);
     const newTask: TaskDefinition = {
       ...taskData,
       id: newId,
-      goalValue: goalValue,
-      goalInterval: goalValue ? taskData.goalInterval : undefined,
-      goalType: goalValue ? (taskData.goalType ?? 'at_least') : undefined,
     };
     setTaskDefinitions(prevTasks => [...prevTasks, newTask]);
     return newId;
   }, []);
 
   const updateTaskDefinition = useCallback((updatedTask: TaskDefinition) => {
-    const goalValue = updatedTask.goalValue === undefined || updatedTask.goalValue === null || Number(updatedTask.goalValue) <= 0 ? undefined : Number(updatedTask.goalValue);
     setTaskDefinitions(prevTasks =>
       prevTasks.map(task => task.id === updatedTask.id ? {
         ...updatedTask,
-        goalValue: goalValue,
-        goalInterval: goalValue ? updatedTask.goalInterval : undefined,
-        goalType: goalValue ? (updatedTask.goalType ?? 'at_least') : undefined,
       } : task)
     );
   }, []);
@@ -486,12 +450,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         rec.taskType === taskId ? {...rec, taskType: undefined} : rec
       )
     );
-    // Also remove from metGoals if the task is deleted
-    setMetGoals(prevMetGoals => {
-        const newMetGoals = {...prevMetGoals};
-        delete newMetGoals[taskId];
-        return newMetGoals;
-    });
   }, []);
 
   const getStatsForCompletedWeek = useCallback((weekOffset: number, taskId?: string | null): WeeklyProgressStats | null => {
@@ -546,107 +504,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return calculateUserLevelInfo(totalExperience);
   }, [getTotalBaseRecordValue, totalBonusPoints]);
 
-  const awardGoalCompletionBonus = useCallback((taskId: string): number | null => {
-    const task = getTaskDefinitionById(taskId);
-    if (task && task.goalValue && task.goalCompletionBonusPercentage) {
-      const bonus = Math.round(task.goalValue * (task.goalCompletionBonusPercentage / 100));
-      setTotalBonusPoints(prevBonus => prevBonus + bonus);
-      return bonus;
-    }
-    return null;
-  }, [getTaskDefinitionById]);
-
   const awardTierEntryBonus = useCallback((bonusAmount: number) => {
     if (bonusAmount > 0) {
       setTotalBonusPoints(prevBonus => prevBonus + bonusAmount);
     }
   }, []);
-
-  const checkAndAwardAutomatedGoal = useCallback(async (taskId: string): Promise<AutomatedGoalCheckResult> => {
-    const task = getTaskDefinitionById(taskId);
-    if (!task || !task.goalValue || !task.goalInterval || task.goalValue <= 0) {
-      return { error: "Goal not properly configured for this task." };
-    }
-    const goalType = task.goalType ?? 'at_least';
-    const today = new Date();
-    let periodStart: Date;
-    let periodEnd: Date;
-    let periodName: string;
-
-    switch (task.goalInterval) {
-      case 'daily':
-        periodStart = startOfDay(subDays(today, 1));
-        periodEnd = endOfDay(subDays(today, 1));
-        periodName = "yesterday";
-        break;
-      case 'weekly':
-        periodStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
-        periodEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
-        periodName = `last week (${format(periodStart, 'MMM d')} - ${format(periodEnd, 'MMM d')})`;
-        break;
-      case 'monthly':
-        periodStart = startOfMonth(subMonths(today, 1));
-        periodEnd = endOfMonth(subMonths(today, 1));
-        periodName = `last month (${format(periodStart, 'MMMM yyyy')})`;
-        break;
-      default:
-        return { error: "Invalid goal interval." };
-    }
-
-    const actualValue = getAggregateSum(periodStart, periodEnd, taskId);
-    let bonusAwarded: number | null = null;
-    let metGoal = false;
-    const periodIdentifierStr = format(periodEnd, 'yyyy-MM-dd');
-
-    if (goalType === 'at_least' && actualValue >= task.goalValue) {
-      metGoal = true;
-    } else if (goalType === 'no_more_than' && actualValue <= task.goalValue) {
-      metGoal = true;
-    }
-
-    if (metGoal) {
-      if (task.goalCompletionBonusPercentage && task.goalCompletionBonusPercentage > 0) {
-        bonusAwarded = awardGoalCompletionBonus(taskId);
-      }
-      // Store that this goal was met for this period
-      setMetGoals(prev => ({ ...prev, [taskId]: periodIdentifierStr }));
-    }
-
-    return {
-      metGoal,
-      bonusAwarded,
-      actualValue,
-      goalValue: task.goalValue,
-      periodName,
-      periodIdentifier: periodIdentifierStr,
-      taskName: task.name,
-      goalType,
-    };
-  }, [getTaskDefinitionById, getAggregateSum, awardGoalCompletionBonus]);
-
-  const isGoalMetForLastPeriod = useCallback((taskId: string): boolean => {
-    const task = getTaskDefinitionById(taskId);
-    if (!task || !task.goalInterval || !isLoaded) return false;
-
-    const today = new Date();
-    let expectedPeriodEnd: Date;
-
-    switch (task.goalInterval) {
-      case 'daily':
-        expectedPeriodEnd = endOfDay(subDays(today, 1));
-        break;
-      case 'weekly':
-        expectedPeriodEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
-        break;
-      case 'monthly':
-        expectedPeriodEnd = endOfMonth(subMonths(today, 1));
-        break;
-      default:
-        return false;
-    }
-    const expectedPeriodIdentifier = format(expectedPeriodEnd, 'yyyy-MM-dd');
-    return metGoals[taskId] === expectedPeriodIdentifier;
-  }, [metGoals, getTaskDefinitionById, isLoaded]);
 
   const deductBonusPoints = useCallback((penalty: number) => {
     setTotalBonusPoints(prevBonus => prevBonus - Math.abs(penalty));
@@ -814,12 +676,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getStatsForCompletedWeek,
     getWeeklyAggregatesForChart,
     getUserLevelInfo,
-    awardGoalCompletionBonus,
     totalBonusPoints,
-    checkAndAwardAutomatedGoal,
     awardTierEntryBonus,
     deductBonusPoints,
-    isGoalMetForLastPeriod,
     getAvailableSkillPoints,
     unlockSkill,
     isSkillUnlocked,
@@ -838,7 +697,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     records,
     taskDefinitions,
     totalBonusPoints,
-    metGoals,
     unlockedAchievements,
     spentSkillPoints,
     unlockedSkills,
@@ -863,11 +721,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getStatsForCompletedWeek,
     getWeeklyAggregatesForChart,
     getUserLevelInfo,
-    awardGoalCompletionBonus,
-    checkAndAwardAutomatedGoal,
     awardTierEntryBonus,
     deductBonusPoints,
-    isGoalMetForLastPeriod,
     getAvailableSkillPoints,
     unlockSkill,
     isSkillUnlocked,
