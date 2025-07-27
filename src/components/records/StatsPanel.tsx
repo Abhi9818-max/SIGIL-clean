@@ -54,15 +54,23 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
       isDarkStreakSelected: task?.darkStreakEnabled === true,
       unitLabel
     };
-  }, [selectedTaskFilterId, getTaskDefinitionById, records]);
+  }, [selectedTaskFilterId, getTaskDefinitionById]);
 
   const activeHighGoal = useMemo(() => {
     const now = new Date();
-    return [...highGoals]
-        .filter(g => parseISO(g.endDate) >= now)
-        .sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())
-        [0]; // Get only the most imminent goal
-  }, [highGoals, records]);
+    let relevantGoals = [...highGoals].filter(g => parseISO(g.endDate) >= now);
+
+    if (selectedTaskFilterId) {
+      relevantGoals = relevantGoals.filter(g => g.taskId === selectedTaskFilterId);
+    }
+    
+    if (relevantGoals.length === 0) {
+        return null;
+    }
+
+    // Sort by end date to find the most imminent one
+    return relevantGoals.sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())[0];
+  }, [highGoals, selectedTaskFilterId]);
 
 
   return (
