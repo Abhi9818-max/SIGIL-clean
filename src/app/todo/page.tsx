@@ -132,6 +132,7 @@ const PactList = ({ items, toggleTodoItem, deleteTodoItem, isEditable }: { items
                 onCheckedChange={() => toggleTodoItem(item.id)}
                 aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
                 className="mt-1"
+                disabled={!isEditable}
             />
             <div className="flex-grow">
             <label
@@ -196,8 +197,21 @@ export default function TodoPage() {
   const { todoItems, addTodoItem, toggleTodoItem, deleteTodoItem } = useTodos();
   const { getUserLevelInfo } = useUserRecords();
 
-  const todaysPacts = todoItems.filter(item => isToday(new Date(item.createdAt)));
-  const yesterdaysPacts = todoItems.filter(item => isYesterday(new Date(item.createdAt)));
+  const todaysPacts = todoItems.filter(item => {
+    try {
+      return isToday(new Date(item.createdAt));
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const yesterdaysPacts = todoItems.filter(item => {
+    try {
+      return isYesterday(new Date(item.createdAt));
+    } catch (e) {
+      return false;
+    }
+  });
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());

@@ -97,11 +97,15 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     // Filter out old pacts (older than yesterday) but keep today's and yesterday's
-    const yesterday = subDays(new Date(), 1);
     const relevantItems = initialItems.filter(item => {
+      try {
         const itemDate = new Date(item.createdAt);
         return isToday(itemDate) || isYesterday(itemDate);
+      } catch (e) {
+        return false;
+      }
     });
+
     setTodoItems(relevantItems);
 
     // Update the last visited date
@@ -160,6 +164,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const item = todoItems.find(i => i.id === id);
     if (!item) return;
     
+    // Deleting is only allowed for today's pacts to prevent accidental deletion of yesterday's reviewable items.
     if (!isToday(new Date(item.createdAt))) return;
 
      // Check for penalty when deleting an overdue, uncompleted task
