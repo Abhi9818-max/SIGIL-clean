@@ -72,7 +72,7 @@ export default function TodoPage() {
               <CardTitle>My Pacts</CardTitle>
             </div>
             <CardDescription>
-              Manage your tasks. Tasks with a due date are considered pacts. You can optionally add an XP penalty for breaking a pact.
+              Create and manage your to-do items.
             </CardDescription>
           </CardHeader>
           <CardContent>
