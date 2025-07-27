@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -71,9 +70,6 @@ export default function TodoPage() {
               <ListChecks className="h-6 w-6 text-primary" />
               <CardTitle>My Pacts</CardTitle>
             </div>
-            <CardDescription>
-              Create and manage your to-do items.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 mb-6">
