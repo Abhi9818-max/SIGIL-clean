@@ -22,17 +22,23 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     getDailyConsistencyLast30Days, 
     getTaskDefinitionById, 
     getCurrentStreak,
-    freezeCrystals 
+    freezeCrystals,
+    records // Depend on raw data to break memoization loops
   } = useUserRecords();
   
   const aggregate = useMemo(() => {
     const today = new Date();
     const last30DaysStart = subDays(today, 29);
     return getAggregateSum(last30DaysStart, today, selectedTaskFilterId);
-  }, [getAggregateSum, selectedTaskFilterId]);
+  }, [records, selectedTaskFilterId]);
 
-  const consistency = useMemo(() => getDailyConsistencyLast30Days(selectedTaskFilterId), [getDailyConsistencyLast30Days, selectedTaskFilterId]);
-  const currentStreak = useMemo(() => getCurrentStreak(selectedTaskFilterId), [getCurrentStreak, selectedTaskFilterId]);
+  const consistency = useMemo(() => {
+    return getDailyConsistencyLast30Days(selectedTaskFilterId);
+  }, [records, selectedTaskFilterId]);
+
+  const currentStreak = useMemo(() => {
+    return getCurrentStreak(selectedTaskFilterId);
+  }, [records, selectedTaskFilterId]);
 
   const { task, isDarkStreakSelected, consistencyLabel, consistencyCircleColor } = useMemo(() => {
     const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
