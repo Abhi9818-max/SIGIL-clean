@@ -317,7 +317,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         try {
             localStorage.setItem(LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY, JSON.stringify(spentSkillPoints));
         } catch (error) {
-            console.error("Failed to save spent skill points to localStorage:", error);
+            console.error("Failed to save spent skill points from localStorage:", error);
         }
     }
   }, [spentSkillPoints, isLoaded]);
@@ -327,7 +327,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         try {
             localStorage.setItem(LOCAL_STORAGE_UNLOCKED_SKILLS_KEY, JSON.stringify(unlockedSkills));
         } catch (error) {
-            console.error("Failed to save unlocked skills to localStorage:", error);
+            console.error("Failed to save unlocked skills from localStorage:", error);
         }
     }
   }, [unlockedSkills, isLoaded]);
@@ -995,18 +995,43 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     unlockedAchievements,
   }), [
     records,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    getRecordsByDate,
+    getRecordsForDateRange,
+    getAggregateSum,
+    getYearlySum,
+    getAllRecordsStringified,
+    getDailyConsistencyLast30Days,
+    getCurrentStreak,
     taskDefinitions,
+    addTaskDefinition,
+    updateTaskDefinition,
+    deleteTaskDefinition,
+    getTaskDefinitionById,
+    getStatsForCompletedWeek,
+    getProgressForCurrentGoal,
+    getWeeklyAggregatesForChart,
+    getUserLevelInfo,
+    awardGoalCompletionBonus,
     totalBonusPoints,
-    metGoals,
-    handledStreaks,
-    unlockedAchievements,
-    handledDarkStreaks,
-    spentSkillPoints,
-    unlockedSkills,
+    checkAndAwardAutomatedGoal,
+    awardTierEntryBonus,
+    deductBonusPoints,
+    handleConsistencyCheck,
+    isGoalMetForLastPeriod,
+    checkDarkStreaks,
+    markDarkStreakHandled,
+    getAvailableSkillPoints,
+    unlockSkill,
+    isSkillUnlocked,
+    constellations,
+    getTaskDistribution,
+    getProductivityByDay,
     freezeCrystals,
-    awardedStreakMilestones,
-    isLoaded,
-    toast
+    useFreezeCrystal,
+    unlockedAchievements,
   ]);
 
 
