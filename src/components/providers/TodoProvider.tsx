@@ -7,7 +7,7 @@ import { LOCAL_STORAGE_TODO_KEY, LOCAL_STORAGE_LAST_VISITED_DATE_KEY } from '@/l
 import { v4 as uuidv4 } from 'uuid';
 import { useUserRecords } from './UserRecordsProvider';
 import { useToast } from '@/hooks/use-toast';
-import { isPast, startOfDay, format, parseISO } from 'date-fns';
+import { isPast, startOfDay, format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
 
 interface TodoContextType {
   todoItems: TodoItem[];
@@ -41,7 +41,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [userRecords, toast]);
   
-  // This effect runs once on load to handle daily reset logic
+  // This effect runs once on load to handle daily state management
   useEffect(() => {
     let initialItems: TodoItem[] = [];
     try {
@@ -61,23 +61,31 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("Failed to load last visited date from localStorage:", error);
     }
     
-    // If it's a new day, process and clear old pacts
+    // If it's a new day, process overdue penalties from previous day(s)
     if (lastVisitedDateStr && lastVisitedDateStr !== todayStr) {
       const lastVisitedDate = parseISO(lastVisitedDateStr);
-      const overdueItems = initialItems.filter(item => 
-        !item.completed && item.dueDate && parseISO(item.dueDate) <= lastVisitedDate
+      const newlyOverdueItems = initialItems.filter(item => 
+        !item.completed && 
+        !item.penaltyApplied && 
+        item.dueDate && 
+        parseISO(item.dueDate) <= lastVisitedDate
       );
       
-      if (overdueItems.length > 0) {
-        let penaltyApplied = false;
-        overdueItems.forEach(item => {
-          if (item.penalty && item.penalty > 0 && !item.penaltyApplied) {
-            userRecords.deductBonusPoints(item.penalty);
-            penaltyApplied = true;
-          }
+      if (newlyOverdueItems.length > 0) {
+        let penaltyToastShown = false;
+        const updatedItems = initialItems.map(item => {
+           if (newlyOverdueItems.some(overdue => overdue.id === item.id)) {
+              if (item.penalty && item.penalty > 0) {
+                 userRecords.deductBonusPoints(item.penalty);
+                 penaltyToastShown = true;
+              }
+              return {...item, penaltyApplied: true};
+           }
+           return item;
         });
+        initialItems = updatedItems;
         
-        if (penaltyApplied) {
+        if (penaltyToastShown) {
             toast({
               title: "Pacts Broken",
               description: `Incomplete pacts from yesterday have been penalized.`,
@@ -86,18 +94,16 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
         }
       }
-      
-      // Clear the list for the new day
-      setTodoItems([]);
-      toast({
-          title: "A New Day",
-          description: "Your pacts have been reset for today.",
-      });
-
-    } else {
-      setTodoItems(initialItems);
     }
     
+    // Filter out old pacts (older than yesterday) but keep today's and yesterday's
+    const yesterday = subDays(new Date(), 1);
+    const relevantItems = initialItems.filter(item => {
+        const itemDate = new Date(item.createdAt);
+        return isToday(itemDate) || isYesterday(itemDate);
+    });
+    setTodoItems(relevantItems);
+
     // Update the last visited date
     try {
       localStorage.setItem(LOCAL_STORAGE_LAST_VISITED_DATE_KEY, todayStr);
@@ -153,6 +159,8 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const deleteTodoItem = useCallback((id: string) => {
     const item = todoItems.find(i => i.id === id);
     if (!item) return;
+    
+    if (!isToday(new Date(item.createdAt))) return;
 
      // Check for penalty when deleting an overdue, uncompleted task
     const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
