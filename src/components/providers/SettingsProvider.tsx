@@ -7,7 +7,10 @@ import { LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY } from '@/lib/config';
 
 // Define the default settings
 const defaultSettings: DashboardSettings = {
-  showStatsPanel: true,
+  showTotalLast30Days: true,
+  showCurrentStreak: true,
+  showDailyConsistency: true,
+  showHighGoalStat: true,
   showTaskFilterBar: true,
   showContributionGraph: true,
   showTodoList: true,
@@ -32,6 +35,15 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       if (storedSettings) {
         // Merge stored settings with defaults to ensure all keys are present
         const parsedSettings = JSON.parse(storedSettings);
+        // Handle migration from old 'showStatsPanel' setting
+        if (parsedSettings.hasOwnProperty('showStatsPanel')) {
+            const showStats = parsedSettings.showStatsPanel;
+            delete parsedSettings.showStatsPanel;
+            if (!parsedSettings.hasOwnProperty('showTotalLast30Days')) parsedSettings.showTotalLast30Days = showStats;
+            if (!parsedSettings.hasOwnProperty('showCurrentStreak')) parsedSettings.showCurrentStreak = showStats;
+            if (!parsedSettings.hasOwnProperty('showDailyConsistency')) parsedSettings.showDailyConsistency = showStats;
+            if (!parsedSettings.hasOwnProperty('showHighGoalStat')) parsedSettings.showHighGoalStat = showStats;
+        }
         setDashboardSettings({ ...defaultSettings, ...parsedSettings });
       }
     } catch (error) {

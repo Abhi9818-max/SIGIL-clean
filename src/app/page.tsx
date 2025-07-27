@@ -118,6 +118,9 @@ export default function HomePage() {
   };
 
   const pageTierClass = currentLevelInfo ? `page-tier-group-${currentLevelInfo.tierGroup}` : 'page-tier-group-1';
+  
+  const showStatsPanel = dashboardSettings.showTotalLast30Days || dashboardSettings.showCurrentStreak || dashboardSettings.showDailyConsistency || dashboardSettings.showHighGoalStat;
+
 
   return (
     <div className={cn("min-h-screen flex flex-col transition-colors duration-700 ease-in-out", pageTierClass)}>
@@ -127,7 +130,7 @@ export default function HomePage() {
       />
       <QuoteCard quote={quote} />
       <main className="flex-grow container mx-auto p-4 md:p-8 space-y-8 animate-fade-in-up">
-        {dashboardSettings.showStatsPanel && <StatsPanel selectedTaskFilterId={selectedTaskFilterId} />}
+        {showStatsPanel && <StatsPanel selectedTaskFilterId={selectedTaskFilterId} />}
 
         {dashboardSettings.showTaskFilterBar && (
           <TaskFilterBar
@@ -172,7 +175,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {dashboardSettings.showAISuggestions && (
+             {dashboardSettings.showAISuggestions && (
                 <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
                     <AISuggestionsCard />
                 </div>

@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { LOCAL_STORAGE_KEYS } from '@/lib/config';
 import { Switch } from '@/components/ui/switch';
 import type { DashboardSettings } from '@/types';
+import { Separator } from '@/components/ui/separator';
 
 
 export default function SettingsPage() {
@@ -144,13 +145,16 @@ export default function SettingsPage() {
     }
   };
 
-  const dashboardComponents: { key: keyof DashboardSettings, label: string }[] = [
-      { key: 'showStatsPanel', label: 'Stats Panel (Streak, 30-Day Total, High Goals)' },
-      { key: 'showTaskFilterBar', label: 'Task Filter Bar' },
-      { key: 'showContributionGraph', label: 'Contribution Graph' },
-      { key: 'showTodoList', label: 'Pacts Card' },
-      { key: 'showProgressChart', label: 'Progress Chart' },
-      { key: 'showAISuggestions', label: 'AI Coach Card' },
+  const dashboardComponents: { key: keyof DashboardSettings, label: string, category: 'Stats' | 'Main' }[] = [
+      { key: 'showTotalLast30Days', label: 'Total Last 30 Days Card', category: 'Stats' },
+      { key: 'showCurrentStreak', label: 'Current Streak Card', category: 'Stats' },
+      { key: 'showDailyConsistency', label: 'Daily Consistency Card', category: 'Stats' },
+      { key: 'showHighGoalStat', label: 'High Goal Card', category: 'Stats' },
+      { key: 'showTaskFilterBar', label: 'Task Filter Bar', category: 'Main' },
+      { key: 'showContributionGraph', label: 'Contribution Graph', category: 'Main' },
+      { key: 'showTodoList', label: 'Pacts Card', category: 'Main' },
+      { key: 'showProgressChart', label: 'Progress Chart', category: 'Main' },
+      { key: 'showAISuggestions', label: 'AI Coach Card', category: 'Main' },
   ];
 
   return (
@@ -173,8 +177,29 @@ export default function SettingsPage() {
               <h3 className="text-lg font-medium text-primary flex items-center gap-2"><LayoutDashboard className="h-5 w-5" /> Dashboard Layout</h3>
               <div className="p-4 border rounded-lg space-y-4">
                   <p className="text-sm text-muted-foreground">Choose which components to display on the main dashboard.</p>
-                  <div className="space-y-3">
-                      {dashboardComponents.map(({ key, label }) => (
+                  
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3">Stats Panel Cards</h4>
+                    <div className="space-y-3 pl-2">
+                        {dashboardComponents.filter(c => c.category === 'Stats').map(({ key, label }) => (
+                            <div key={key} className="flex items-center justify-between">
+                                <Label htmlFor={key} className="font-normal">{label}</Label>
+                                <Switch
+                                    id={key}
+                                    checked={dashboardSettings[key]}
+                                    onCheckedChange={(checked) => updateDashboardSetting(key, checked)}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3">Main Dashboard Components</h4>
+                     <div className="space-y-3 pl-2">
+                      {dashboardComponents.filter(c => c.category === 'Main').map(({ key, label }) => (
                           <div key={key} className="flex items-center justify-between">
                               <Label htmlFor={key} className="font-normal">{label}</Label>
                               <Switch
@@ -184,6 +209,7 @@ export default function SettingsPage() {
                               />
                           </div>
                       ))}
+                    </div>
                   </div>
               </div>
             </div>
