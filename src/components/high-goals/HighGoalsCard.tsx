@@ -16,13 +16,13 @@ const HighGoalsCard = () => {
   const recentGoals = [...highGoals].sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime()).slice(0, 3);
 
   const getUnitLabelForTask = (taskId: string | undefined): string => {
-    if (!taskId) return 'Value';
+    if (!taskId) return '';
     const task = getTaskDefinitionById(taskId);
-    if (!task || !task.unit) return 'Value';
+    if (!task || !task.unit) return '';
     
     switch (task.unit) {
       case 'custom':
-        return task.customUnitName || 'Value';
+        return task.customUnitName || '';
       case 'count':
       case 'generic':
         return '';

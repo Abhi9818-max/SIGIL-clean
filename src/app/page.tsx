@@ -180,7 +180,7 @@ export default function HomePage() {
             )}
             {dashboardSettings.showAISuggestions && (
                 <div className={cn("animate-fade-in-up",
-                  dashboardSettings.showHighGoals ? "" : "md:col-span-2"
+                  !dashboardSettings.showHighGoals ? "md:col-span-2" : ""
                 )} style={{ animationDelay: '400ms' }}>
                     <AISuggestionsCard />
                 </div>
