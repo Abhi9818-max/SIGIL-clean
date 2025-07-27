@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { subDays } from 'date-fns';
 import PerformanceCircle from './PerformanceCircle';
-import { Flame, Snowflake, Calendar } from 'lucide-react';
+import { Flame, Snowflake, Calendar, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '../ui/button';
@@ -30,15 +30,15 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     const today = new Date();
     const last30DaysStart = subDays(today, 29);
     return getAggregateSum(last30DaysStart, today, selectedTaskFilterId);
-  }, [records, selectedTaskFilterId]);
+  }, [records, selectedTaskFilterId, getAggregateSum]);
 
   const consistency = useMemo(() => {
     return getDailyConsistencyLast30Days(selectedTaskFilterId);
-  }, [records, selectedTaskFilterId]);
+  }, [records, selectedTaskFilterId, getDailyConsistencyLast30Days]);
 
   const currentStreak = useMemo(() => {
     return getCurrentStreak(selectedTaskFilterId);
-  }, [records, selectedTaskFilterId]);
+  }, [records, selectedTaskFilterId, getCurrentStreak]);
 
   const { task, isDarkStreakSelected, consistencyLabel, consistencyCircleColor } = useMemo(() => {
     const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
@@ -52,7 +52,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card
           className="shadow-lg animate-fade-in-up"
         >
@@ -60,6 +60,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Last 30 Days
             </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -89,13 +90,13 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
               />
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 cursor-help">
                     <Snowflake className="h-4 w-4 text-blue-300" />
                     <span className="text-sm font-bold">{freezeCrystals}</span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Freeze Crystals available</p>
+                  <p>Freeze Crystals can save a streak.</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -134,8 +135,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
           </CardContent>
         </Card>
       </div>
-
-      
     </>
   );
 };
