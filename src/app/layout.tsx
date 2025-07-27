@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { UserRecordsProvider } from '@/components/providers/UserRecordsProvider';
 import { TodoProvider } from '@/components/providers/TodoProvider';
+import { SettingsProvider } from '@/components/providers/SettingsProvider';
 
 export const metadata: Metadata = {
   title: 'S.I.G.I.L.',
@@ -36,14 +37,16 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className={`font-sans antialiased`}>
-        <TooltipProvider delayDuration={100}>
-          <UserRecordsProvider>
-            <TodoProvider>
-              {children}
-              <Toaster />
-            </TodoProvider>
-          </UserRecordsProvider>
-        </TooltipProvider>
+        <SettingsProvider>
+          <TooltipProvider delayDuration={100}>
+            <UserRecordsProvider>
+              <TodoProvider>
+                {children}
+                <Toaster />
+              </TodoProvider>
+            </UserRecordsProvider>
+          </TooltipProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

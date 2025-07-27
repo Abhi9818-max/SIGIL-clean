@@ -4,9 +4,10 @@
 import React, { useState } from 'react';
 import Header from '@/components/layout/Header';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import {
@@ -23,10 +24,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LOCAL_STORAGE_KEYS } from '@/lib/config';
+import { Switch } from '@/components/ui/switch';
+import type { DashboardSettings } from '@/types';
 
 
 export default function SettingsPage() {
   const { getUserLevelInfo } = useUserRecords();
+  const { dashboardSettings, updateDashboardSetting } = useSettings();
   const { toast } = useToast();
   const [isClearing, setIsClearing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -140,6 +144,14 @@ export default function SettingsPage() {
     }
   };
 
+  const dashboardComponents: { key: keyof DashboardSettings, label: string }[] = [
+      { key: 'showStatsPanel', label: 'Stats Panel' },
+      { key: 'showTaskFilterBar', label: 'Task Filter Bar' },
+      { key: 'showContributionGraph', label: 'Contribution Graph' },
+      { key: 'showTodoList', label: 'Pacts Card' },
+      { key: 'showProgressChart', label: 'Progress Chart' },
+      { key: 'showAISuggestions', label: 'AI Coach Card' },
+  ];
 
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -157,6 +169,25 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-primary flex items-center gap-2"><LayoutDashboard className="h-5 w-5" /> Dashboard Layout</h3>
+              <div className="p-4 border rounded-lg space-y-4">
+                  <p className="text-sm text-muted-foreground">Choose which components to display on the main dashboard.</p>
+                  <div className="space-y-3">
+                      {dashboardComponents.map(({ key, label }) => (
+                          <div key={key} className="flex items-center justify-between">
+                              <Label htmlFor={key} className="font-normal">{label}</Label>
+                              <Switch
+                                  id={key}
+                                  checked={dashboardSettings[key]}
+                                  onCheckedChange={(checked) => updateDashboardSetting(key, checked)}
+                              />
+                          </div>
+                      ))}
+                  </div>
+              </div>
+            </div>
+
             <div className="space-y-4">
                 <h3 className="text-lg font-medium text-primary">Data Management</h3>
                 <div className="p-4 border rounded-lg space-y-4">

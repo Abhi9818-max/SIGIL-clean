@@ -11,7 +11,7 @@ import StatsPanel from '@/components/records/StatsPanel';
 import ManageTasksModal from '@/components/manage-tasks/ManageTasksModal';
 import TaskFilterBar from '@/components/records/TaskFilterBar';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import { useTodos } from '@/components/providers/TodoProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
@@ -44,6 +44,7 @@ export default function HomePage() {
     totalBonusPoints,
     awardTierEntryBonus,
   } = useUserRecords();
+  const { dashboardSettings } = useSettings();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -126,39 +127,55 @@ export default function HomePage() {
       />
       <QuoteCard quote={quote} />
       <main className="flex-grow container mx-auto p-4 md:p-8 space-y-8 animate-fade-in-up">
-        <StatsPanel selectedTaskFilterId={selectedTaskFilterId} />
+        {dashboardSettings.showStatsPanel && <StatsPanel selectedTaskFilterId={selectedTaskFilterId} />}
 
-        <TaskFilterBar
-          taskDefinitions={taskDefinitions}
-          selectedTaskId={selectedTaskFilterId}
-          onSelectTask={(taskId) => setSelectedTaskFilterId(taskId)}
-        />
-        <ContributionGraph
-          onDayClick={handleDayClick}
-          selectedTaskFilterId={selectedTaskFilterId}
-          displayMode="full"
-        />
-        <div className="text-center -mt-4">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/calendar">
-                <Calendar className="mr-2 h-4 w-4" />
-                View Full Calendar
-              </Link>
-            </Button>
-        </div>
+        {dashboardSettings.showTaskFilterBar && (
+          <TaskFilterBar
+            taskDefinitions={taskDefinitions}
+            selectedTaskId={selectedTaskFilterId}
+            onSelectTask={(taskId) => setSelectedTaskFilterId(taskId)}
+          />
+        )}
+        
+        {dashboardSettings.showContributionGraph && (
+            <>
+                <ContributionGraph
+                    onDayClick={handleDayClick}
+                    selectedTaskFilterId={selectedTaskFilterId}
+                    displayMode="full"
+                />
+                <div className="text-center -mt-4">
+                    <Button asChild variant="outline" size="sm">
+                    <Link href="/calendar">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        View Full Calendar
+                    </Link>
+                    </Button>
+                </div>
+            </>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            <TodoListCard />
-          </div>
-          <div className="md:col-span-2 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-            <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
-          </div>
+            {dashboardSettings.showTodoList && (
+                <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                    <TodoListCard />
+                </div>
+            )}
+            {dashboardSettings.showProgressChart && (
+                <div className={cn(
+                    "animate-fade-in-up",
+                    dashboardSettings.showTodoList ? "md:col-span-2" : "md:col-span-3"
+                )} style={{ animationDelay: '200ms' }}>
+                    <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
+                </div>
+            )}
         </div>
 
-         <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-            <AISuggestionsCard />
-        </div>
+        {dashboardSettings.showAISuggestions && (
+            <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                <AISuggestionsCard />
+            </div>
+        )}
 
       </main>
       <RecordModal

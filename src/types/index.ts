@@ -190,3 +190,13 @@ export interface HighGoal {
   startDate: string; // ISO date string
   endDate: string; // ISO date string
 }
+
+// For Settings
+export interface DashboardSettings {
+  showStatsPanel: boolean;
+  showTaskFilterBar: boolean;
+  showContributionGraph: boolean;
+  showTodoList: boolean;
+  showProgressChart: boolean;
+  showAISuggestions: boolean;
+}
