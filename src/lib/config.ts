@@ -15,6 +15,8 @@ export const LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY = 'sigiLHandledDarkStreaks';
 export const LOCAL_STORAGE_FREEZE_CRYSTALS_KEY = 'sigiLFreezeCrystals';
 export const LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY = 'sigiLAwardedStreakMilestones';
 export const LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY = 'sigiLUnlockedAchievements';
+export const LOCAL_STORAGE_HIGH_GOALS_KEY = 'sigiLHighGoals';
+
 
 export const MAX_CONTRIBUTION_LEVEL = 4;
 export const NUM_WEEKS_TO_DISPLAY = 52;

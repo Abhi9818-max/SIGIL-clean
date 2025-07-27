@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
@@ -16,6 +16,7 @@ import {
   LOCAL_STORAGE_FREEZE_CRYSTALS_KEY,
   LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
   LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY,
+  LOCAL_STORAGE_HIGH_GOALS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
   STREAK_MILESTONES_FOR_CRYSTALS
@@ -84,6 +85,12 @@ interface UserRecordsContextType {
   useFreezeCrystal: () => void;
   // Achievements
   unlockedAchievements: string[];
+  // High Goals
+  highGoals: HighGoal[];
+  addHighGoal: (goal: Omit<HighGoal, 'id'>) => void;
+  updateHighGoal: (goal: HighGoal) => void;
+  deleteHighGoal: (goalId: string) => void;
+  getHighGoalProgress: (goal: HighGoal) => number;
 }
 
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
@@ -98,6 +105,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
   const [freezeCrystals, setFreezeCrystals] = useState<number>(0);
   const [awardedStreakMilestones, setAwardedStreakMilestones] = useState<Record<string, number[]>>({});
+  const [highGoals, setHighGoals] = useState<HighGoal[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
 
@@ -206,6 +214,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch (error) {
         console.error("Failed to load awarded streak milestones from localStorage:", error);
     }
+    
+     try {
+        const storedHighGoals = localStorage.getItem(LOCAL_STORAGE_HIGH_GOALS_KEY);
+        if (storedHighGoals) {
+            setHighGoals(JSON.parse(storedHighGoals));
+        }
+    } catch (error) {
+        console.error("Failed to load high goals from localStorage:", error);
+    }
 
 
     setIsLoaded(true);
@@ -300,6 +317,17 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
             }
         }
     }, [awardedStreakMilestones, isLoaded]);
+
+    useEffect(() => {
+    if (isLoaded) {
+        try {
+            localStorage.setItem(LOCAL_STORAGE_HIGH_GOALS_KEY, JSON.stringify(highGoals));
+        } catch (error) {
+            console.error("Failed to save high goals from localStorage:", error);
+        }
+    }
+  }, [highGoals, isLoaded]);
+
 
   const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
     return taskDefinitions.find(task => task.id === taskId);
@@ -748,6 +776,24 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
 
+  // High Goal Functions
+  const addHighGoal = useCallback((goalData: Omit<HighGoal, 'id'>) => {
+    const newGoal: HighGoal = { ...goalData, id: uuidv4() };
+    setHighGoals(prev => [...prev, newGoal]);
+  }, []);
+
+  const updateHighGoal = useCallback((updatedGoal: HighGoal) => {
+    setHighGoals(prev => prev.map(g => g.id === updatedGoal.id ? updatedGoal : g));
+  }, []);
+
+  const deleteHighGoal = useCallback((goalId: string) => {
+    setHighGoals(prev => prev.filter(g => g.id !== goalId));
+  }, []);
+  
+  const getHighGoalProgress = useCallback((goal: HighGoal) => {
+    return getAggregateSum(parseISO(goal.startDate), parseISO(goal.endDate), goal.taskId);
+  }, [getAggregateSum]);
+
   const contextValue = useMemo(() => ({
     records,
     addRecord,
@@ -783,6 +829,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     freezeCrystals,
     useFreezeCrystal,
     unlockedAchievements,
+    highGoals,
+    addHighGoal,
+    updateHighGoal,
+    deleteHighGoal,
+    getHighGoalProgress,
   }), [
     records,
     taskDefinitions,
@@ -793,6 +844,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     unlockedSkills,
     freezeCrystals,
     awardedStreakMilestones,
+    highGoals,
     isLoaded,
     addRecord,
     updateRecord,
@@ -823,7 +875,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getTaskDistribution,
     getProductivityByDay,
     useFreezeCrystal,
-    checkAchievements
+    checkAchievements,
+    addHighGoal,
+    updateHighGoal,
+    deleteHighGoal,
+    getHighGoalProgress
   ]);
 
 

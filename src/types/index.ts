@@ -180,3 +180,13 @@ export interface Achievement {
     loreEntryCount: number;
   }) => boolean;
 }
+
+// For High Goals
+export interface HighGoal {
+  id: string;
+  name: string;
+  taskId: string;
+  targetValue: number;
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
+}

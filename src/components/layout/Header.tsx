@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target } from 'lucide-react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -48,6 +48,7 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
   const isEchoesPage = pathname === '/echoes';
   const isAchievementsPage = pathname === '/achievements';
   const isGoalsPage = pathname === '/goals';
+  const isHighGoalsPage = pathname === '/high-goals';
 
   return (
     <>
@@ -82,6 +83,12 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
               <Link href="/goals">
                 <Target className="mr-1.5 h-4 w-4" />
                 Goals
+              </Link>
+            </Button>
+             <Button asChild variant={isHighGoalsPage ? "secondary" : "ghost"} size="sm">
+              <Link href="/high-goals">
+                <ShieldCheck className="mr-1.5 h-4 w-4" />
+                High Goals
               </Link>
             </Button>
              <Button asChild variant={isInsightsPage ? "secondary" : "ghost"} size="sm">
@@ -140,6 +147,12 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   <Link href="/goals" className="flex items-center w-full">
                     <Target className="mr-2 h-4 w-4" />
                     Goals
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/high-goals" className="flex items-center w-full">
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    High Goals
                   </Link>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>
