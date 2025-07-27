@@ -194,12 +194,15 @@ export interface HighGoal {
 // For Settings
 export interface DashboardSettings {
   showTotalLast30Days: boolean;
+  totalDays: number;
   showCurrentStreak: boolean;
   showDailyConsistency: boolean;
+  consistencyDays: number;
   showHighGoalStat: boolean;
   showTaskFilterBar: boolean;
   showContributionGraph: boolean;
   showTodoList: boolean;
   showProgressChart: boolean;
   showAISuggestions: boolean;
+  showHighGoalsCard: boolean;
 }

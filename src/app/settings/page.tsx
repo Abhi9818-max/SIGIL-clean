@@ -7,7 +7,7 @@ import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard } from 'lucide-react';
+import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import {
@@ -145,17 +145,29 @@ export default function SettingsPage() {
     }
   };
 
-  const dashboardComponents: { key: keyof DashboardSettings, label: string, category: 'Stats' | 'Main' }[] = [
-      { key: 'showTotalLast30Days', label: 'Total Last 30 Days Card', category: 'Stats' },
-      { key: 'showCurrentStreak', label: 'Current Streak Card', category: 'Stats' },
-      { key: 'showDailyConsistency', label: 'Daily Consistency Card', category: 'Stats' },
-      { key: 'showHighGoalStat', label: 'High Goal Card', category: 'Stats' },
+  const dashboardComponents: { key: keyof DashboardSettings, label: string, category: 'Main', hasDaysInput?: keyof DashboardSettings }[] = [
       { key: 'showTaskFilterBar', label: 'Task Filter Bar', category: 'Main' },
       { key: 'showContributionGraph', label: 'Contribution Graph', category: 'Main' },
       { key: 'showTodoList', label: 'Pacts Card', category: 'Main' },
       { key: 'showProgressChart', label: 'Progress Chart', category: 'Main' },
       { key: 'showAISuggestions', label: 'AI Coach Card', category: 'Main' },
+      { key: 'showHighGoalsCard', label: 'High Goals Card', category: 'Main' },
   ];
+
+  const statComponents: { key: keyof DashboardSettings, label: string, hasDaysInput?: keyof DashboardSettings }[] = [
+      { key: 'showTotalLast30Days', label: 'Total Value Card', hasDaysInput: 'totalDays' },
+      { key: 'showCurrentStreak', label: 'Current Streak Card' },
+      { key: 'showDailyConsistency', label: 'Daily Consistency Card', hasDaysInput: 'consistencyDays' },
+      { key: 'showHighGoalStat', label: 'High Goal Card' },
+  ];
+
+  const handleDaysChange = (key: keyof DashboardSettings, value: string) => {
+    const numValue = Number(value);
+    if (numValue > 0 && numValue <= 365) {
+      updateDashboardSetting(key, numValue);
+    }
+  };
+
 
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -181,14 +193,31 @@ export default function SettingsPage() {
                   <div>
                     <h4 className="font-semibold text-sm mb-3">Stats Panel Cards</h4>
                     <div className="space-y-3 pl-2">
-                        {dashboardComponents.filter(c => c.category === 'Stats').map(({ key, label }) => (
-                            <div key={key} className="flex items-center justify-between">
-                                <Label htmlFor={key} className="font-normal">{label}</Label>
-                                <Switch
-                                    id={key}
-                                    checked={dashboardSettings[key]}
-                                    onCheckedChange={(checked) => updateDashboardSetting(key, checked)}
-                                />
+                        {statComponents.map(({ key, label, hasDaysInput }) => (
+                            <div key={key} className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor={key.toString()} className="font-normal">{label}</Label>
+                                    <Switch
+                                        id={key.toString()}
+                                        checked={!!dashboardSettings[key]}
+                                        onCheckedChange={(checked) => updateDashboardSetting(key, checked)}
+                                    />
+                                </div>
+                                {hasDaysInput && dashboardSettings[key] && (
+                                     <div className="flex items-center gap-2 pl-4 animate-fade-in-up">
+                                        <CalendarDays className="h-4 w-4 text-muted-foreground"/>
+                                        <Label htmlFor={`${hasDaysInput}-input`} className="text-xs text-muted-foreground whitespace-nowrap">Time Period (days)</Label>
+                                        <Input
+                                            id={`${hasDaysInput}-input`}
+                                            type="number"
+                                            className="h-8 w-20"
+                                            value={dashboardSettings[hasDaysInput] as number}
+                                            onChange={(e) => handleDaysChange(hasDaysInput, e.target.value)}
+                                            min={1}
+                                            max={365}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -199,12 +228,12 @@ export default function SettingsPage() {
                   <div>
                     <h4 className="font-semibold text-sm mb-3">Main Dashboard Components</h4>
                      <div className="space-y-3 pl-2">
-                      {dashboardComponents.filter(c => c.category === 'Main').map(({ key, label }) => (
+                      {dashboardComponents.map(({ key, label }) => (
                           <div key={key} className="flex items-center justify-between">
-                              <Label htmlFor={key} className="font-normal">{label}</Label>
+                              <Label htmlFor={key.toString()} className="font-normal">{label}</Label>
                               <Switch
-                                  id={key}
-                                  checked={dashboardSettings[key]}
+                                  id={key.toString()}
+                                  checked={!!dashboardSettings[key]}
                                   onCheckedChange={(checked) => updateDashboardSetting(key, checked)}
                               />
                           </div>

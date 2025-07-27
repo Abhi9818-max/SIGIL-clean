@@ -8,14 +8,17 @@ import { LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY } from '@/lib/config';
 // Define the default settings
 const defaultSettings: DashboardSettings = {
   showTotalLast30Days: true,
+  totalDays: 30,
   showCurrentStreak: true,
   showDailyConsistency: true,
+  consistencyDays: 30,
   showHighGoalStat: true,
   showTaskFilterBar: true,
   showContributionGraph: true,
   showTodoList: true,
   showProgressChart: true,
   showAISuggestions: true,
+  showHighGoalsCard: true,
 };
 
 interface SettingsContextType {

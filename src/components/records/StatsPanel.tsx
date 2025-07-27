@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ selectedTaskFilterId }) => {
   const { 
     getAggregateSum, 
-    getDailyConsistencyLast30Days,
+    getDailyConsistency,
     getTaskDefinitionById, 
     getCurrentStreak,
     freezeCrystals,
@@ -27,13 +27,13 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
   
   const aggregate = useMemo(() => {
     const today = new Date();
-    const last30DaysStart = subDays(today, 29);
-    return getAggregateSum(last30DaysStart, today, selectedTaskFilterId);
-  }, [records, selectedTaskFilterId, getAggregateSum]);
+    const startDate = subDays(today, dashboardSettings.totalDays - 1);
+    return getAggregateSum(startDate, today, selectedTaskFilterId);
+  }, [records, selectedTaskFilterId, getAggregateSum, dashboardSettings.totalDays]);
 
   const consistency = useMemo(() => {
-    return getDailyConsistencyLast30Days(selectedTaskFilterId);
-  }, [records, selectedTaskFilterId, getDailyConsistencyLast30Days]);
+    return getDailyConsistency(dashboardSettings.consistencyDays, selectedTaskFilterId);
+  }, [records, selectedTaskFilterId, getDailyConsistency, dashboardSettings.consistencyDays]);
 
   const currentStreak = useMemo(() => {
     return getCurrentStreak(selectedTaskFilterId);
@@ -60,7 +60,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
 
   const activeHighGoal = useMemo(() => {
     const now = new Date();
-    // High goal is only shown if a specific task with a high goal is selected
+    // Only show if a specific task with an active high goal is selected
     if (!selectedTaskFilterId) {
         return null;
     }
@@ -75,6 +75,16 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
     return relevantGoals.sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())[0];
   }, [highGoals, selectedTaskFilterId]);
 
+  const visibleCards = [
+    dashboardSettings.showTotalLast30Days,
+    dashboardSettings.showCurrentStreak,
+    dashboardSettings.showDailyConsistency,
+    dashboardSettings.showHighGoalStat && !!activeHighGoal,
+  ].filter(Boolean).length;
+
+  if (visibleCards === 0) {
+    return null;
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -82,7 +92,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             <Card className="shadow-lg animate-fade-in-up">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Last 30 Days
+                    Total Last {dashboardSettings.totalDays} Days
                     </CardTitle>
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -155,7 +165,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex flex-col">
                             <p className="text-xs text-muted-foreground">Active days in</p>
-                            <p className="text-xs text-muted-foreground">last 30 days</p>
+                            <p className="text-xs text-muted-foreground">last {dashboardSettings.consistencyDays} days</p>
                         </div>
                         <PerformanceCircle percentage={consistency} size={60} strokeWidth={6} />
                     </div>

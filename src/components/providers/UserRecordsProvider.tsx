@@ -56,7 +56,7 @@ interface UserRecordsContextType {
   getAggregateSum: (startDate: Date, endDate: Date, taskId?: string | null) => number;
   getYearlySum: (year: number, taskId?: string | null) => number;
   getAllRecordsStringified: () => string;
-  getDailyConsistencyLast30Days: (taskId?: string | null) => number;
+  getDailyConsistency: (days: number, taskId?: string | null) => number;
   getCurrentStreak: (taskId?: string | null) => number;
   taskDefinitions: TaskDefinition[];
   addTaskDefinition: (taskData: Omit<TaskDefinition, 'id'>) => string;
@@ -435,19 +435,19 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return JSON.stringify(formattedRecords);
   }, [records]);
 
-  const getDailyConsistencyLast30Days = useCallback((taskId: string | null = null): number => {
-    if (!isLoaded) return 0;
+  const getDailyConsistency = useCallback((days: number, taskId: string | null = null): number => {
+    if (!isLoaded || days <= 0) return 0;
     const today = startOfDay(new Date());
-    const thirtyDaysAgo = startOfDay(subDays(today, 29));
+    const startDate = startOfDay(subDays(today, days - 1));
 
-    let relevantRecords = getRecordsForDateRange(thirtyDaysAgo, today);
+    let relevantRecords = getRecordsForDateRange(startDate, today);
     if (taskId) {
       relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
     }
 
     const uniqueDaysWithRecords = new Set(relevantRecords.map(r => r.date)).size;
 
-    const daysInPeriod = eachDayOfInterval({ start: thirtyDaysAgo, end: today }).length;
+    const daysInPeriod = eachDayOfInterval({ start: startDate, end: today }).length;
     if (daysInPeriod === 0) return 0;
 
     return Math.round((uniqueDaysWithRecords / daysInPeriod) * 100);
@@ -804,7 +804,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getAggregateSum,
     getYearlySum,
     getAllRecordsStringified,
-    getDailyConsistencyLast30Days,
+    getDailyConsistency,
     getCurrentStreak,
     taskDefinitions,
     addTaskDefinition,
@@ -854,7 +854,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getAggregateSum,
     getYearlySum,
     getAllRecordsStringified,
-    getDailyConsistencyLast30Days,
+    getDailyConsistency,
     getCurrentStreak,
     addTaskDefinition,
     updateTaskDefinition,
