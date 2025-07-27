@@ -17,12 +17,9 @@ const AISuggestionsCard: React.FC = () => {
     taskDefinitions,
     checkAndAwardAutomatedGoal,
     isGoalMetForLastPeriod,
-    getUserLevelInfo,
-    getAllRecordsStringified,
   } = useUserRecords();
   
   const [isCheckingAllGoals, setIsCheckingAllGoals] = useState(false);
-  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [suggestionError, setSuggestionError] = useState<string | null>("AI features are temporarily unavailable due to high demand. Please try again later.");
   const { toast } = useToast();
@@ -90,7 +87,8 @@ const AISuggestionsCard: React.FC = () => {
   };
 
   const handleGenerateSuggestion = useCallback(async () => {
-    // This function is now disabled
+    // This function is currently disabled.
+    // The error state is set by default to inform the user.
   }, []);
 
   const hasConfiguredGoals = useMemo(() => {
@@ -143,36 +141,36 @@ const AISuggestionsCard: React.FC = () => {
         <Separator />
 
         {hasConfiguredGoals ? (
-          <>
-            <div>
-              <h4 className="text-sm font-semibold mb-2 text-foreground/90 flex items-center">
-                <Gift className="h-4 w-4 mr-2 text-yellow-400" />
-                Automated Goal Check & Rewards
-              </h4>
-              <p className="text-xs text-muted-foreground mb-3">
-                Check your performance against set goals for the last completed period (daily, weekly, or monthly). Bonuses are awarded automatically if criteria are met.
-              </p>
-              <Button
-                onClick={handleCheckAllGoals}
-                variant="outline"
-                size="sm"
-                className="w-full"
-                disabled={isCheckingAllGoals || eligibleGoalTasks.length === 0}
-              >
-                {isCheckingAllGoals ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                )}
-                {isCheckingAllGoals ? 'Checking...' : (eligibleGoalTasks.length > 0 ? 'Check All Completed Goals' : 'All Goals Checked')}
-              </Button>
-              {eligibleGoalTasks.length === 0 && (
-                 <p className="text-xs text-muted-foreground text-center mt-2">All eligible goals for the last completed periods have been checked.</p>
+          <div>
+            <h4 className="text-sm font-semibold mb-2 text-foreground/90 flex items-center">
+              <Gift className="h-4 w-4 mr-2 text-yellow-400" />
+              Automated Goal Check & Rewards
+            </h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Check your performance against set goals for the last completed period (daily, weekly, or monthly). Bonuses are awarded automatically if criteria are met.
+            </p>
+            <Button
+              onClick={handleCheckAllGoals}
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={isCheckingAllGoals || eligibleGoalTasks.length === 0}
+            >
+              {isCheckingAllGoals ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckSquare className="mr-2 h-4 w-4" />
               )}
-            </div>
-          </>
+              {isCheckingAllGoals ? 'Checking...' : (eligibleGoalTasks.length > 0 ? `Check ${eligibleGoalTasks.length} Completed Goal(s)` : 'All Goals Checked')}
+            </Button>
+            {eligibleGoalTasks.length === 0 && (
+               <p className="text-xs text-muted-foreground text-center mt-2">All eligible goals for past periods have been evaluated.</p>
+            )}
+          </div>
         ) : (
+          <div className="text-center py-4">
             <p className="text-sm text-muted-foreground">Define goals for your tasks in "Manage Tasks" to enable automated reward checking.</p>
+          </div>
         )}
       </CardContent>
        <CardFooter>
