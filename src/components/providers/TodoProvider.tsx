@@ -106,7 +106,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
 
-    setTodoItems(relevantItems);
+    setTodoItems(initialItems);
 
     // Update the last visited date
     try {
