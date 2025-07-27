@@ -130,18 +130,25 @@ export default function HighGoalsPage() {
     handleSetEditing(null);
   };
   
-  const getUnitLabelForTask = (taskId: string) => {
+  const getUnitLabelForTask = (taskId: string | undefined): string => {
+    if (!taskId) return 'Value';
     const task = getTaskDefinitionById(taskId);
-    if (task?.unit) {
-      if (task.unit === 'custom' && task.customUnitName) {
-        return task.customUnitName;
-      }
-      if(task.unit !== 'count' && task.unit !== 'generic') {
-        return task.unit;
-      }
+    if (!task || !task.unit) return 'Value';
+    
+    switch (task.unit) {
+      case 'custom':
+        return task.customUnitName || 'Value';
+      case 'count':
+      case 'generic':
+        return ''; // No unit for simple counts
+      default:
+        // Capitalize first letter
+        return task.unit.charAt(0).toUpperCase() + task.unit.slice(1);
     }
-    return 'value';
   }
+
+  const watchedTaskId = form.watch('taskId');
+  const unitLabel = getUnitLabelForTask(watchedTaskId);
 
   return (
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -188,7 +195,7 @@ export default function HighGoalsPage() {
                    {form.formState.errors.taskId && <p className="text-sm text-destructive mt-1">{form.formState.errors.taskId.message}</p>}
                 </div>
                 <div>
-                    <Label htmlFor="target-value">Target Value ({getUnitLabelForTask(form.watch('taskId'))})</Label>
+                    <Label htmlFor="target-value">Target {unitLabel && `(${unitLabel})`}</Label>
                     <Input id="target-value" type="number" {...form.register('targetValue')} className="mt-1" placeholder="e.g., 500" />
                     {form.formState.errors.targetValue && <p className="text-sm text-destructive mt-1">{form.formState.errors.targetValue.message}</p>}
                 </div>
