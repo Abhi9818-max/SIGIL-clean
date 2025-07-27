@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -262,7 +263,7 @@ export default function TodoPage() {
                 </Button>
             </div>
              <CardDescription>
-              {view === 'today' ? "Your daily commitments. Add new pacts below." : "Review and finalize yesterday's tasks."}
+              {view === 'today' ? "" : "Review and finalize yesterday's tasks."}
             </CardDescription>
           </CardHeader>
           <CardContent>
