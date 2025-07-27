@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target } from 'lucide-react';
