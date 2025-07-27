@@ -91,7 +91,7 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
               </Button>
             ))}
             
-            {isDashboardPage ? (
+            {isDashboardPage && (
               <>
                 <Button onClick={onManageTasksClick} variant="ghost" size="sm">
                   <Settings className="mr-1.5 h-4 w-4" />
@@ -101,14 +101,13 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   Add Record
                 </Button>
               </>
-            ) : (
-                 <Button asChild variant="ghost" size="icon">
-                    <Link href="/settings">
-                        <Settings className="h-5 w-5" />
-                        <span className="sr-only">Settings</span>
-                    </Link>
-                </Button>
             )}
+             <Button asChild variant="ghost" size="icon">
+                <Link href="/settings">
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Settings</span>
+                </Link>
+            </Button>
           </div>
 
           {/* Mobile Menu */}
