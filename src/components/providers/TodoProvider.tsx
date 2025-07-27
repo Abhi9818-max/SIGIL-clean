@@ -3,11 +3,11 @@
 
 import type { TodoItem } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { LOCAL_STORAGE_TODO_KEY } from '@/lib/config';
+import { LOCAL_STORAGE_TODO_KEY, LOCAL_STORAGE_LAST_VISITED_DATE_KEY } from '@/lib/config';
 import { v4 as uuidv4 } from 'uuid';
 import { useUserRecords } from './UserRecordsProvider';
 import { useToast } from '@/hooks/use-toast';
-import { isPast, startOfDay } from 'date-fns';
+import { isPast, startOfDay, format, parseISO } from 'date-fns';
 
 interface TodoContextType {
   todoItems: TodoItem[];
@@ -25,18 +25,6 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const userRecords = useUserRecords();
   const { toast } = useToast();
 
-  useEffect(() => {
-    try {
-      const storedTodoItems = localStorage.getItem(LOCAL_STORAGE_TODO_KEY);
-      if (storedTodoItems) {
-        setTodoItems(JSON.parse(storedTodoItems));
-      }
-    } catch (error) {
-      console.error("Failed to load to-do items from localStorage:", error);
-    }
-    setIsLoaded(true);
-  }, []);
-  
   const applyPenalty = useCallback((item: TodoItem) => {
     if (item.penalty && item.penalty > 0 && userRecords.deductBonusPoints && !item.penaltyApplied) {
       userRecords.deductBonusPoints(item.penalty);
@@ -52,35 +40,73 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     }
   }, [userRecords, toast]);
-
-
-  // Check for overdue tasks on load
+  
+  // This effect runs once on load to handle daily reset logic
   useEffect(() => {
-    if (isLoaded) {
-      let itemsToUpdate = [...todoItems];
-      let wasPenaltyApplied = false;
+    let initialItems: TodoItem[] = [];
+    try {
+      const storedTodoItems = localStorage.getItem(LOCAL_STORAGE_TODO_KEY);
+      if (storedTodoItems) {
+        initialItems = JSON.parse(storedTodoItems);
+      }
+    } catch (error) {
+      console.error("Failed to load to-do items from localStorage:", error);
+    }
 
-      itemsToUpdate.forEach(item => {
-        if (item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate))) && !item.penaltyApplied) {
-          if (item.penalty && item.penalty > 0) {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    let lastVisitedDateStr: string | null = null;
+    try {
+        lastVisitedDateStr = localStorage.getItem(LOCAL_STORAGE_LAST_VISITED_DATE_KEY);
+    } catch(error) {
+        console.error("Failed to load last visited date from localStorage:", error);
+    }
+    
+    // If it's a new day, process and clear old pacts
+    if (lastVisitedDateStr && lastVisitedDateStr !== todayStr) {
+      const lastVisitedDate = parseISO(lastVisitedDateStr);
+      const overdueItems = initialItems.filter(item => 
+        !item.completed && item.dueDate && parseISO(item.dueDate) <= lastVisitedDate
+      );
+      
+      if (overdueItems.length > 0) {
+        let penaltyApplied = false;
+        overdueItems.forEach(item => {
+          if (item.penalty && item.penalty > 0 && !item.penaltyApplied) {
             userRecords.deductBonusPoints(item.penalty);
+            penaltyApplied = true;
+          }
+        });
+        
+        if (penaltyApplied) {
             toast({
-              title: "Pact Broken",
-              description: `Your pact "${item.text}" was not honored in time. A penalty of ${item.penalty} XP has been deducted.`,
+              title: "Pacts Broken",
+              description: `Incomplete pacts from yesterday have been penalized.`,
               variant: "destructive",
               duration: 7000,
             });
-            item.penaltyApplied = true;
-            wasPenaltyApplied = true;
-          }
         }
-      });
-      
-      if(wasPenaltyApplied) {
-        setTodoItems(itemsToUpdate);
       }
+      
+      // Clear the list for the new day
+      setTodoItems([]);
+      toast({
+          title: "A New Day",
+          description: "Your pacts have been reset for today.",
+      });
+
+    } else {
+      setTodoItems(initialItems);
     }
-  }, [isLoaded, todoItems]); // Removed dependencies that cause loops
+    
+    // Update the last visited date
+    try {
+      localStorage.setItem(LOCAL_STORAGE_LAST_VISITED_DATE_KEY, todayStr);
+    } catch(error) {
+        console.error("Failed to save last visited date to localStorage:", error);
+    }
+    
+    setIsLoaded(true);
+  }, []); // This should only run once on initial load. Dependencies are intentionally omitted.
 
 
   useEffect(() => {
