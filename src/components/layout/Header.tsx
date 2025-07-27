@@ -71,36 +71,36 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-2">
-             <Link href="/todo" passHref>
-              <Button variant={isTodoPage ? "secondary" : "ghost"} size="sm">
+             <Button asChild variant={isTodoPage ? "secondary" : "ghost"} size="sm">
+              <Link href="/todo">
                 <ListChecks className="mr-1.5 h-4 w-4" />
                 Pacts
-              </Button>
-            </Link>
-             <Link href="/goals" passHref>
-              <Button variant={isGoalsPage ? "secondary" : "ghost"} size="sm">
+              </Link>
+            </Button>
+             <Button asChild variant={isGoalsPage ? "secondary" : "ghost"} size="sm">
+              <Link href="/goals">
                 <Target className="mr-1.5 h-4 w-4" />
                 Goals
-              </Button>
-            </Link>
-             <Link href="/insights" passHref>
-              <Button variant={isInsightsPage ? "secondary" : "ghost"} size="sm">
+              </Link>
+            </Button>
+             <Button asChild variant={isInsightsPage ? "secondary" : "ghost"} size="sm">
+              <Link href="/insights">
                 <BarChart2 className="mr-1.5 h-4 w-4" />
                 Insights
-              </Button>
-            </Link>
-             <Link href="/achievements" passHref>
-              <Button variant={isAchievementsPage ? "secondary" : "ghost"} size="sm">
+              </Link>
+            </Button>
+             <Button asChild variant={isAchievementsPage ? "secondary" : "ghost"} size="sm">
+              <Link href="/achievements">
                 <Trophy className="mr-1.5 h-4 w-4" />
                 Achievements
-              </Button>
-            </Link>
-             <Link href="/constellations" passHref>
-              <Button variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
+              </Link>
+            </Button>
+             <Button asChild variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
+              <Link href="/constellations">
                 <Sparkles className="mr-1.5 h-4 w-4" />
                 Constellations
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             {isDashboardPage && (
               <>
                 <Button onClick={onManageTasksClick} variant="ghost" size="sm">
