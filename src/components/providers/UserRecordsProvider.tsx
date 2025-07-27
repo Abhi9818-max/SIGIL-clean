@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
