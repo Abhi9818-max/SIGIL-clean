@@ -34,20 +34,19 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         variant: "destructive",
         duration: 7000,
       });
-      // Mark penalty as applied to prevent it from being applied again
-      setTodoItems(prevItems => 
-        prevItems.map(i => i.id === item.id ? {...i, penaltyApplied: true} : i)
-      );
+      // Return a new item with the penalty applied
+      return { ...item, penaltyApplied: true };
     }
+    return item;
   }, [userRecords, toast]);
-  
+
   // This effect runs once on load to handle daily state management
   useEffect(() => {
-    let initialItems: TodoItem[] = [];
+    let allStoredItems: TodoItem[] = [];
     try {
       const storedTodoItems = localStorage.getItem(LOCAL_STORAGE_TODO_KEY);
       if (storedTodoItems) {
-        initialItems = JSON.parse(storedTodoItems);
+        allStoredItems = JSON.parse(storedTodoItems);
       }
     } catch (error) {
       console.error("Failed to load to-do items from localStorage:", error);
@@ -61,43 +60,37 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("Failed to load last visited date from localStorage:", error);
     }
     
+    let processedItems = [...allStoredItems];
+
     // If it's a new day, process overdue penalties from previous day(s)
     if (lastVisitedDateStr && lastVisitedDateStr !== todayStr) {
-      const lastVisitedDate = parseISO(lastVisitedDateStr);
-      const newlyOverdueItems = initialItems.filter(item => 
-        !item.completed && 
-        !item.penaltyApplied && 
-        item.dueDate && 
-        parseISO(item.dueDate) <= lastVisitedDate
-      );
+      const lastVisitedDate = startOfDay(parseISO(lastVisitedDateStr));
       
-      if (newlyOverdueItems.length > 0) {
-        let penaltyToastShown = false;
-        const updatedItems = initialItems.map(item => {
-           if (newlyOverdueItems.some(overdue => overdue.id === item.id)) {
-              if (item.penalty && item.penalty > 0) {
-                 userRecords.deductBonusPoints(item.penalty);
-                 penaltyToastShown = true;
-              }
-              return {...item, penaltyApplied: true};
-           }
-           return item;
-        });
-        initialItems = updatedItems;
-        
-        if (penaltyToastShown) {
-            toast({
-              title: "Pacts Broken",
-              description: `Incomplete pacts from yesterday have been penalized.`,
-              variant: "destructive",
-              duration: 7000,
-            });
-        }
+      let penaltyToastShown = false;
+      processedItems = processedItems.map(item => {
+         if (!item.completed && !item.penaltyApplied && item.dueDate) {
+             const dueDate = startOfDay(parseISO(item.dueDate));
+             if (dueDate <= lastVisitedDate) {
+                penaltyToastShown = true;
+                return applyPenalty(item);
+             }
+         }
+         return item;
+      });
+      
+      if (penaltyToastShown) {
+          toast({
+            title: "Pacts Judged",
+            description: `Incomplete pacts from previous days have been penalized.`,
+            variant: "destructive",
+            duration: 7000,
+          });
       }
     }
     
     // Filter out old pacts (older than yesterday) but keep today's and yesterday's
-    const relevantItems = initialItems.filter(item => {
+    const yesterday = subDays(new Date(), 1);
+    const relevantItems = processedItems.filter(item => {
       try {
         const itemDate = new Date(item.createdAt);
         return isToday(itemDate) || isYesterday(itemDate);
@@ -106,7 +99,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
 
-    setTodoItems(initialItems);
+    setTodoItems(relevantItems);
 
     // Update the last visited date
     try {
@@ -116,7 +109,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     setIsLoaded(true);
-  }, []); // This should only run once on initial load. Dependencies are intentionally omitted.
+  }, []); // Intentionally empty dependency array to run only once on mount
 
 
   useEffect(() => {
@@ -144,21 +137,24 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const toggleTodoItem = useCallback((id: string) => {
-    const item = todoItems.find(i => i.id === id);
-    if (!item) return;
-
-    // Check for penalty when completing an overdue task
-    const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
-    if (isOverdue && !item.penaltyApplied) {
-        applyPenalty(item);
-    }
-
     setTodoItems(prevItems =>
-      prevItems.map(i =>
-        i.id === id ? { ...i, completed: !i.completed } : i
-      )
+      prevItems.map(item => {
+        if (item.id === id) {
+          const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
+          
+          // Apply penalty if completing an overdue task
+          if (isOverdue && !item.penaltyApplied) {
+            const updatedItemWithPenalty = applyPenalty(item);
+            return { ...updatedItemWithPenalty, completed: !item.completed };
+          }
+          
+          return { ...item, completed: !item.completed };
+        }
+        return item;
+      })
     );
-  }, [todoItems, applyPenalty]);
+  }, [applyPenalty]);
+
 
   const deleteTodoItem = useCallback((id: string) => {
     const item = todoItems.find(i => i.id === id);
@@ -167,14 +163,8 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Deleting is only allowed for today's pacts to prevent accidental deletion of yesterday's reviewable items.
     if (!isToday(new Date(item.createdAt))) return;
 
-     // Check for penalty when deleting an overdue, uncompleted task
-    const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
-    if (isOverdue && !item.penaltyApplied) {
-        applyPenalty(item);
-    }
-
     setTodoItems(prevItems => prevItems.filter(i => i.id !== id));
-  }, [todoItems, applyPenalty]);
+  }, [todoItems]);
 
   const getTodoItemById = useCallback((id: string): TodoItem | undefined => {
     return todoItems.find(item => item.id === id);
