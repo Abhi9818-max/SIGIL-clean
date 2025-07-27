@@ -145,10 +145,10 @@ export default function SettingsPage() {
   };
 
   const dashboardComponents: { key: keyof DashboardSettings, label: string }[] = [
-      { key: 'showStatsPanel', label: 'Stats Panel (Total, Streak, etc.)' },
+      { key: 'showStatsPanel', label: 'Stats Panel (Streak, 30-Day Total, High Goals)' },
       { key: 'showTaskFilterBar', label: 'Task Filter Bar' },
       { key: 'showContributionGraph', label: 'Contribution Graph' },
-      { key: 'showTodoList', label: 'Pacts Card (To-Do)' },
+      { key: 'showTodoList', label: 'Pacts Card' },
       { key: 'showProgressChart', label: 'Progress Chart' },
       { key: 'showAISuggestions', label: 'AI Coach Card' },
   ];

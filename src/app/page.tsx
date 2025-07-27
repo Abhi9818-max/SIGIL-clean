@@ -173,9 +173,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {dashboardSettings.showAISuggestions && (
-                <div className={cn("animate-fade-in-up",
-                  !dashboardSettings.showHighGoals ? "lg:col-span-2" : ""
-                )} style={{ animationDelay: '400ms' }}>
+                <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
                     <AISuggestionsCard />
                 </div>
             )}

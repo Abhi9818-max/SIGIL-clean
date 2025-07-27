@@ -3,79 +3,23 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { subDays, parseISO, formatDistanceToNowStrict } from 'date-fns';
 import PerformanceCircle from './PerformanceCircle';
-import { Flame, Snowflake, TrendingUp, ShieldCheck } from 'lucide-react';
+import { Flame, Snowflake, TrendingUp, ShieldCheck, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface StatsPanelProps {
-  selectedTaskFilterId: string | null;
-}
-
-const HighGoalPanel = () => {
-    const { highGoals, getHighGoalProgress, getTaskDefinitionById, records } = useUserRecords();
-    
-    const mostImminentGoal = useMemo(() => {
-        const now = new Date();
-        return [...highGoals]
-            .filter(g => parseISO(g.endDate) >= now)
-            .sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())
-            [0];
-    }, [highGoals, records]);
-
-    if (!mostImminentGoal) {
-        return (
-            <Card className="shadow-lg animate-fade-in-up" style={{ animationDelay: `200ms` }}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">High Goal</CardTitle>
-                    <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-center text-muted-foreground pt-3">
-                        <p>No active high goals.</p>
-                        <Link href="/high-goals" className="text-xs text-primary hover:underline">Set one now</Link>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    }
-    
-    const task = getTaskDefinitionById(mostImminentGoal.taskId);
-    const progress = getHighGoalProgress(mostImminentGoal);
-    const percentage = Math.min((progress / mostImminentGoal.targetValue) * 100, 100);
-    const timeRemaining = formatDistanceToNowStrict(parseISO(mostImminentGoal.endDate), { addSuffix: true });
-
-    return (
-        <Card className="shadow-lg animate-fade-in-up" style={{ animationDelay: `200ms` }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={mostImminentGoal.name}>
-                    High Goal: {mostImminentGoal.name}
-                </CardTitle>
-                <ShieldCheck className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-center justify-between gap-4">
-                    <div className="flex flex-col">
-                        <div className="text-2xl font-bold" style={{color: task?.color}}>{percentage.toFixed(0)}%</div>
-                        <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
-                    </div>
-                    <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={task?.color} />
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-
-const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
+const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ selectedTaskFilterId }) => {
   const { 
     getAggregateSum, 
+    getDailyConsistencyLast30Days,
     getTaskDefinitionById, 
     getCurrentStreak,
     freezeCrystals,
+    highGoals,
+    getHighGoalProgress,
     records
   } = useUserRecords();
   
@@ -84,6 +28,10 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     const last30DaysStart = subDays(today, 29);
     return getAggregateSum(last30DaysStart, today, selectedTaskFilterId);
   }, [records, selectedTaskFilterId, getAggregateSum]);
+
+  const consistency = useMemo(() => {
+    return getDailyConsistencyLast30Days(selectedTaskFilterId);
+  }, [records, selectedTaskFilterId, getDailyConsistencyLast30Days]);
 
   const currentStreak = useMemo(() => {
     return getCurrentStreak(selectedTaskFilterId);
@@ -108,24 +56,30 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
     };
   }, [selectedTaskFilterId, getTaskDefinitionById, records]);
 
+  const activeHighGoal = useMemo(() => {
+    const now = new Date();
+    return [...highGoals]
+        .filter(g => parseISO(g.endDate) >= now)
+        .sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())
+        [0]; // Get only the most imminent goal
+  }, [highGoals, records]);
+
+
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card
-          className="shadow-lg animate-fade-in-up"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Last 30 Days
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {aggregate.toLocaleString()}
-              {unitLabel && <span className="text-lg text-muted-foreground ml-2">{unitLabel}</span>}
-            </div>
-          </CardContent>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="shadow-lg animate-fade-in-up">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Last 30 Days
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                {aggregate.toLocaleString()}
+                {unitLabel && <span className="text-lg text-muted-foreground ml-2">{unitLabel}</span>}
+                </div>
+            </CardContent>
         </Card>
 
         <Card
@@ -172,10 +126,57 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
           </CardContent>
         </Card>
 
-        <HighGoalPanel />
+        <Card className="shadow-lg animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Daily Consistency
+                </CardTitle>
+                <Repeat className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                        <div className="text-2xl font-bold text-foreground">{consistency}%</div>
+                        <p className="text-xs text-muted-foreground">Last 30 Days</p>
+                    </div>
+                    <PerformanceCircle percentage={consistency} size={60} strokeWidth={6} />
+                </div>
+            </CardContent>
+        </Card>
         
+        <Card className="shadow-lg animate-fade-in-up" style={{ animationDelay: `300ms` }}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={activeHighGoal?.name ?? "High Goal"}>
+                    {activeHighGoal?.name ?? "High Goal"}
+                </CardTitle>
+                <ShieldCheck className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+                {activeHighGoal ? (
+                    (() => {
+                        const goalTask = getTaskDefinitionById(activeHighGoal.taskId);
+                        const progress = getHighGoalProgress(activeHighGoal);
+                        const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
+                        const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
+                        return (
+                             <div className="flex items-center justify-between gap-4">
+                                <div className="flex flex-col">
+                                    <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
+                                    <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
+                                </div>
+                                <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
+                            </div>
+                        )
+                    })()
+                ) : (
+                    <div className="text-center text-muted-foreground pt-3">
+                        <p>No active high goals.</p>
+                        <Link href="/high-goals" className="text-xs text-primary hover:underline">Set one now</Link>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
       </div>
-    </>
   );
 };
 
