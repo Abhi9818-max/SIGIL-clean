@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTodos } from '@/components/providers/TodoProvider';
-import { ListChecks, Trash2, CalendarIcon, CalendarDays, ShieldAlert } from 'lucide-react';
+import { ListChecks, Trash2, CalendarIcon, CalendarDays, ShieldAlert, PlusCircle } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { cn } from '@/lib/utils';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 const AddPactForm = ({ onAddItem, newItemText, setNewItemText, newDueDate, setNewDueDate, newPenalty, setNewPenalty }: any) => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const handleDateSelect = (date: Date | undefined) => {
     if (newDueDate && date && startOfDay(newDueDate).getTime() === startOfDay(date).getTime()) {
       setNewDueDate(undefined);
@@ -32,6 +34,14 @@ const AddPactForm = ({ onAddItem, newItemText, setNewItemText, newDueDate, setNe
       setNewPenalty(undefined);
     }
   }, [newDueDate, setNewPenalty]);
+  
+  useEffect(() => {
+    // If advanced options are hidden, clear the values
+    if (!showAdvanced) {
+      setNewDueDate(undefined);
+      setNewPenalty(undefined);
+    }
+  }, [showAdvanced, setNewDueDate, setNewPenalty]);
 
   return (
     <div className="space-y-4">
@@ -52,46 +62,54 @@ const AddPactForm = ({ onAddItem, newItemText, setNewItemText, newDueDate, setNe
             Add Pact
           </Button>
       </div>
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="flex-grow">
-           <Label htmlFor="due-date-button" className="sr-only">Due Date</Label>
-           <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="due-date-button"
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !newDueDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {newDueDate ? format(newDueDate, "PPP") : <span>Pick due date (optional)</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={newDueDate}
-                onSelect={handleDateSelect}
-                initialFocus
-                disabled={(date) => date < startOfDay(new Date())}
-              />
-            </PopoverContent>
-          </Popover>
+
+      {!showAdvanced ? (
+        <Button variant="outline" size="sm" onClick={() => setShowAdvanced(true)} className="w-full sm:w-auto">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Details (Due Date, Penalty)
+        </Button>
+      ) : (
+        <div className="flex flex-col sm:flex-row gap-2 animate-fade-in-up">
+          <div className="flex-grow">
+            <Label htmlFor="due-date-button" className="sr-only">Due Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="due-date-button"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !newDueDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {newDueDate ? format(newDueDate, "PPP") : <span>Pick due date (optional)</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={newDueDate}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                  disabled={(date) => date < startOfDay(new Date())}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex-grow">
+            <Label htmlFor="penalty" className="sr-only">Penalty</Label>
+            <Input
+              id="penalty"
+              type="number"
+              value={newPenalty || ''}
+              onChange={(e) => setNewPenalty(e.target.value === '' ? undefined : Number(e.target.value))}
+              placeholder="Penalty XP (optional)"
+              disabled={!newDueDate}
+            />
+          </div>
         </div>
-        <div className="flex-grow">
-           <Label htmlFor="penalty" className="sr-only">Penalty</Label>
-           <Input
-            id="penalty"
-            type="number"
-            value={newPenalty || ''}
-            onChange={(e) => setNewPenalty(e.target.value === '' ? undefined : Number(e.target.value))}
-            placeholder="Penalty XP (optional)"
-            disabled={!newDueDate}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 };
