@@ -40,15 +40,24 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
 
   const headerTierClass = levelInfo ? `header-tier-group-${levelInfo.tierGroup}` : 'header-tier-group-1';
   const isDashboardPage = pathname === '/';
-  const isTodoPage = pathname === '/todo';
-  const isWidgetPage = pathname === '/widget';
-  const isConstellationsPage = pathname === '/constellations';
-  const isTestApiPage = pathname === '/test-api';
-  const isInsightsPage = pathname === '/insights';
-  const isEchoesPage = pathname === '/echoes';
-  const isAchievementsPage = pathname === '/achievements';
-  const isGoalsPage = pathname === '/goals';
-  const isHighGoalsPage = pathname === '/high-goals';
+
+  const navLinks = [
+    { href: "/todo", label: "Pacts", icon: ListChecks },
+    { href: "/goals", label: "Goals", icon: Target },
+    { href: "/high-goals", label: "High Goals", icon: ShieldCheck },
+    { href: "/insights", label: "Insights", icon: BarChart2 },
+    { href: "/achievements", label: "Achievements", icon: Trophy },
+    { href: "/constellations", label: "Constellations", icon: Sparkles },
+  ];
+
+  const mobileMenuLinks = [
+    ...navLinks,
+    { href: "/echoes", label: "Echoes", icon: Share2 },
+    { isSeparator: true },
+    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/widget", label: "Widget", icon: AppWindow },
+    { href: "/test-api", label: "Test API", icon: Server },
+  ];
 
   return (
     <>
@@ -73,42 +82,14 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-2">
-             <Button asChild variant={isTodoPage ? "secondary" : "ghost"} size="sm">
-              <Link href="/todo">
-                <ListChecks className="mr-1.5 h-4 w-4" />
-                Pacts
-              </Link>
-            </Button>
-             <Button asChild variant={isGoalsPage ? "secondary" : "ghost"} size="sm">
-              <Link href="/goals">
-                <Target className="mr-1.5 h-4 w-4" />
-                Goals
-              </Link>
-            </Button>
-             <Button asChild variant={isHighGoalsPage ? "secondary" : "ghost"} size="sm">
-              <Link href="/high-goals">
-                <ShieldCheck className="mr-1.5 h-4 w-4" />
-                High Goals
-              </Link>
-            </Button>
-             <Button asChild variant={isInsightsPage ? "secondary" : "ghost"} size="sm">
-              <Link href="/insights">
-                <BarChart2 className="mr-1.5 h-4 w-4" />
-                Insights
-              </Link>
-            </Button>
-             <Button asChild variant={isAchievementsPage ? "secondary" : "ghost"} size="sm">
-              <Link href="/achievements">
-                <Trophy className="mr-1.5 h-4 w-4" />
-                Achievements
-              </Link>
-            </Button>
-             <Button asChild variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
-              <Link href="/constellations">
-                <Sparkles className="mr-1.5 h-4 w-4" />
-                Constellations
-              </Link>
-            </Button>
+            {navLinks.map(link => (
+              <Button asChild key={link.href} variant={pathname === link.href ? "secondary" : "ghost"} size="sm">
+                <Link href={link.href}>
+                  <link.icon className="mr-1.5 h-4 w-4" />
+                  {link.label}
+                </Link>
+              </Button>
+            ))}
             {isDashboardPage && (
               <>
                 <Button onClick={onManageTasksClick} variant="ghost" size="sm">
@@ -137,74 +118,33 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   View Level Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/todo" className="flex items-center w-full">
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    Pacts
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/goals" className="flex items-center w-full">
-                    <Target className="mr-2 h-4 w-4" />
-                    Goals
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/high-goals" className="flex items-center w-full">
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    High Goals
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/insights" className="flex items-center w-full">
-                    <BarChart2 className="mr-2 h-4 w-4" />
-                    Insights
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/achievements" className="flex items-center w-full">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Achievements
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/constellations" className="flex items-center w-full">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Constellations
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/echoes" className="flex items-center w-full">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Echoes
-                  </Link>
-                </DropdownMenuItem>
+
                 {isDashboardPage && (
                   <>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onManageTasksClick} className="flex items-center w-full">
                       <Settings className="mr-2 h-4 w-4" />
                       Manage Tasks
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onAddRecordClick} className="flex items-center w-full">
-                       {/* Could add a PlusCircleIcon here if desired for "Add Record" */}
                       Add Record
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                   </>
                 )}
-                 <DropdownMenuSeparator />
-                 <DropdownMenuItem asChild>
-                  <Link href="/widget" className="flex items-center w-full">
-                    <AppWindow className="mr-2 h-4 w-4" />
-                    Widget
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/test-api" className="flex items-center w-full">
-                    <Server className="mr-2 h-4 w-4" />
-                    Test API
-                  </Link>
-                </DropdownMenuItem>
+
+                {mobileMenuLinks.map((link, index) => {
+                  if (link.isSeparator) {
+                    return <DropdownMenuSeparator key={`sep-${index}`} />;
+                  }
+                  return (
+                    <DropdownMenuItem key={link.href} asChild>
+                      <Link href={link.href!} className="flex items-center w-full">
+                        <link.icon className="mr-2 h-4 w-4" />
+                        {link.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
