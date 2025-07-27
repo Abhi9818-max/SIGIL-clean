@@ -112,15 +112,6 @@ export type AutomatedGoalCheckResult =
       goalType?: never;
     };
     
-// For Consistency Breach Modal
-export type BreachCheckResult = {
-  breachDetected: boolean;
-  lastRecordDate: string | null;
-  daysSince: number | null;
-  penalty: number;
-};
-
-
 // Specific for TIER_INFO in config.ts
 export interface TierConfig {
   name: string;
@@ -169,16 +160,6 @@ export interface TaskDistributionData {
 export interface ProductivityByDayData {
     day: string;
     total: number;
-}
-
-
-// For Dark Streak
-export interface DarkStreakCheckResult {
-  taskId: string;
-  taskName: string;
-  streakBroken: boolean;
-  penalty: number;
-  dare?: string;
 }
 
 // For Achievements

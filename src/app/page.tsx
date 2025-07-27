@@ -12,19 +12,16 @@ import ManageTasksModal from '@/components/manage-tasks/ManageTasksModal';
 import TaskFilterBar from '@/components/records/TaskFilterBar';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useTodos } from '@/components/providers/TodoProvider';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import WeeklyProgressCard from '@/components/progress/WeeklyProgressCard';
-import GoalProgressCard from '@/components/progress/GoalProgressCard';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import type { UserLevelInfo, BreachCheckResult, DarkStreakCheckResult } from '@/types';
-import { TIER_INFO, DARK_STREAK_PENALTY } from '@/lib/config';
+import type { UserLevelInfo } from '@/types';
+import { TIER_INFO } from '@/lib/config';
 import type { Quote } from '@/lib/quotes';
 import { QUOTES } from '@/lib/quotes';
 import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
-import ConsistencyBreachModal from '@/components/features/ConsistencyBreachModal';
-import PunishmentModal from '@/components/features/PunishmentModal';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
@@ -40,25 +37,13 @@ export default function HomePage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
 
-  // State for breach modals
-  const [consistencyBreach, setConsistencyBreach] = useState<BreachCheckResult | null>(null);
-  const [darkStreakBreach, setDarkStreakBreach] = useState<DarkStreakCheckResult | null>(null);
-
-
   const {
     taskDefinitions,
     getUserLevelInfo,
     records,
     totalBonusPoints,
     awardTierEntryBonus,
-    handleConsistencyCheck,
-    checkDarkStreaks,
-    markDarkStreakHandled,
-    deductBonusPoints,
-    useFreezeCrystal,
-    freezeCrystals,
   } = useUserRecords();
-  const { addTodoItem } = useTodos();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,25 +59,6 @@ export default function HomePage() {
     const levelInfo = getUserLevelInfo();
     setCurrentLevelInfo(levelInfo);
   }, [getUserLevelInfo, records, totalBonusPoints]);
-
-   const handleBreaches = useCallback(async () => {
-    // Check for Dark Streaks first
-    const darkStreakResult = await checkDarkStreaks();
-    if (darkStreakResult) {
-      setDarkStreakBreach(darkStreakResult);
-      return; // Stop here if a dark streak is found
-    }
-
-    // If no dark streak, check for global consistency breach
-    const consistencyResult = handleConsistencyCheck();
-    if (consistencyResult.breachDetected) {
-        setConsistencyBreach(consistencyResult);
-    }
-  }, [checkDarkStreaks, handleConsistencyCheck]);
-
-  useEffect(() => {
-    handleBreaches();
-  }, [handleBreaches]);
 
 
   useEffect(() => {
@@ -150,47 +116,6 @@ export default function HomePage() {
     setIsManageTasksModalOpen(true);
   };
 
-  const handleAcceptConsistencyBreach = () => {
-    setConsistencyBreach(null);
-  };
-  
-  const handleAcceptDare = () => {
-    if (darkStreakBreach) {
-        if(darkStreakBreach.dare) {
-            addTodoItem(darkStreakBreach.dare, format(addDays(new Date(), 1), 'yyyy-MM-dd'), darkStreakBreach.penalty);
-        }
-        markDarkStreakHandled(darkStreakBreach.taskId);
-        setDarkStreakBreach(null);
-    }
-  };
-  
-  const handleDeclineDare = () => {
-    if (darkStreakBreach) {
-        const additionalPenalty = darkStreakBreach.penalty * 0.5;
-        deductBonusPoints(additionalPenalty);
-        toast({
-            title: "Dare Declined",
-            description: `An additional penalty of ${additionalPenalty} XP has been applied.`,
-            variant: "destructive"
-        })
-        markDarkStreakHandled(darkStreakBreach.taskId);
-        setDarkStreakBreach(null);
-    }
-  };
-  
-  const handleUseFreezeCrystal = () => {
-    if (darkStreakBreach) {
-        useFreezeCrystal();
-        markDarkStreakHandled(darkStreakBreach.taskId); // Mark as handled to prevent re-triggering
-        setDarkStreakBreach(null); // Close the modal
-        toast({
-            title: "❄️ Streak Frozen!",
-            description: `You used a Freeze Crystal. Your streak for "${darkStreakBreach.taskName}" is safe for today.`,
-        });
-    }
-  };
-
-
   const pageTierClass = currentLevelInfo ? `page-tier-group-${currentLevelInfo.tierGroup}` : 'page-tier-group-1';
 
   return (
@@ -229,9 +154,6 @@ export default function HomePage() {
             <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
             </div>
-            <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-               <GoalProgressCard />
-            </div>
             <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
               <AISuggestionsCard />
             </div>
@@ -248,25 +170,6 @@ export default function HomePage() {
         isOpen={isManageTasksModalOpen}
         onOpenChange={setIsManageTasksModalOpen}
       />
-       {consistencyBreach && (
-        <ConsistencyBreachModal
-          isOpen={!!consistencyBreach}
-          onAccept={handleAcceptConsistencyBreach}
-          breachInfo={consistencyBreach}
-        />
-      )}
-       {darkStreakBreach && (
-        <PunishmentModal
-            isOpen={!!darkStreakBreach}
-            onAcceptDare={handleAcceptDare}
-            onDecline={handleDeclineDare}
-            onUseFreeze={handleUseFreezeCrystal}
-            penalty={darkStreakBreach.penalty}
-            taskName={darkStreakBreach.taskName}
-            dare={darkStreakBreach.dare}
-            availableCrystals={freezeCrystals}
-        />
-       )}
       <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border">
         S.I.G.I.L. &copy; {currentYear}
       </footer>

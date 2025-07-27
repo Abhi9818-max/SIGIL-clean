@@ -2,27 +2,22 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, BreachCheckResult, DarkStreakCheckResult, Achievement, GoalProgress } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import {
   LOCAL_STORAGE_KEY,
   LOCAL_STORAGE_TASKS_KEY,
   LOCAL_STORAGE_BONUS_POINTS_KEY,
   LOCAL_STORAGE_MET_GOALS_KEY,
-  LOCAL_STORAGE_HANDLED_STREAKS_KEY,
   LOCAL_STORAGE_TODO_KEY,
   LOCAL_STORAGE_LORE_KEY,
   LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
   LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
-  LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY,
   LOCAL_STORAGE_FREEZE_CRYSTALS_KEY,
   LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
   LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
-  CONSISTENCY_BREACH_DAYS,
-  CONSISTENCY_BREACH_PENALTY,
-  DARK_STREAK_PENALTY,
   STREAK_MILESTONES_FOR_CRYSTALS
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
@@ -68,7 +63,6 @@ interface UserRecordsContextType {
   deleteTaskDefinition: (taskId: string) => void;
   getTaskDefinitionById: (taskId: string) => TaskDefinition | undefined;
   getStatsForCompletedWeek: (weekOffset: number, taskId?: string | null) => WeeklyProgressStats | null;
-  getProgressForCurrentGoal: (taskId: string) => GoalProgress | null;
   getWeeklyAggregatesForChart: (numberOfWeeks: number, taskId?: string | null) => AggregatedTimeDataPoint[];
   getUserLevelInfo: () => UserLevelInfo;
   awardGoalCompletionBonus: (taskId: string) => number | null;
@@ -77,10 +71,6 @@ interface UserRecordsContextType {
   awardTierEntryBonus: (bonusAmount: number) => void;
   isGoalMetForLastPeriod: (taskId: string) => boolean;
   deductBonusPoints: (penalty: number) => void;
-  handleConsistencyCheck: () => BreachCheckResult;
-  // Dark Streak
-  checkDarkStreaks: () => Promise<DarkStreakCheckResult | null>;
-  markDarkStreakHandled: (taskId: string) => void;
   // Constellations
   getAvailableSkillPoints: (taskId: string) => number;
   unlockSkill: (skillId: string, taskId: string, cost: number) => boolean;
@@ -103,9 +93,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [taskDefinitions, setTaskDefinitions] = useState<TaskDefinition[]>([]);
   const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
   const [metGoals, setMetGoals] = useState<Record<string, string>>({}); // New state for met goals
-  const [handledStreaks, setHandledStreaks] = useState<Record<string, boolean>>({});
   const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
-  const [handledDarkStreaks, setHandledDarkStreaks] = useState<Record<string, string>>({});
   const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
   const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
   const [freezeCrystals, setFreezeCrystals] = useState<number>(0);
@@ -175,30 +163,12 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
     
     try {
-      const storedHandledStreaks = localStorage.getItem(LOCAL_STORAGE_HANDLED_STREAKS_KEY);
-      if (storedHandledStreaks) {
-        setHandledStreaks(JSON.parse(storedHandledStreaks));
-      }
-    } catch (error) {
-        console.error("Failed to load handled streaks from localStorage:", error);
-    }
-    
-    try {
       const storedUnlockedAchievements = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY);
       if (storedUnlockedAchievements) {
         setUnlockedAchievements(JSON.parse(storedUnlockedAchievements));
       }
     } catch (error) {
         console.error("Failed to load unlocked achievements from localStorage:", error);
-    }
-    
-    try {
-      const storedHandledDarkStreaks = localStorage.getItem(LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY);
-      if (storedHandledDarkStreaks) {
-        setHandledDarkStreaks(JSON.parse(storedHandledDarkStreaks));
-      }
-    } catch (error) {
-        console.error("Failed to load handled dark streaks from localStorage:", error);
     }
 
     try {
@@ -284,33 +254,12 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
    useEffect(() => {
     if (isLoaded) {
       try {
-        localStorage.setItem(LOCAL_STORAGE_HANDLED_STREAKS_KEY, JSON.stringify(handledStreaks));
-      } catch (error) {
-        console.error("Failed to save handled streaks to localStorage:", error);
-      }
-    }
-  }, [handledStreaks, isLoaded]);
-  
-   useEffect(() => {
-    if (isLoaded) {
-      try {
         localStorage.setItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY, JSON.stringify(unlockedAchievements));
       } catch (error) {
         console.error("Failed to save unlocked achievements to localStorage:", error);
       }
     }
   }, [unlockedAchievements, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY, JSON.stringify(handledDarkStreaks));
-      } catch (error) {
-        console.error("Failed to save handled dark streaks to localStorage:", error);
-      }
-    }
-  }, [handledDarkStreaks, isLoaded]);
-
 
   useEffect(() => {
     if (isLoaded) {
@@ -370,32 +319,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
         currentDate = subDays(currentDate, 1);
-        // Reset streak milestone tracking if the streak was broken *yesterday*
-        if (taskId && !recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
-            setAwardedStreakMilestones(prev => {
-                const newMilestones = {...prev};
-                delete newMilestones[taskId];
-                return newMilestones;
-            });
-        }
     }
 
     while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
         streak++;
         currentDate = subDays(currentDate, 1);
     }
-    
-    if (streak === 0 && taskId && awardedStreakMilestones[taskId]) {
-        // Streak is broken, clear milestones
-        setAwardedStreakMilestones(prev => {
-            const newMilestones = {...prev};
-            delete newMilestones[taskId];
-            return newMilestones;
-        });
-    }
 
     return streak;
-  }, [isLoaded, records, awardedStreakMilestones]);
+  }, [isLoaded, records]);
 
   const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
     const newRecord: RecordEntry = {
@@ -554,49 +486,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   }, [isLoaded, getAggregateSum]);
 
-  const getProgressForCurrentGoal = useCallback((taskId: string): GoalProgress | null => {
-    const task = getTaskDefinitionById(taskId);
-    if (!task || !task.goalValue || !task.goalInterval) {
-      return null;
-    }
-
-    const today = new Date();
-    let periodStart: Date;
-    let periodEnd: Date;
-
-    switch (task.goalInterval) {
-      case 'weekly':
-        periodStart = startOfWeek(today, { weekStartsOn: 1 });
-        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-        break;
-      // Add cases for 'daily' and 'monthly' if needed for this component
-      default:
-        return null;
-    }
-    
-    const currentTotal = getAggregateSum(periodStart, periodEnd, taskId);
-    const goalValue = task.goalValue;
-    const goalType = task.goalType || 'at_least';
-    const unit = task.unit || 'units';
-
-    const isMet = goalType === 'at_least' 
-      ? currentTotal >= goalValue 
-      : currentTotal <= goalValue;
-      
-    const percentage = goalType === 'at_least'
-      ? Math.min((currentTotal / goalValue) * 100, 100)
-      : Math.min((goalValue - currentTotal) / goalValue * 100, 100);
-
-
-    return {
-      current: currentTotal,
-      goal: goalValue,
-      percentage: isMet ? 100 : percentage,
-      isMet,
-      unit,
-    };
-  }, [getTaskDefinitionById, getAggregateSum]);
-
   const getWeeklyAggregatesForChart = useCallback((numberOfWeeks: number, taskId?: string | null): AggregatedTimeDataPoint[] => {
     if (!isLoaded) return [];
     const today = new Date();
@@ -735,104 +624,9 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     setTotalBonusPoints(prevBonus => prevBonus - Math.abs(penalty));
   }, []);
 
-  const handleConsistencyCheck = useCallback((): BreachCheckResult => {
-    const result: BreachCheckResult = {
-        breachDetected: false,
-        lastRecordDate: null,
-        daysSince: null,
-        penalty: 0,
-    };
-
-    if (records.length === 0) return result;
-
-    const sortedRecords = [...records].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-    const lastRecordDate = parseISO(sortedRecords[0].date);
-    const today = startOfDay(new Date());
-
-    const daysSince = differenceInDays(today, lastRecordDate);
-
-    result.lastRecordDate = format(lastRecordDate, 'yyyy-MM-dd');
-    result.daysSince = daysSince;
-
-    if (daysSince >= CONSISTENCY_BREACH_DAYS) {
-        const breachKey = format(lastRecordDate, 'yyyy-MM-dd');
-        if (!handledStreaks[breachKey]) {
-            result.breachDetected = true;
-            result.penalty = CONSISTENCY_BREACH_PENALTY;
-            deductBonusPoints(CONSISTENCY_BREACH_PENALTY);
-            setHandledStreaks(prev => ({ ...prev, [breachKey]: true }));
-        }
-    }
-
-    return result;
-  }, [records, handledStreaks, deductBonusPoints]);
-
-  const checkDarkStreaks = useCallback(async (): Promise<DarkStreakCheckResult | null> => {
-    if (!isLoaded) return null;
-
-    const darkStreakTasks = taskDefinitions.filter(t => t.darkStreakEnabled);
-    if (darkStreakTasks.length === 0) return null;
-
-    const yesterday = startOfDay(subDays(new Date(), 1));
-    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
-    const recordsByDate = new Map<string, RecordEntry[]>();
-    records.forEach(rec => {
-        if (!recordsByDate.has(rec.date)) recordsByDate.set(rec.date, []);
-        recordsByDate.get(rec.date)!.push(rec);
-    });
-    
-    const yesterdayRecords = recordsByDate.get(yesterdayStr) || [];
-
-    for (const task of darkStreakTasks) {
-        const wasTaskDoneYesterday = yesterdayRecords.some(r => r.taskType === task.id);
-        const wasHandled = handledDarkStreaks[task.id] === yesterdayStr;
-
-        if (!wasTaskDoneYesterday && !wasHandled) {
-            deductBonusPoints(DARK_STREAK_PENALTY);
-            
-            try {
-                const response = await fetch('/dares.json');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch dares');
-                }
-                const data = await response.json();
-                const dares: string[] = data.dares;
-                const dare = dares[Math.floor(Math.random() * dares.length)];
-
-                return {
-                    taskId: task.id,
-                    taskName: task.name,
-                    streakBroken: true,
-                    penalty: DARK_STREAK_PENALTY,
-                    dare: dare
-                };
-            } catch (error) {
-                console.error("Error fetching or processing dares:", error);
-                // Return penalty without a dare if fetching fails
-                return {
-                    taskId: task.id,
-                    taskName: task.name,
-                    streakBroken: true,
-                    penalty: DARK_STREAK_PENALTY,
-                };
-            }
-        }
-    }
-
-    return null; // No broken dark streaks
-  }, [isLoaded, taskDefinitions, records, handledDarkStreaks, deductBonusPoints]);
-
-  const markDarkStreakHandled = useCallback((taskId: string) => {
-    const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-    setHandledDarkStreaks(prev => ({ ...prev, [taskId]: yesterdayStr }));
-  }, []);
-
   const useFreezeCrystal = useCallback(() => {
     if (freezeCrystals > 0) {
         setFreezeCrystals(prev => prev - 1);
-        // We're essentially "paying" the penalty with a crystal, so we add the penalty value back
-        // to negate the deduction that already happened in checkDarkStreaks.
-        setTotalBonusPoints(prev => prev + DARK_STREAK_PENALTY);
     }
   }, [freezeCrystals]);
 
@@ -972,7 +766,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     deleteTaskDefinition,
     getTaskDefinitionById,
     getStatsForCompletedWeek,
-    getProgressForCurrentGoal,
     getWeeklyAggregatesForChart,
     getUserLevelInfo,
     awardGoalCompletionBonus,
@@ -980,10 +773,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     checkAndAwardAutomatedGoal,
     awardTierEntryBonus,
     deductBonusPoints,
-    handleConsistencyCheck,
     isGoalMetForLastPeriod,
-    checkDarkStreaks,
-    markDarkStreakHandled,
     getAvailableSkillPoints,
     unlockSkill,
     isSkillUnlocked,
@@ -998,15 +788,12 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     taskDefinitions,
     totalBonusPoints,
     metGoals,
-    handledStreaks,
     unlockedAchievements,
-    handledDarkStreaks,
     spentSkillPoints,
     unlockedSkills,
     freezeCrystals,
     awardedStreakMilestones,
     isLoaded,
-    toast,
     addRecord,
     updateRecord,
     deleteRecord,
@@ -1022,17 +809,13 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     deleteTaskDefinition,
     getTaskDefinitionById,
     getStatsForCompletedWeek,
-    getProgressForCurrentGoal,
     getWeeklyAggregatesForChart,
     getUserLevelInfo,
     awardGoalCompletionBonus,
     checkAndAwardAutomatedGoal,
     awardTierEntryBonus,
     deductBonusPoints,
-    handleConsistencyCheck,
     isGoalMetForLastPeriod,
-    checkDarkStreaks,
-    markDarkStreakHandled,
     getAvailableSkillPoints,
     unlockSkill,
     isSkillUnlocked,
