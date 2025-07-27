@@ -44,14 +44,19 @@ const highGoalFormSchema = z.object({
   name: z.string().min(3, "Goal name must be at least 3 characters.").max(100, "Goal name is too long."),
   taskId: z.string().min(1, "You must select a task."),
   targetValue: z.preprocess(
-    val => (val === "" ? undefined : Number(val)),
+    val => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number().positive("Target value must be a positive number.")
   ),
   dateRange: z.object({
     from: z.date({ required_error: "Start date is required." }),
     to: z.date({ required_error: "End date is required." }),
   }),
-}).refine(data => data.dateRange.to > data.dateRange.from, {
+}).refine(data => {
+  if (!data.dateRange.from || !data.dateRange.to) {
+      return true;
+  }
+  return data.dateRange.to > data.dateRange.from
+}, {
   message: "End date must be after the start date.",
   path: ["dateRange"],
 });
@@ -204,7 +209,7 @@ export default function HighGoalsPage() {
                             </PopoverContent>
                         </Popover>
                     )} />
-                    {form.formState.errors.dateRange && <p className="text-sm text-destructive mt-1">{form.formState.errors.dateRange.message}</p>}
+                    {form.formState.errors.dateRange && <p className="text-sm text-destructive mt-1">{form.formState.errors.dateRange?.from?.message || form.formState.errors.dateRange?.to?.message || form.formState.errors.dateRange.message}</p>}
                 </div>
               </div>
               
@@ -244,7 +249,7 @@ export default function HighGoalsPage() {
                             <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>This action will permanently delete your high goal "{goal.name}".</_alertdialogdescription>
+                                    <AlertDialogDescription>This action will permanently delete your high goal "{goal.name}".</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
