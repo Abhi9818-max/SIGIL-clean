@@ -55,7 +55,8 @@ const DaySquare: React.FC<DaySquareProps> = ({ day, onClick }) => {
               "aspect-square w-full h-full rounded-sm focus:outline-none focus:ring-2 focus:ring-ring",
               "hover:shadow-md hover:brightness-110",
               "transition-all duration-200 ease-out",
-              isDayInTheFuture ? "cursor-not-allowed" : "cursor-pointer"
+              isDayInTheFuture ? "cursor-not-allowed" : "cursor-pointer",
+              isToday && "today-glow"
             )}
             style={getSquareStyle()}
             aria-label={tooltipText}
