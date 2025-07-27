@@ -57,10 +57,11 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
   }, [selectedTaskFilterId, getTaskDefinitionById]);
 
   const activeHighGoal = useMemo(() => {
-    if (!selectedTaskFilterId) {
-      return null;
-    }
     const now = new Date();
+    // Only show the card if a specific task with a high goal is selected
+    if (!selectedTaskFilterId) {
+        return null;
+    }
     const relevantGoals = [...highGoals]
         .filter(g => g.taskId === selectedTaskFilterId && parseISO(g.endDate) >= now);
     
@@ -68,6 +69,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
         return null;
     }
     
+    // Return the goal that ends soonest
     return relevantGoals.sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())[0];
   }, [highGoals, selectedTaskFilterId]);
 
@@ -86,6 +88,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
                 {aggregate.toLocaleString()}
                 {unitLabel && <span className="text-lg text-muted-foreground ml-2">{unitLabel}</span>}
                 </div>
+                <p className="text-xs text-muted-foreground">in selected task(s)</p>
             </CardContent>
         </Card>
 
@@ -130,6 +133,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             >
               {currentStreak} Day{currentStreak !== 1 ? "s" : ""}
             </div>
+             <p className="text-xs text-muted-foreground">in selected task(s)</p>
           </CardContent>
         </Card>
 
@@ -143,8 +147,8 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             <CardContent>
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col">
-                        <div className="text-2xl font-bold text-foreground">{consistency}%</div>
-                        <p className="text-xs text-muted-foreground">Last 30 Days</p>
+                        <p className="text-xs text-muted-foreground">Active days in</p>
+                        <p className="text-xs text-muted-foreground">last 30 days</p>
                     </div>
                     <PerformanceCircle percentage={consistency} size={60} strokeWidth={6} />
                 </div>
@@ -156,7 +160,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
               <Card className="shadow-lg animate-fade-in-up h-full hover:bg-muted/50 transition-colors" style={{ animationDelay: `300ms` }}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={activeHighGoal.name}>
-                          {activeHighGoal.name}
+                          High Goal: {activeHighGoal.name}
                       </CardTitle>
                       <ShieldCheck className="h-4 w-4 text-primary" />
                   </CardHeader>
@@ -167,15 +171,12 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
                           const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
                           const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
                           return (
-                              <div className="flex flex-col justify-between gap-1 h-full">
-                                  <div className="flex items-center justify-between gap-4">
-                                      <div className="flex flex-col">
-                                          <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
-                                           <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
-                                      </div>
-                                      <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
+                              <div className="flex items-center justify-between gap-4">
+                                  <div className="flex flex-col">
+                                      <p className="text-xs font-semibold text-foreground">{progress.toLocaleString()} / {activeHighGoal.targetValue.toLocaleString()}</p>
+                                      <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
                                   </div>
-                                  <p className="text-xs text-center text-muted-foreground mt-1">{progress.toLocaleString()} / {activeHighGoal.targetValue.toLocaleString()}</p>
+                                  <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
                               </div>
                           )
                       })()}
