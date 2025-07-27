@@ -57,18 +57,17 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
   }, [selectedTaskFilterId, getTaskDefinitionById]);
 
   const activeHighGoal = useMemo(() => {
-    const now = new Date();
-    let relevantGoals = [...highGoals].filter(g => parseISO(g.endDate) >= now);
-
-    if (selectedTaskFilterId) {
-      relevantGoals = relevantGoals.filter(g => g.taskId === selectedTaskFilterId);
+    if (!selectedTaskFilterId) {
+      return null;
     }
+    const now = new Date();
+    const relevantGoals = [...highGoals]
+        .filter(g => g.taskId === selectedTaskFilterId && parseISO(g.endDate) >= now);
     
     if (relevantGoals.length === 0) {
         return null;
     }
-
-    // Sort by end date to find the most imminent one
+    
     return relevantGoals.sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())[0];
   }, [highGoals, selectedTaskFilterId]);
 
@@ -152,42 +151,38 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             </CardContent>
         </Card>
         
-        <Link href="/high-goals">
-            <Card className="shadow-lg animate-fade-in-up h-full hover:bg-muted/50 transition-colors" style={{ animationDelay: `300ms` }}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={activeHighGoal?.name ?? "High Goal"}>
-                        {activeHighGoal?.name ?? "High Goal"}
-                    </CardTitle>
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                    {activeHighGoal ? (
-                        (() => {
-                            const goalTask = getTaskDefinitionById(activeHighGoal.taskId);
-                            const progress = getHighGoalProgress(activeHighGoal);
-                            const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
-                            const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
-                            return (
-                                <div className="flex flex-col justify-between gap-1 h-full">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex flex-col">
-                                            <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
-                                             <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
-                                        </div>
-                                        <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
-                                    </div>
-                                    <p className="text-xs text-center text-muted-foreground mt-1">{progress.toLocaleString()} / {activeHighGoal.targetValue.toLocaleString()}</p>
-                                </div>
-                            )
-                        })()
-                    ) : (
-                        <div className="text-center text-muted-foreground pt-4 flex items-center justify-center h-full">
-                            <p className="text-sm">No active high goals.</p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </Link>
+        {activeHighGoal && (
+          <Link href="/high-goals">
+              <Card className="shadow-lg animate-fade-in-up h-full hover:bg-muted/50 transition-colors" style={{ animationDelay: `300ms` }}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground truncate" title={activeHighGoal.name}>
+                          {activeHighGoal.name}
+                      </CardTitle>
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                  </CardHeader>
+                  <CardContent>
+                      {(() => {
+                          const goalTask = getTaskDefinitionById(activeHighGoal.taskId);
+                          const progress = getHighGoalProgress(activeHighGoal);
+                          const percentage = Math.min((progress / activeHighGoal.targetValue) * 100, 100);
+                          const timeRemaining = formatDistanceToNowStrict(parseISO(activeHighGoal.endDate), { addSuffix: true });
+                          return (
+                              <div className="flex flex-col justify-between gap-1 h-full">
+                                  <div className="flex items-center justify-between gap-4">
+                                      <div className="flex flex-col">
+                                          <div className="text-2xl font-bold" style={{color: goalTask?.color}}>{percentage.toFixed(0)}%</div>
+                                           <p className="text-xs text-muted-foreground">Due {timeRemaining}</p>
+                                      </div>
+                                      <PerformanceCircle percentage={percentage} size={60} strokeWidth={6} progressColor={goalTask?.color} />
+                                  </div>
+                                  <p className="text-xs text-center text-muted-foreground mt-1">{progress.toLocaleString()} / {activeHighGoal.targetValue.toLocaleString()}</p>
+                              </div>
+                          )
+                      })()}
+                  </CardContent>
+              </Card>
+          </Link>
+        )}
       </div>
   );
 };
