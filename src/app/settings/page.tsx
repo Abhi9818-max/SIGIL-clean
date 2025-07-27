@@ -146,13 +146,12 @@ export default function SettingsPage() {
     }
   };
 
-  const dashboardComponents: { key: keyof DashboardSettings, label: string, category: 'Main', hasDaysInput?: keyof DashboardSettings }[] = [
+  const dashboardComponents: { key: keyof DashboardSettings, label: string, category: 'Main' }[] = [
       { key: 'showTaskFilterBar', label: 'Task Filter Bar', category: 'Main' },
       { key: 'showContributionGraph', label: 'Contribution Graph', category: 'Main' },
       { key: 'showTodoList', label: 'Pacts Card', category: 'Main' },
       { key: 'showProgressChart', label: 'Progress Chart', category: 'Main' },
       { key: 'showAISuggestions', label: 'AI Coach Card', category: 'Main' },
-      { key: 'showHighGoalsCard', label: 'High Goals Card', category: 'Main' },
   ];
 
   const statComponents: { key: keyof DashboardSettings, label: string, hasDaysInput?: keyof DashboardSettings }[] = [
@@ -163,9 +162,19 @@ export default function SettingsPage() {
   ];
 
   const handleDaysChange = (key: keyof DashboardSettings, value: string) => {
-    const numValue = Number(value);
-    if (numValue > 0 && numValue <= 365) {
-      updateDashboardSetting(key, numValue);
+    // Allow empty string for editing, otherwise convert to number
+    const numValue = value === '' ? '' : Number(value);
+    
+    // Only update if it's an empty string or a valid number within range
+    if (numValue === '' || (typeof numValue === 'number' && numValue >= 1 && numValue <= 365)) {
+        updateDashboardSetting(key, numValue as any); // Cast to any to allow empty string
+    }
+  };
+
+  const handleDaysBlur = (key: keyof DashboardSettings, value: string | number) => {
+    // If the input is empty or invalid on blur, reset to a default value (e.g., 30)
+    if (value === '' || Number(value) <= 0) {
+      updateDashboardSetting(key, 30);
     }
   };
 
@@ -219,6 +228,7 @@ export default function SettingsPage() {
                                                 className="h-8 w-20"
                                                 value={dashboardSettings[hasDaysInput] as number}
                                                 onChange={(e) => handleDaysChange(hasDaysInput, e.target.value)}
+                                                onBlur={(e) => handleDaysBlur(hasDaysInput, e.target.value)}
                                                 min={1}
                                                 max={365}
                                             />
