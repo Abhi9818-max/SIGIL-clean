@@ -13,7 +13,6 @@ import TaskFilterBar from '@/components/records/TaskFilterBar';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useTodos } from '@/components/providers/TodoProvider';
 import { format } from 'date-fns';
-import WeeklyProgressCard from '@/components/progress/WeeklyProgressCard';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import type { UserLevelInfo } from '@/types';
@@ -25,6 +24,7 @@ import AISuggestionsCard from '@/components/records/AISuggestionsCard';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
+import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
 
@@ -146,19 +146,20 @@ export default function HomePage() {
               </Link>
             </Button>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             <TodoListCard />
           </div>
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
-            </div>
-            <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-              <AISuggestionsCard />
-            </div>
+          <div className="md:col-span-2 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
           </div>
         </div>
+
+         <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+            <AISuggestionsCard />
+        </div>
+
       </main>
       <RecordModal
         isOpen={isRecordModalOpen}

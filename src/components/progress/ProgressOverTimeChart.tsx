@@ -9,9 +9,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  // ChartLegend, // Legend not explicitly shown in the image for this chart, can be re-added if needed
-  // ChartLegendContent,
-  // ChartStyle, // Style is applied via ChartContainer
   type ChartConfig
 } from "@/components/ui/chart";
 import { LineChart, CartesianGrid, XAxis, YAxis, Line } from 'recharts';
@@ -23,11 +20,12 @@ interface ProgressOverTimeChartProps {
 }
 
 const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedTaskFilterId }) => {
-  const { getWeeklyAggregatesForChart, getTaskDefinitionById, taskDefinitions } = useUserRecords();
+  const { getWeeklyAggregatesForChart, getTaskDefinitionById } = useUserRecords();
   const [chartData, setChartData] = useState<AggregatedTimeDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const staticTitle = "Overall Progress (Last 12 Weeks)"; // Static title from image
 
+  const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+  const chartTitle = task ? `${task.name} Progress` : "Overall Progress";
   const defaultChartColor = "hsl(var(--primary))";
 
   useEffect(() => {
@@ -39,14 +37,11 @@ const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedT
 
   const chartConfig = useMemo(() => {
     let color = defaultChartColor;
-    let label = "Total Value"; // Default label if no specific task is selected or found
+    let label = "Total Value"; 
 
-    if (selectedTaskFilterId) {
-      const task = getTaskDefinitionById(selectedTaskFilterId);
-      if (task) {
-        color = task.color;
-        label = task.name; // Use task name for legend/tooltip if a task is selected
-      }
+    if (task) {
+      color = task.color;
+      label = task.name;
     }
     return {
       value: {
@@ -54,7 +49,7 @@ const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedT
         color: color,
       },
     } satisfies ChartConfig;
-  }, [selectedTaskFilterId, getTaskDefinitionById, defaultChartColor]);
+  }, [task, defaultChartColor]);
 
 
   return (
@@ -62,9 +57,9 @@ const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedT
       <CardHeader>
         <div className="flex items-center gap-2">
           <TrendingUp className="h-6 w-6 text-accent" />
-          <CardTitle>{staticTitle}</CardTitle>
+          <CardTitle>{chartTitle}</CardTitle>
         </div>
-        <CardDescription>Weekly total record values.</CardDescription>
+        <CardDescription>Total weekly values over the last 12 weeks.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -72,7 +67,7 @@ const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedT
             <Skeleton className="h-full w-full" />
           </div>
         ) : chartData.length === 0 ? (
-          <p className="text-center text-muted-foreground py-10">Not enough data to display chart.</p>
+          <p className="text-center text-muted-foreground py-10 h-[250px] flex items-center justify-center">Not enough data to display chart.</p>
         ) : (
           <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
             <LineChart
@@ -111,7 +106,7 @@ const ProgressOverTimeChart: React.FC<ProgressOverTimeChartProps> = ({ selectedT
                 stroke={`var(--color-value)`}
                 strokeWidth={2}
                 dot={true}
-                name={chartConfig.value.label} // For tooltip to show correct label
+                name={chartConfig.value.label}
               />
             </LineChart>
           </ChartContainer>
