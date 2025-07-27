@@ -1,6 +1,6 @@
 
 
-export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic';
+export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic' | 'custom';
 export type GoalType = 'at_least' | 'no_more_than';
 
 export interface RecordEntry {
@@ -38,6 +38,7 @@ export interface TaskDefinition {
   name: string;
   color: string; // HSL color string e.g., 'hsl(210 90% 70%)'
   unit?: TaskUnit; // The unit of measurement for this task's value
+  customUnitName?: string; // Optional: name for the custom unit
   intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
   goalValue?: number; // Optional: A numerical goal for the task (e.g., hours)
   goalInterval?: 'daily' | 'weekly' | 'monthly'; // Optional: The interval for the goal

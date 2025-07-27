@@ -43,8 +43,13 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
   const { task, isDarkStreakSelected, consistencyLabel, consistencyCircleColor, unitLabel } = useMemo(() => {
     const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
     let unitLabel = '';
-    if (task?.unit && task.unit !== 'count' && task.unit !== 'generic') {
-      unitLabel = task.unit;
+    
+    if (task?.unit) {
+      if (task.unit === 'custom' && task.customUnitName) {
+        unitLabel = task.customUnitName;
+      } else if (task.unit !== 'count' && task.unit !== 'generic' && task.unit !== 'custom') {
+        unitLabel = task.unit;
+      }
     }
 
     return {
@@ -54,7 +59,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedTaskFilterId }) => {
       consistencyCircleColor: task?.color,
       unitLabel
     };
-  }, [selectedTaskFilterId, getTaskDefinitionById, records]); // added records to dependency array
+  }, [selectedTaskFilterId, getTaskDefinitionById, records]);
 
   return (
     <>

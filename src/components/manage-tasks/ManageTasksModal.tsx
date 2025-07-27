@@ -71,7 +71,8 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
       { message: "This task name already exists." }
     ),
   color: z.string().regex(/^(#[0-9A-Fa-f]{6}|hsl\(\s*\d+\s*,\s*\d+%?\s*,\s*\d+%?\s*\))$/, "Color must be a valid hex or HSL string."),
-  unit: z.enum(['count', 'minutes', 'hours', 'pages', 'generic']).optional(),
+  unit: z.enum(['count', 'minutes', 'hours', 'pages', 'generic', 'custom']).optional(),
+  customUnitName: z.string().max(20, "Custom unit must be 20 characters or less.").optional(),
   threshold1: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   threshold2: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
   threshold3: z.preprocess(val => val === "" || val === null || val === undefined ? undefined : Number(val), z.number().positive("Must be > 0").optional()),
@@ -100,6 +101,14 @@ const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: st
         });
       }
     }
+    
+    if (data.unit === 'custom' && (!data.customUnitName || data.customUnitName.trim().length === 0)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["customUnitName"],
+            message: "Custom unit name is required.",
+        });
+    }
 });
 
 type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
@@ -124,6 +133,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       name: '',
       color: 'hsl(210, 40%, 96.1%)',
       unit: 'count',
+      customUnitName: '',
       threshold1: undefined,
       threshold2: undefined,
       threshold3: undefined,
@@ -137,6 +147,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       name: task?.name || '',
       color: task?.color || 'hsl(210, 40%, 96.1%)',
       unit: task?.unit ?? 'count',
+      customUnitName: task?.customUnitName || '',
       threshold1: task?.intensityThresholds?.[0] ?? undefined,
       threshold2: task?.intensityThresholds?.[1] ?? undefined,
       threshold3: task?.intensityThresholds?.[2] ?? undefined,
@@ -166,6 +177,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
       color: data.color,
       intensityThresholds: intensityThresholds,
       unit: data.unit,
+      customUnitName: data.unit === 'custom' ? data.customUnitName : undefined,
       darkStreakEnabled: data.darkStreakEnabled,
     };
 
@@ -189,14 +201,21 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
   
   const watchUnit = form.watch('unit');
 
-  const unitPlaceholders: Record<TaskUnit, string> = {
+  const getUnitLabel = (task: TaskDefinition) => {
+    if (task.unit === 'custom' && task.customUnitName) {
+      return task.customUnitName;
+    }
+    return task.unit ? task.unit.charAt(0).toUpperCase() + task.unit.slice(1) : 'Value';
+  };
+
+  const unitPlaceholders: Record<Exclude<TaskUnit, 'custom'>, string> = {
     count: 'e.g., 5',
     minutes: 'e.g., 30',
     hours: 'e.g., 1',
     pages: 'e.g., 10',
     generic: 'e.g., 100',
   };
-  const unitLabel = watchUnit ? watchUnit.charAt(0).toUpperCase() + watchUnit.slice(1) : 'Value';
+  const currentUnitLabel = watchUnit === 'custom' ? (form.getValues('customUnitName') || 'Custom') : (watchUnit ? watchUnit.charAt(0).toUpperCase() + watchUnit.slice(1) : 'Value');
 
 
   if (!isOpen) {
@@ -253,12 +272,21 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                     <AccordionTrigger className="text-sm py-2 px-3 bg-muted/50 rounded-md hover:bg-muted/80 [&[data-state=open]]:rounded-b-none"><div className="flex items-center gap-2"><Timer className="h-4 w-4 text-muted-foreground" />Custom Intensity Phases (Optional)</div></AccordionTrigger>
                     <AccordionContent className="pt-4 px-3 pb-3 space-y-3 bg-muted/20 rounded-b-md">
                       <p className="text-xs text-muted-foreground">Define 4 values for different shades. Defaults: {VALUE_THRESHOLDS.join(', ')}.</p>
-                      <div>
-                         <Label htmlFor="unit">Unit of Measurement</Label>
-                         <Controller name="unit" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? "count"}><SelectTrigger className="mt-1"><SelectValue placeholder="Select unit" /></SelectTrigger><SelectContent><SelectItem value="count">Count</SelectItem><SelectItem value="minutes">Minutes</SelectItem><SelectItem value="hours">Hours</SelectItem><SelectItem value="pages">Pages</SelectItem><SelectItem value="generic">Generic Units</SelectItem></SelectContent></Select>)}/>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="unit">Unit of Measurement</Label>
+                          <Controller name="unit" control={form.control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? "count"}><SelectTrigger className="mt-1"><SelectValue placeholder="Select unit" /></SelectTrigger><SelectContent><SelectItem value="count">Count</SelectItem><SelectItem value="minutes">Minutes</SelectItem><SelectItem value="hours">Hours</SelectItem><SelectItem value="pages">Pages</SelectItem><SelectItem value="generic">Generic Units</SelectItem><SelectItem value="custom">Custom</SelectItem></SelectContent></Select>)}/>
+                        </div>
+                        {watchUnit === 'custom' && (
+                          <div className="animate-fade-in-up">
+                            <Label htmlFor="customUnitName">Custom Unit Name</Label>
+                            <Input id="customUnitName" {...form.register('customUnitName')} className="mt-1" placeholder="e.g., Commits" />
+                             {form.formState.errors.customUnitName && (<p className="text-sm text-destructive mt-1">{form.formState.errors.customUnitName.message}</p>)}
+                          </div>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {[1, 2, 3, 4].map(i => (<div key={i}><Label htmlFor={`threshold${i}`}>Phase {i} ({unitLabel})</Label><Input id={`threshold${i}`} type="number" placeholder={unitPlaceholders[watchUnit || 'count']} {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/></div>))}
+                        {[1, 2, 3, 4].map(i => (<div key={i}><Label htmlFor={`threshold${i}`}>Phase {i} ({currentUnitLabel})</Label><Input id={`threshold${i}`} type="number" placeholder={watchUnit && watchUnit !== 'custom' ? unitPlaceholders[watchUnit] : 'e.g., 5'} {...form.register(`threshold${i}` as keyof TaskFormData)} className="mt-1"/></div>))}
                       </div>
                       {form.formState.errors.threshold1 && (<p className="text-sm text-destructive mt-1">{form.formState.errors.threshold1.message}</p>)}
                     </AccordionContent>
@@ -318,12 +346,12 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                                     <Tooltip><TooltipTrigger><Zap className="h-4 w-4 text-yellow-400" /></TooltipTrigger><TooltipContent><p>Dark Streak Enabled</p></TooltipContent></Tooltip>
                                 )}
                                 {task.goalValue && (
-                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalType === 'no_more_than' ? '<= ' : ''}{task.goalValue}{task.unit ? ` ${task.unit}` : ''}{task.goalInterval ? `/${task.goalInterval.charAt(0)}` : ''}</span></TooltipTrigger><TooltipContent>
-                                    <p>Goal: {task.goalType === 'no_more_than' ? 'No More Than' : 'At Least'} {task.goalValue}{task.unit ? ` ${task.unit}` : ''}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
+                                    <Tooltip><TooltipTrigger className="flex items-center gap-1"><Target className="h-4 w-4" /><span>{task.goalType === 'no_more_than' ? '<= ' : ''}{task.goalValue}{task.unit ? ` ${getUnitLabel(task)}` : ''}{task.goalInterval ? `/${task.goalInterval.charAt(0)}` : ''}</span></TooltipTrigger><TooltipContent>
+                                    <p>Goal: {task.goalType === 'no_more_than' ? 'No More Than' : 'At Least'} {task.goalValue}{task.unit ? ` ${getUnitLabel(task)}` : ''}{task.goalInterval ? ` per ${task.goalInterval.replace('ly', '')}` : ''}{task.goalCompletionBonusPercentage ? `, ${task.goalCompletionBonusPercentage}% Bonus` : ''}</p>
                                     </TooltipContent></Tooltip>
                                 )}
                                 {task.intensityThresholds && (
-                                     <Tooltip><TooltipTrigger className="flex items-center gap-1"><Timer className="h-4 w-4" /><span>Phases ({task.unit || 'count'})</span></TooltipTrigger><TooltipContent>
+                                     <Tooltip><TooltipTrigger className="flex items-center gap-1"><Timer className="h-4 w-4" /><span>Phases ({getUnitLabel(task)})</span></TooltipTrigger><TooltipContent>
                                      <p>Custom Phases: {task.intensityThresholds.join(', ')}</p>
                                      </TooltipContent></Tooltip>
                                 )}
@@ -372,5 +400,3 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
-
-    

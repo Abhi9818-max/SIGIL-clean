@@ -65,7 +65,14 @@ const GoalForm: React.FC<GoalFormProps> = ({ task, onSave }) => {
     onSave(task.id, data);
   };
   
-  const unitLabel = task.unit ? task.unit.charAt(0).toUpperCase() + task.unit.slice(1) : 'Value';
+  let unitLabel = 'Value';
+  if (task.unit) {
+    if (task.unit === 'custom' && task.customUnitName) {
+      unitLabel = task.customUnitName;
+    } else if (task.unit !== 'custom') {
+      unitLabel = task.unit.charAt(0).toUpperCase() + task.unit.slice(1);
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-1">
