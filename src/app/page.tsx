@@ -21,7 +21,6 @@ import type { Quote } from '@/lib/quotes';
 import { QUOTES } from '@/lib/quotes';
 import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
-import HighGoalsCard from '@/components/high-goals/HighGoalsCard';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
@@ -173,11 +172,6 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {dashboardSettings.showHighGoals && (
-                <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                    <HighGoalsCard />
-                </div>
-            )}
             {dashboardSettings.showAISuggestions && (
                 <div className={cn("animate-fade-in-up",
                   !dashboardSettings.showHighGoals ? "lg:col-span-2" : ""

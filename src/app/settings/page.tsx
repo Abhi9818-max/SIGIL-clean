@@ -145,13 +145,12 @@ export default function SettingsPage() {
   };
 
   const dashboardComponents: { key: keyof DashboardSettings, label: string }[] = [
-      { key: 'showStatsPanel', label: 'Stats Panel' },
+      { key: 'showStatsPanel', label: 'Stats Panel (Total, Streak, etc.)' },
       { key: 'showTaskFilterBar', label: 'Task Filter Bar' },
       { key: 'showContributionGraph', label: 'Contribution Graph' },
       { key: 'showTodoList', label: 'Pacts Card (To-Do)' },
       { key: 'showProgressChart', label: 'Progress Chart' },
       { key: 'showAISuggestions', label: 'AI Coach Card' },
-      { key: 'showHighGoals', label: 'High Goals Card' },
   ];
 
   return (

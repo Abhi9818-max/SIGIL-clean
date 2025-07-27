@@ -199,5 +199,4 @@ export interface DashboardSettings {
   showTodoList: boolean;
   showProgressChart: boolean;
   showAISuggestions: boolean;
-  showHighGoals: boolean;
 }
