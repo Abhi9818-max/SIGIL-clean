@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target, ShieldCheck, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LevelDetailsModal from './LevelDetailsModal';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface HeaderProps {
   onAddRecordClick: () => void;
@@ -25,6 +26,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick }) => {
   const { getUserLevelInfo, records, totalBonusPoints } = useUserRecords(); 
+  const { logout } = useAuth();
   const [isLevelDetailsModalOpen, setIsLevelDetailsModalOpen] = useState(false);
   const pathname = usePathname();
 
@@ -101,12 +103,26 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                 </Button>
               </>
             )}
-             <Button asChild variant="ghost" size="icon">
-                <Link href="/settings">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" size="icon">
                     <Settings className="h-5 w-5" />
-                    <span className="sr-only">Settings</span>
-                </Link>
-            </Button>
+                    <span className="sr-only">More Options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" /> Settings
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="flex items-center w-full text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile Menu */}
@@ -151,6 +167,11 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                     </DropdownMenuItem>
                   );
                 })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="flex items-center w-full text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
