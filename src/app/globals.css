@@ -41,6 +41,13 @@
     --contribution-level-2: hsl(var(--primary) / 0.5);
     --contribution-level-3: hsl(var(--primary) / 0.7);
     --contribution-level-4: hsl(var(--primary) / 0.9);
+
+    /* Tier Group Progress Bar Colors */
+    --progress-tier-group-1: 210 40% 98%; /* White/Silver */
+    --progress-tier-group-2: 120 73% 75%; /* Green */
+    --progress-tier-group-3: 48 96% 70%; /* Gold */
+    --progress-tier-group-4: 265 89% 78%; /* Purple */
+    --progress-tier-group-5: 347 97% 73%; /* Red/Rose */
   }
 
   .dark {
