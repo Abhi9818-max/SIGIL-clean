@@ -26,7 +26,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 type SetupForm = z.infer<typeof setupSchema>;
 
 export default function LoginPage() {
-  const { isInitialSetup, login, setupCredentials } = useAuth();
+  const { isInitialSetup, login, setupCredentials, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const loginForm = useForm<LoginForm>({
@@ -52,7 +52,14 @@ export default function LoginPage() {
     await setupCredentials(data.username, data.password);
   };
   
-  // Use the isInitialSetup flag to determine which form to show
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="text-primary">Loading S.I.G.I.L...</div>
+      </div>
+    );
+  }
+
   const FormComponent = isInitialSetup ? setupForm : loginForm;
   const onSubmit = isInitialSetup ? handleSetup : handleLogin;
 

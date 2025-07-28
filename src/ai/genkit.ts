@@ -8,11 +8,25 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
+import {defineDotprompt} from 'genkit/dotprompt';
+import *as path from 'path';
+
+require('dotenv').config({path: path.resolve(__dirname, '../.env')});
 
 export const ai = genkit({
   plugins: [
     googleAI({
       apiVersion: 'v1beta',
+    }),
+    defineDotprompt({
+      prompt: {
+        model: 'googleai/gemini-pro',
+        input: {
+          schema: {
+            description: 'The user\'s prompt.',
+          },
+        },
+      },
     }),
   ],
   // Log developer-friendly errors

@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, collection, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import type { RecordEntry, TaskDefinition, TodoItem, HighGoal, DashboardSettings } from '@/types';
@@ -50,20 +50,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
   const auth = getAuth();
 
+   const checkForInitialSetup = async () => {
+    try {
+      const usersCollectionRef = collection(db, "users");
+      const q = limit(1);
+      const querySnapshot = await getDocs(usersCollectionRef);
+      setIsInitialSetup(querySnapshot.empty);
+    } catch (error) {
+      console.error("Error checking for initial setup:", error);
+      // Fallback to true to allow at least one user to attempt to sign up
+      setIsInitialSetup(true);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      if (user) {
-        // A user is logged in, so it's not the initial setup for the app itself.
-        // We'll handle data doc creation later.
-        setIsInitialSetup(false);
+      if (!user) {
+        await checkForInitialSetup();
       } else {
-        // No user is logged in. This could be an initial setup state.
-        // For simplicity, we'll treat the login page as the decider.
-        // Let's assume if no one is logged in, the first action is to sign up or sign in.
-        // We'll manage this state on the login page itself.
-        // The most important thing is to protect other routes.
-        setIsInitialSetup(true); // Default to setup/login if no user
+        setIsInitialSetup(false);
       }
       setLoading(false);
     });
@@ -77,14 +83,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               if (docSnap.exists()) {
                   setUserData(docSnap.data() as AllUserData);
               } else {
-                  // User exists, but no data document yet.
                   setUserData(null);
               }
               setIsUserDataLoaded(true);
           });
           return () => unsubscribe();
       } else {
-          // No user logged in
           setUserData(null);
           setIsUserDataLoaded(false);
       }
@@ -122,6 +126,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
+      setUserData(null);
+      setIsUserDataLoaded(false);
       router.push('/login');
     } catch (error) {
       console.error("Logout failed:", error);
@@ -135,7 +141,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, { username: username.toLowerCase() }); // Save username for reference
+      await setDoc(userDocRef, { username: username.toLowerCase() });
 
       toast({ title: 'Account Created!', description: 'Welcome to S.I.G.I.L.' });
       router.push('/');

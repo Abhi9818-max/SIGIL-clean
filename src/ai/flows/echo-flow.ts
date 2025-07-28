@@ -9,7 +9,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'zod';
 
 const EchoInputSchema = z.object({
@@ -30,7 +29,6 @@ export async function generateEcho(input: EchoInput): Promise<EchoOutput> {
 
 const echoPrompt = ai.definePrompt({
   name: 'echoPrompt',
-  model: googleAI.model('gemini-pro'),
   input: { schema: EchoInputSchema },
   output: { schema: EchoOutputSchema },
   prompt: `
@@ -54,7 +52,16 @@ const echoFlow = ai.defineFlow(
     outputSchema: EchoOutputSchema,
   },
   async (input) => {
-    const { output } = await echoPrompt(input);
+    const llmResponse = await ai.generate({
+        prompt: echoPrompt.prompt,
+        model: 'googleai/gemini-pro',
+        input,
+        output: {
+            schema: EchoOutputSchema,
+        },
+    });
+
+    const output = llmResponse.output;
     if (!output) {
       throw new Error("The AI Chronicler fell silent and failed to generate an echo.");
     }
