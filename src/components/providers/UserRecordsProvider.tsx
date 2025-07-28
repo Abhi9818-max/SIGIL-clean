@@ -140,7 +140,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [taskDefinitions]);
     
   const getCurrentStreak = useCallback((taskId: string | null = null): number => {
-    if (!isLoaded) return 0;
+    if (!isUserDataLoaded) return 0;
   
     const allRecords = [...records];
     let taskRelevantRecords = taskId ? allRecords.filter(r => r.taskType === taskId) : allRecords;
@@ -187,7 +187,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   
     return streak;
-  }, [records, getTaskDefinitionById]);
+  }, [records, getTaskDefinitionById, isUserDataLoaded]);
 
   const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
     const newRecord: RecordEntry = {
@@ -277,7 +277,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [records]);
 
   const getDailyConsistency = useCallback((days: number, taskId: string | null = null): number => {
-    if (!isLoaded || days <= 0) return 0;
+    if (!isUserDataLoaded || days <= 0) return 0;
   
     const today = startOfDay(new Date());
     const startDate = startOfDay(subDays(today, days - 1));
@@ -330,7 +330,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       return Math.round((successfulWeeks / totalWeeks) * 100);
     }
   
-  }, [getRecordsForDateRange, getTaskDefinitionById, records, taskDefinitions]);
+  }, [getRecordsForDateRange, getTaskDefinitionById, records, taskDefinitions, isUserDataLoaded]);
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
