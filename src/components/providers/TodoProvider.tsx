@@ -23,7 +23,6 @@ const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
 export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
   const userRecords = useUserRecords();
   const { user, userData, isUserDataLoaded } = useAuth();
   const { toast } = useToast();
@@ -82,23 +81,19 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else if (isUserDataLoaded) {
       setTodoItems([]);
     }
-    setIsLoaded(true);
   }, [userData, isUserDataLoaded, applyPenalty, toast]);
 
   // Save to Firebase when todoItems change
-  useEffect(() => {
-    const updateDb = async () => {
-      if (isLoaded && user) {
+  const updateDbWithTodos = useCallback(async (newTodos: TodoItem[]) => {
+      if (user) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
-          await setDoc(userDocRef, { todoItems }, { merge: true });
+          await setDoc(userDocRef, { todoItems: newTodos }, { merge: true });
         } catch (e) {
            console.error(`Failed to update todoItems in Firestore:`, e);
         }
       }
-    };
-    updateDb();
-  }, [todoItems, isLoaded, user]);
+  }, [user]);
 
   const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
@@ -111,35 +106,43 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       penalty: (dueDate && penalty && penalty > 0) ? penalty : undefined,
       penaltyApplied: false,
     };
-    setTodoItems(prevItems => [newItem, ...prevItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-  }, []);
+    setTodoItems(prevItems => {
+        const newItems = [newItem, ...prevItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        updateDbWithTodos(newItems);
+        return newItems;
+    });
+  }, [updateDbWithTodos]);
 
   const toggleTodoItem = useCallback((id: string) => {
-    setTodoItems(prevItems =>
-      prevItems.map(item => {
-        if (item.id === id) {
-          const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
-          
-          if (isOverdue && !item.penaltyApplied) {
-            const updatedItemWithPenalty = applyPenalty(item);
-            return { ...updatedItemWithPenalty, completed: !item.completed };
-          }
-          
-          return { ...item, completed: !item.completed };
-        }
-        return item;
-      })
-    );
-  }, [applyPenalty]);
+    setTodoItems(prevItems => {
+        const newItems = prevItems.map(item => {
+            if (item.id === id) {
+              const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
+              
+              if (isOverdue && !item.penaltyApplied) {
+                const updatedItemWithPenalty = applyPenalty(item);
+                return { ...updatedItemWithPenalty, completed: !item.completed };
+              }
+              
+              return { ...item, completed: !item.completed };
+            }
+            return item;
+        });
+        updateDbWithTodos(newItems);
+        return newItems;
+    });
+  }, [applyPenalty, updateDbWithTodos]);
 
   const deleteTodoItem = useCallback((id: string) => {
     const item = todoItems.find(i => i.id === id);
-    if (!item) return;
-    
-    if (!isToday(new Date(item.createdAt))) return;
+    if (!item || !isToday(new Date(item.createdAt))) return;
 
-    setTodoItems(prevItems => prevItems.filter(i => i.id !== id));
-  }, [todoItems]);
+    setTodoItems(prevItems => {
+        const newItems = prevItems.filter(i => i.id !== id);
+        updateDbWithTodos(newItems);
+        return newItems;
+    });
+  }, [todoItems, updateDbWithTodos]);
 
   const getTodoItemById = useCallback((id: string): TodoItem | undefined => {
     return todoItems.find(item => item.id === id);

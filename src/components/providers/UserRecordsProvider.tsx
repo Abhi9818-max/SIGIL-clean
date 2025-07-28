@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal } from '@/types';
@@ -96,13 +95,24 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [freezeCrystals, setFreezeCrystals] = useState<number>(0);
   const [awardedStreakMilestones, setAwardedStreakMilestones] = useState<Record<string, number[]>>({});
   const [highGoals, setHighGoals] = useState<HighGoal[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
+
+  const updateUserDataInDb = useCallback(async (data: Partial<Omit<import('@/types').UserData, 'username' | 'username_lowercase'>>) => {
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      try {
+        await setDoc(userDocRef, data, { merge: true });
+      } catch (error) {
+        console.error("Error updating user data in DB:", error);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     if (isUserDataLoaded && userData) {
+      const defaultTasksWithIds = DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
       setRecords(userData.records || []);
-      setTaskDefinitions(userData.taskDefinitions || DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: uuidv4()})));
+      setTaskDefinitions(userData.taskDefinitions && userData.taskDefinitions.length > 0 ? userData.taskDefinitions : defaultTasksWithIds);
       setTotalBonusPoints(userData.bonusPoints || 0);
       setUnlockedAchievements(userData.unlockedAchievements || []);
       setSpentSkillPoints(userData.spentSkillPoints || {});
@@ -110,7 +120,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       setFreezeCrystals(userData.freezeCrystals || 0);
       setAwardedStreakMilestones(userData.awardedStreakMilestones || {});
       setHighGoals(userData.highGoals || []);
-      setIsLoaded(true);
     } else if (isUserDataLoaded && !userData && user) {
         // This is a new user with no data yet, initialize with defaults
         const defaultTasks = DEFAULT_TASK_DEFINITIONS.map(task => ({ ...task, id: uuidv4() }));
@@ -123,31 +132,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         setFreezeCrystals(0);
         setAwardedStreakMilestones({});
         setHighGoals([]);
-        setIsLoaded(true); // Ready to save new data
     }
   }, [user, userData, isUserDataLoaded]);
-
-  // Generic function to update a specific field in the user's Firestore document
-  const saveToDb = useCallback(async (field: string, data: any) => {
-    if (user && isLoaded) {
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, { [field]: data }, { merge: true });
-      } catch (e) {
-        console.error(`Failed to update ${field} in Firestore:`, e);
-      }
-    }
-  }, [user, isLoaded]);
-
-  useEffect(() => { saveToDb('records', records); }, [records, saveToDb]);
-  useEffect(() => { saveToDb('taskDefinitions', taskDefinitions); }, [taskDefinitions, saveToDb]);
-  useEffect(() => { saveToDb('bonusPoints', totalBonusPoints); }, [totalBonusPoints, saveToDb]);
-  useEffect(() => { saveToDb('unlockedAchievements', unlockedAchievements); }, [unlockedAchievements, saveToDb]);
-  useEffect(() => { saveToDb('spentSkillPoints', spentSkillPoints); }, [spentSkillPoints, saveToDb]);
-  useEffect(() => { saveToDb('unlockedSkills', unlockedSkills); }, [unlockedSkills, saveToDb]);
-  useEffect(() => { saveToDb('freezeCrystals', freezeCrystals); }, [freezeCrystals, saveToDb]);
-  useEffect(() => { saveToDb('awardedStreakMilestones', awardedStreakMilestones); }, [awardedStreakMilestones, saveToDb]);
-  useEffect(() => { saveToDb('highGoals', highGoals); }, [highGoals, saveToDb]);
 
   const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
     return taskDefinitions.find(task => task.id === taskId);
@@ -201,7 +187,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   
     return streak;
-  }, [isLoaded, records, getTaskDefinitionById]);
+  }, [records, getTaskDefinitionById]);
 
   const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
     const newRecord: RecordEntry = {
@@ -212,6 +198,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     const updatedRecords = [...records, newRecord].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     setRecords(updatedRecords);
+    updateUserDataInDb({ records: updatedRecords });
 
     // Post-record addition logic for streak rewards
     if(newRecord.taskType) {
@@ -221,10 +208,12 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         STREAK_MILESTONES_FOR_CRYSTALS.forEach(milestone => {
             if (newStreak >= milestone && !(awardedStreakMilestones[taskId] || []).includes(milestone)) {
                 setFreezeCrystals(prev => prev + 1);
-                setAwardedStreakMilestones(prev => ({
-                    ...prev,
-                    [taskId]: [...(prev[taskId] || []), milestone]
-                }));
+                updateUserDataInDb({ freezeCrystals: freezeCrystals + 1 });
+                setAwardedStreakMilestones(prev => {
+                    const updatedMilestones = {...prev, [taskId]: [...(prev[taskId] || []), milestone]};
+                    updateUserDataInDb({ awardedStreakMilestones: updatedMilestones });
+                    return updatedMilestones;
+                });
                 toast({
                     title: "❄️ Freeze Crystal Earned!",
                     description: `You've maintained a ${milestone}-day streak and earned a Freeze Crystal!`
@@ -232,17 +221,23 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
             }
         });
     }
-  }, [records, getCurrentStreak, awardedStreakMilestones, toast]);
+  }, [records, getCurrentStreak, awardedStreakMilestones, toast, updateUserDataInDb, freezeCrystals]);
 
   const updateRecord = useCallback((entry: RecordEntry) => {
-    setRecords(prevRecords =>
-      prevRecords.map(r => r.id === entry.id ? { ...entry, value: Number(entry.value) } : r)
-    );
-  }, []);
+    setRecords(prevRecords => {
+      const updatedRecords = prevRecords.map(r => r.id === entry.id ? { ...entry, value: Number(entry.value) } : r);
+      updateUserDataInDb({ records: updatedRecords });
+      return updatedRecords;
+    });
+  }, [updateUserDataInDb]);
 
   const deleteRecord = useCallback((recordId: string) => {
-    setRecords(prevRecords => prevRecords.filter(r => r.id !== recordId));
-  }, []);
+    setRecords(prevRecords => {
+      const updatedRecords = prevRecords.filter(r => r.id !== recordId);
+      updateUserDataInDb({ records: updatedRecords });
+      return updatedRecords;
+    });
+  }, [updateUserDataInDb]);
 
   const getRecordsByDate = useCallback((date: string): RecordEntry[] => {
     return records.filter(r => r.date === date);
@@ -335,7 +330,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       return Math.round((successfulWeeks / totalWeeks) * 100);
     }
   
-  }, [getRecordsForDateRange, isLoaded, getTaskDefinitionById, records, taskDefinitions]);
+  }, [getRecordsForDateRange, getTaskDefinitionById, records, taskDefinitions]);
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
@@ -343,29 +338,37 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       ...taskData,
       id: newId,
     };
-    setTaskDefinitions(prevTasks => [...prevTasks, newTask]);
+    setTaskDefinitions(prevTasks => {
+      const updatedTasks = [...prevTasks, newTask];
+      updateUserDataInDb({ taskDefinitions: updatedTasks });
+      return updatedTasks;
+    });
     return newId;
-  }, []);
+  }, [updateUserDataInDb]);
 
   const updateTaskDefinition = useCallback((updatedTask: TaskDefinition) => {
-    setTaskDefinitions(prevTasks =>
-      prevTasks.map(task => task.id === updatedTask.id ? {
-        ...updatedTask,
-      } : task)
-    );
-  }, []);
+    setTaskDefinitions(prevTasks => {
+      const updatedTasks = prevTasks.map(task => task.id === updatedTask.id ? { ...updatedTask } : task);
+      updateUserDataInDb({ taskDefinitions: updatedTasks });
+      return updatedTasks;
+    });
+  }, [updateUserDataInDb]);
 
   const deleteTaskDefinition = useCallback((taskId: string) => {
-    setTaskDefinitions(prevTasks => prevTasks.filter(task => task.id !== taskId));
-    setRecords(prevRecords =>
-      prevRecords.map(rec =>
-        rec.taskType === taskId ? {...rec, taskType: undefined} : rec
-      )
-    );
-  }, []);
+    setTaskDefinitions(prevTasks => {
+      const updatedTasks = prevTasks.filter(task => task.id !== taskId);
+      updateUserDataInDb({ taskDefinitions: updatedTasks });
+      return updatedTasks;
+    });
+    setRecords(prevRecords => {
+      const updatedRecords = prevRecords.map(rec => rec.taskType === taskId ? {...rec, taskType: undefined} : rec);
+      updateUserDataInDb({ records: updatedRecords });
+      return updatedRecords;
+    });
+  }, [updateUserDataInDb]);
 
   const getStatsForCompletedWeek = useCallback((weekOffset: number, taskId?: string | null): WeeklyProgressStats | null => {
-    if (!isLoaded) return null;
+    if (records.length === 0) return null;
     const today = new Date();
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
     const targetWeekStart = subWeeks(currentWeekStart, weekOffset);
@@ -382,10 +385,10 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const sum = getAggregateSum(targetWeekStart, targetWeekEnd, taskId);
     return { total: sum, startDate: targetWeekStart, endDate: targetWeekEnd };
 
-  }, [isLoaded, getAggregateSum]);
+  }, [records, getAggregateSum]);
 
   const getWeeklyAggregatesForChart = useCallback((numberOfWeeks: number, taskId?: string | null): AggregatedTimeDataPoint[] => {
-    if (!isLoaded) return [];
+    if (records.length === 0) return [];
     const today = new Date();
     const data: AggregatedTimeDataPoint[] = [];
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -403,12 +406,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       });
     }
     return data;
-  }, [isLoaded, getAggregateSum]);
+  }, [records, getAggregateSum]);
 
   const getTotalBaseRecordValue = useCallback((): number => {
-    if (!isLoaded) return 0;
     return records.reduce((sum, record) => sum + (Number(record.value) || 0), 0);
-  }, [records, isLoaded]);
+  }, [records]);
 
   const getUserLevelInfo = useCallback((): UserLevelInfo => {
     const sumOfRecordValues = getTotalBaseRecordValue();
@@ -418,29 +420,41 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const awardTierEntryBonus = useCallback((bonusAmount: number) => {
     if (bonusAmount > 0) {
-      setTotalBonusPoints(prevBonus => prevBonus + bonusAmount);
+      setTotalBonusPoints(prevBonus => {
+        const newBonus = prevBonus + bonusAmount;
+        updateUserDataInDb({ bonusPoints: newBonus });
+        return newBonus;
+      });
     }
-  }, []);
+  }, [updateUserDataInDb]);
 
   const deductBonusPoints = useCallback((penalty: number) => {
-    setTotalBonusPoints(prevBonus => prevBonus - Math.abs(penalty));
-  }, []);
+    setTotalBonusPoints(prevBonus => {
+      const newBonus = prevBonus - Math.abs(penalty);
+      updateUserDataInDb({ bonusPoints: newBonus });
+      return newBonus;
+    });
+  }, [updateUserDataInDb]);
 
   const useFreezeCrystal = useCallback(() => {
     if (freezeCrystals > 0) {
-        setFreezeCrystals(prev => prev - 1);
+        setFreezeCrystals(prev => {
+          const newCrystals = prev - 1;
+          updateUserDataInDb({ freezeCrystals: newCrystals });
+          return newCrystals;
+        });
     }
-  }, [freezeCrystals]);
+  }, [freezeCrystals, updateUserDataInDb]);
 
 
   // Constellation Functions
   const getAvailableSkillPoints = useCallback((taskId: string): number => {
-    if (!isLoaded) return 0;
+    if (records.length === 0) return 0;
     // Skill points are equivalent to the total value recorded for a task
     const totalPoints = getAggregateSum(new Date("1900-01-01"), new Date(), taskId);
     const spentPoints = spentSkillPoints[taskId] || 0;
     return totalPoints - spentPoints;
-  }, [isLoaded, getAggregateSum, spentSkillPoints]);
+  }, [records, getAggregateSum, spentSkillPoints]);
 
   const isSkillUnlocked = useCallback((skillId: string): boolean => {
     return unlockedSkills.includes(skillId);
@@ -449,15 +463,20 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const unlockSkill = useCallback((skillId: string, taskId: string, cost: number): boolean => {
     const availablePoints = getAvailableSkillPoints(taskId);
     if (availablePoints >= cost && !isSkillUnlocked(skillId)) {
-      setSpentSkillPoints(prev => ({
-        ...prev,
-        [taskId]: (prev[taskId] || 0) + cost,
-      }));
-      setUnlockedSkills(prev => [...prev, skillId]);
+      setSpentSkillPoints(prev => {
+        const updatedPoints = { ...prev, [taskId]: (prev[taskId] || 0) + cost };
+        updateUserDataInDb({ spentSkillPoints: updatedPoints });
+        return updatedPoints;
+      });
+      setUnlockedSkills(prev => {
+        const updatedSkills = [...prev, skillId];
+        updateUserDataInDb({ unlockedSkills: updatedSkills });
+        return updatedSkills;
+      });
       return true;
     }
     return false;
-  }, [getAvailableSkillPoints, isSkillUnlocked]);
+  }, [getAvailableSkillPoints, isSkillUnlocked, updateUserDataInDb]);
 
   const constellations = useMemo(() => CONSTELLATIONS, []);
 
@@ -511,7 +530,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   // Achievement Check
   const checkAchievements = useCallback(() => {
-    if (!isLoaded) return;
     const levelInfo = getUserLevelInfo();
     const streaks: Record<string, number> = {};
     taskDefinitions.forEach(task => {
@@ -540,29 +558,45 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     });
 
     if (newlyUnlocked.length > 0) {
-      setUnlockedAchievements(prev => [...new Set([...prev, ...newlyUnlocked])]);
+      setUnlockedAchievements(prev => {
+        const updatedAchievements = [...new Set([...prev, ...newlyUnlocked])];
+        updateUserDataInDb({ unlockedAchievements: updatedAchievements });
+        return updatedAchievements;
+      });
     }
-  }, [isLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast]);
+  }, [getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast, updateUserDataInDb]);
 
   useEffect(() => {
-    if (isLoaded) {
+    if (isUserDataLoaded) {
       checkAchievements();
     }
-  }, [records, totalBonusPoints, unlockedSkills, isLoaded, checkAchievements]);
+  }, [records, totalBonusPoints, unlockedSkills, isUserDataLoaded, checkAchievements]);
 
   // High Goal Functions
   const addHighGoal = useCallback((goalData: Omit<HighGoal, 'id'>) => {
     const newGoal: HighGoal = { ...goalData, id: uuidv4() };
-    setHighGoals(prev => [...prev, newGoal]);
-  }, []);
+    setHighGoals(prev => {
+        const updatedGoals = [...prev, newGoal];
+        updateUserDataInDb({ highGoals: updatedGoals });
+        return updatedGoals;
+    });
+  }, [updateUserDataInDb]);
 
   const updateHighGoal = useCallback((updatedGoal: HighGoal) => {
-    setHighGoals(prev => prev.map(g => g.id === updatedGoal.id ? updatedGoal : g));
-  }, []);
+    setHighGoals(prev => {
+        const updatedGoals = prev.map(g => g.id === updatedGoal.id ? updatedGoal : g);
+        updateUserDataInDb({ highGoals: updatedGoals });
+        return updatedGoals;
+    });
+  }, [updateUserDataInDb]);
 
   const deleteHighGoal = useCallback((goalId: string) => {
-    setHighGoals(prev => prev.filter(g => g.id !== goalId));
-  }, []);
+    setHighGoals(prev => {
+        const updatedGoals = prev.filter(g => g.id !== goalId);
+        updateUserDataInDb({ highGoals: updatedGoals });
+        return updatedGoals;
+    });
+  }, [updateUserDataInDb]);
   
   const getHighGoalProgress = useCallback((goal: HighGoal) => {
     return getAggregateSum(parseISO(goal.startDate), parseISO(goal.endDate), goal.taskId);
@@ -660,4 +694,3 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
-

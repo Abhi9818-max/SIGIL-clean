@@ -102,7 +102,7 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, [user]);
 
     const acceptFriendRequest = useCallback(async (request: FriendRequest) => {
-        if (!user) return;
+        if (!user || !user.displayName) return;
         const batch = writeBatch(db);
 
         // Add to each other's friends subcollection

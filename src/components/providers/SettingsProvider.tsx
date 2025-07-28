@@ -42,25 +42,27 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [userData, isUserDataLoaded]);
 
   const updateDashboardSetting = useCallback(<K extends keyof DashboardSettings>(key: K, value: DashboardSettings[K]) => {
-    const newSettings = {
-      ...dashboardSettings, // Start with current state
-      [key]: value,
-    };
-    setDashboardSettings(newSettings);
-    
-    // Save to Firestore
-    if (user) {
-      const updateDb = async () => {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          await setDoc(userDocRef, { dashboardSettings: newSettings }, { merge: true });
-        } catch (e) {
-           console.error("Failed to save dashboard settings to Firestore:", e);
+    setDashboardSettings(prevSettings => {
+        const newSettings = {
+            ...prevSettings,
+            [key]: value,
+        };
+        
+        // Save to Firestore
+        if (user) {
+            const updateDb = async () => {
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    await setDoc(userDocRef, { dashboardSettings: newSettings }, { merge: true });
+                } catch (e) {
+                    console.error("Failed to save dashboard settings to Firestore:", e);
+                }
+            };
+            updateDb();
         }
-      };
-      updateDb();
-    }
-  }, [user, dashboardSettings]);
+        return newSettings;
+    });
+  }, [user]);
 
   return (
     <SettingsContext.Provider value={{ dashboardSettings, updateDashboardSetting }}>
