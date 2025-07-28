@@ -172,6 +172,7 @@ export interface DashboardSettings {
 // For Auth/User Data
 export interface UserData {
     username: string;
+    username_lowercase?: string; // For case-insensitive search
     records?: RecordEntry[];
     taskDefinitions?: TaskDefinition[];
     bonusPoints?: number;

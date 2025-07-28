@@ -62,8 +62,8 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const searchUser = useCallback(async (username: string): Promise<SearchedUser | null> => {
         const usersRef = collection(db, 'users');
-        // Search for the exact username, case-sensitive.
-        const q = query(usersRef, where('username', '==', username));
+        const searchTerm = username.toLowerCase();
+        const q = query(usersRef, where('username_lowercase', '==', searchTerm));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {

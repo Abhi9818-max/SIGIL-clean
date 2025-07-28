@@ -111,7 +111,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await updateProfile(userCredential.user, { displayName: username });
 
       const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, { username: username });
+      // Store both original and lowercase username
+      await setDoc(userDocRef, { 
+        username: username,
+        username_lowercase: username.toLowerCase(),
+      });
 
       toast({ title: 'Account Created!', description: 'Welcome to S.I.G.I.L.' });
       router.push('/');
