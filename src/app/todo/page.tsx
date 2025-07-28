@@ -221,7 +221,9 @@ export default function TodoPage() {
   const handleAddItem = () => {
     if (newItemText.trim()) {
       const dueDateString = newDueDate ? format(newDueDate, 'yyyy-MM-dd') : undefined;
-      addTodoItem(newItemText, dueDateString, newPenalty);
+      // Ensure we don't pass `undefined` if penalty is not a valid number
+      const penaltyValue = (newPenalty && Number.isFinite(newPenalty)) ? newPenalty : undefined;
+      addTodoItem(newItemText, dueDateString, penaltyValue);
       setNewItemText('');
       setNewDueDate(undefined);
       setNewPenalty(undefined);

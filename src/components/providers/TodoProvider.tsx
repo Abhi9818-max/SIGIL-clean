@@ -21,13 +21,26 @@ interface TodoContextType {
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
+// Helper function to create a Firestore-safe object by removing undefined keys
+const sanitizeForFirestore = (obj: any) => {
+  const newObj: any = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      newObj[key] = obj[key];
+    }
+  }
+  return newObj;
+};
+
+
 export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const userRecords = useUserRecords();
   const { user, userData, isUserDataLoaded } = useAuth();
   const { toast } = useToast();
 
-  const applyPenalty = useCallback((item: TodoItem) => {
+  const applyPenalty = useCallback((item: TodoItem): TodoItem => {
+    // Only apply penalty if it's defined, positive, and not already applied
     if (item.penalty && item.penalty > 0 && userRecords.deductBonusPoints && !item.penaltyApplied) {
       userRecords.deductBonusPoints(item.penalty);
       toast({
@@ -51,14 +64,16 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let penaltiesApplied = false;
 
       processedItems = allStoredItems.map(item => {
-        if (!item.completed && !item.penaltyApplied && item.dueDate) {
-          const dueDate = startOfDay(parseISO(item.dueDate));
+        // Sanitize item first to remove any legacy undefined fields
+        const sanitizedItem = sanitizeForFirestore(item) as TodoItem;
+        if (!sanitizedItem.completed && !sanitizedItem.penaltyApplied && sanitizedItem.dueDate) {
+          const dueDate = startOfDay(parseISO(sanitizedItem.dueDate));
           if (isPast(dueDate)) {
             penaltiesApplied = true;
-            return applyPenalty(item);
+            return applyPenalty(sanitizedItem);
           }
         }
-        return item;
+        return sanitizedItem;
       });
 
       if (penaltiesApplied) {
@@ -89,7 +104,9 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (user) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
-          await setDoc(userDocRef, { todoItems: newTodos }, { merge: true });
+          // Sanitize every item before saving to be safe
+          const sanitizedTodos = newTodos.map(item => sanitizeForFirestore(item));
+          await setDoc(userDocRef, { todoItems: sanitizedTodos }, { merge: true });
         } catch (e) {
            console.error(`Failed to update todoItems in Firestore:`, e);
         }
@@ -99,7 +116,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
     
-    const newItem: TodoItem = {
+    let newItem: TodoItem = {
       id: uuidv4(),
       text,
       completed: false,
