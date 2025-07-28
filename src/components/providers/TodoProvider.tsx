@@ -38,6 +38,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       return { ...item, penaltyApplied: true };
     }
+    // If there's no penalty to apply, just return the item as-is.
     return item;
   }, [userRecords, toast]);
 
@@ -107,6 +108,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       penaltyApplied: false,
     };
     
+    // Only add penalty field if it has a value
     if (dueDate && penalty && penalty > 0) {
       newItem.penalty = penalty;
     }
