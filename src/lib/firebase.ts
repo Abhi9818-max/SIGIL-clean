@@ -4,6 +4,7 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 
 // 🔐 Your Firebase config should be in environment variables
@@ -39,7 +40,8 @@ if (typeof window !== 'undefined') {
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 
 // 🧠 Export the app and other Firebase services
-export { app, analytics, auth, db };
+export { app, analytics, auth, db, storage };

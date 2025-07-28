@@ -84,7 +84,7 @@ const FriendProfileContent = () => {
                 <Card>
                     <CardHeader className="flex flex-col md:flex-row items-start md:items-center gap-4">
                         <Avatar className="h-20 w-20">
-                            <AvatarImage src={`https://i.pravatar.cc/150?u=${friendId}`} />
+                            <AvatarImage src={friendData.photoURL} />
                             <AvatarFallback>{friendData.username.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-grow">

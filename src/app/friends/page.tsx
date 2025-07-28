@@ -148,7 +148,7 @@ const FriendsContent = () => {
                                                 <div className="p-3 border rounded-lg flex items-center justify-between bg-card hover:bg-muted/50 transition-colors cursor-pointer">
                                                     <div className="flex items-center gap-3">
                                                         <Avatar>
-                                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${friend.uid}`} />
+                                                            <AvatarImage src={friend.photoURL} />
                                                             <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
                                                         </Avatar>
                                                         <span className="font-medium">{friend.username}</span>

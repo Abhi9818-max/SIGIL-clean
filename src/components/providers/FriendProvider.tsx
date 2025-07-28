@@ -23,7 +23,7 @@ interface FriendContextType {
 const FriendContext = createContext<FriendContextType | undefined>(undefined);
 
 export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const { toast } = useToast();
     const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
     const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
@@ -104,13 +104,27 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const acceptFriendRequest = useCallback(async (request: FriendRequest) => {
         if (!user || !user.displayName) return;
         const batch = writeBatch(db);
+        
+        // Get the sender's data to include their photoURL
+        const senderDataDoc = await getDoc(doc(db, 'users', request.senderId));
+        const senderData = senderDataDoc.data() as UserData;
 
         // Add to each other's friends subcollection
         const currentUserFriendRef = doc(db, `users/${user.uid}/friends`, request.senderId);
-        batch.set(currentUserFriendRef, { uid: request.senderId, username: request.senderUsername, since: new Date().toISOString() });
+        batch.set(currentUserFriendRef, { 
+            uid: request.senderId, 
+            username: request.senderUsername, 
+            photoURL: senderData?.photoURL || null,
+            since: new Date().toISOString() 
+        });
 
         const senderFriendRef = doc(db, `users/${request.senderId}/friends`, user.uid);
-        batch.set(senderFriendRef, { uid: user.uid, username: user.displayName, since: new Date().toISOString() });
+        batch.set(senderFriendRef, { 
+            uid: user.uid, 
+            username: user.displayName, 
+            photoURL: userData?.photoURL || null,
+            since: new Date().toISOString() 
+        });
         
         // Delete the request
         const requestRef = doc(db, 'friend_requests', request.id);
@@ -118,7 +132,7 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         await batch.commit();
         toast({ title: 'Friend Added', description: `You are now friends with ${request.senderUsername}.` });
-    }, [user, toast]);
+    }, [user, userData, toast]);
 
     const declineFriendRequest = useCallback(async (requestId: string) => {
         const requestRef = doc(db, 'friend_requests', requestId);

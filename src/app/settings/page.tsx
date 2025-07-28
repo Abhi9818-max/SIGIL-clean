@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Header from '@/components/layout/Header';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays, Database, HardDrive } from 'lucide-react';
+import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays, Database, User, Camera } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import {
@@ -28,14 +28,19 @@ import { Switch } from '@/components/ui/switch';
 import type { DashboardSettings } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from '@/components/providers/AuthProvider';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 export default function SettingsPage() {
   const { getUserLevelInfo } = useUserRecords();
   const { dashboardSettings, updateDashboardSetting } = useSettings();
+  const { user, userData, updateProfilePicture } = useAuth();
   const { toast } = useToast();
   const [isClearing, setIsClearing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const levelInfo = getUserLevelInfo();
   const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
@@ -118,6 +123,20 @@ export default function SettingsPage() {
     };
     reader.readAsText(file);
   };
+  
+  const handleProfilePictureChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    await updateProfilePicture(file);
+    setIsUploading(false);
+    
+    // Reset file input
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  };
 
   const handleClearData = () => {
     setIsClearing(true);
@@ -194,12 +213,38 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            <Tabs defaultValue="layout" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="layout"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard Layout</TabsTrigger>
-                <TabsTrigger value="data"><Database className="mr-2 h-4 w-4" />Data Management</TabsTrigger>
+            <Tabs defaultValue="profile" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="profile"><User className="mr-2 h-4 w-4" />Profile</TabsTrigger>
+                <TabsTrigger value="layout"><LayoutDashboard className="mr-2 h-4 w-4" />Layout</TabsTrigger>
+                <TabsTrigger value="data"><Database className="mr-2 h-4 w-4" />Data</TabsTrigger>
               </TabsList>
               
+              <TabsContent value="profile" className="mt-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-primary">Profile Information</h3>
+                  <div className="p-4 border rounded-lg space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-24 w-24">
+                          <AvatarImage src={userData?.photoURL || ''} alt={userData?.username}/>
+                          <AvatarFallback className="text-3xl">
+                            {userData?.username ? userData.username.charAt(0).toUpperCase() : '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-xl font-semibold">{userData?.username}</p>
+                          <p className="text-sm text-muted-foreground">Level {levelInfo?.currentLevel} {levelInfo?.levelName}</p>
+                          <Label htmlFor="picture-upload" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), "mt-2 cursor-pointer")}>
+                            <Camera className="mr-2 h-4 w-4" />
+                            {isUploading ? "Uploading..." : "Change Picture"}
+                          </Label>
+                          <Input id="picture-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleProfilePictureChange} ref={fileInputRef} disabled={isUploading}/>
+                        </div>
+                      </div>
+                  </div>
+                </div>
+              </TabsContent>
+
               <TabsContent value="layout" className="mt-6">
                 <div className="space-y-4">
                   <div className="p-4 border rounded-lg space-y-4">

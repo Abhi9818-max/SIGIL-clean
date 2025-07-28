@@ -4,8 +4,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User, updateProfile } from 'firebase/auth';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import type { UserData } from '@/types';
 
@@ -17,6 +18,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   setupCredentials: (username: string, password: string) => Promise<boolean>;
+  updateProfilePicture: (file: File) => Promise<string | null>;
   userData: UserData | null;
   loading: boolean;
   isUserDataLoaded: boolean;
@@ -108,11 +110,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const email = `${username.toLowerCase()}@${FAKE_DOMAIN}`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Also set the displayName on the auth user object itself
       await updateProfile(userCredential.user, { displayName: username });
 
       const userDocRef = doc(db, 'users', userCredential.user.uid);
-      // Store both original and lowercase username
       await setDoc(userDocRef, { 
         username: username,
         username_lowercase: username.toLowerCase(),
@@ -131,6 +131,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return false;
     }
   }, [auth, router, toast]);
+  
+  const updateProfilePicture = useCallback(async (file: File): Promise<string | null> => {
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to upload a picture.", variant: "destructive" });
+        return null;
+    }
+
+    const storageRef = ref(storage, `profile-pictures/${user.uid}`);
+    try {
+        await uploadBytes(storageRef, file);
+        const photoURL = await getDownloadURL(storageRef);
+
+        // Update auth profile
+        await updateProfile(user, { photoURL });
+        
+        // Update Firestore document
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, { photoURL }, { merge: true });
+
+        toast({ title: "Profile Picture Updated", description: "Your new avatar has been saved." });
+        return photoURL;
+
+    } catch (error) {
+        console.error("Error updating profile picture:", error);
+        toast({ title: "Upload Failed", description: "Could not upload your profile picture.", variant: "destructive" });
+        return null;
+    }
+  }, [user, toast]);
+
 
   if (loading || (!user && pathname !== '/login')) {
     return (
@@ -141,7 +170,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, setupCredentials, userData, loading, isUserDataLoaded }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, setupCredentials, updateProfilePicture, userData, loading, isUserDataLoaded }}>
       {children}
     </AuthContext.Provider>
   );
