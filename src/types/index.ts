@@ -1,5 +1,4 @@
 
-
 export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic' | 'custom';
 export type TaskFrequency = 'daily' | 'weekly';
 
@@ -168,4 +167,42 @@ export interface DashboardSettings {
   showTodoList: boolean;
   showProgressChart: boolean;
   showAISuggestions: boolean;
+}
+
+// For Auth/User Data
+export interface UserData {
+    username: string;
+    records?: RecordEntry[];
+    taskDefinitions?: TaskDefinition[];
+    bonusPoints?: number;
+    unlockedAchievements?: string[];
+    spentSkillPoints?: Record<string, number>;
+    unlockedSkills?: string[];
+    freezeCrystals?: number;
+    awardedStreakMilestones?: Record<string, number[]>;
+    highGoals?: HighGoal[];
+    todoItems?: TodoItem[];
+    dashboardSettings?: DashboardSettings;
+}
+
+// For Friends feature
+export interface SearchedUser {
+    uid: string;
+    username: string;
+}
+
+export interface FriendRequest {
+    id: string;
+    senderId: string;
+    senderUsername: string;
+    recipientId: string;
+    recipientUsername: string;
+    status: 'pending' | 'accepted' | 'declined';
+    createdAt: string;
+}
+
+export interface Friend {
+    uid: string;
+    username: string;
+    since: string;
 }

@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import DaySquare from './DaySquare';
-import type { DayData, MonthColumn } from '@/types';
+import type { DayData, MonthColumn, RecordEntry, TaskDefinition } from '@/types';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { getMonthlyGraphData } from '@/lib/date-utils';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -14,18 +14,27 @@ interface ContributionGraphProps {
   onDayClick: (date: string) => void;
   selectedTaskFilterId: string | null;
   displayMode?: 'full' | 'current_month';
+  // Allow passing records and tasks directly for friend profiles
+  records?: RecordEntry[];
+  taskDefinitions?: TaskDefinition[];
 }
 
 const ContributionGraph: React.FC<ContributionGraphProps> = ({ 
   year,
   onDayClick, 
   selectedTaskFilterId,
-  displayMode = 'current_month'
+  displayMode = 'current_month',
+  records: recordsProp,
+  taskDefinitions: taskDefinitionsProp,
 }) => {
-  const { records, taskDefinitions } = useUserRecords();
+  const userRecords = useUserRecords();
   const [clientToday, setClientToday] = React.useState<Date | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null); 
   const monthColumnRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Use passed props if available, otherwise use context
+  const records = recordsProp || userRecords.records;
+  const taskDefinitions = taskDefinitionsProp || userRecords.taskDefinitions;
 
   useEffect(() => {
     setClientToday(new Date()); 

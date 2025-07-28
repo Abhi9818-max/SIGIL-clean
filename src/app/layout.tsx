@@ -8,6 +8,7 @@ import { UserRecordsProvider } from '@/components/providers/UserRecordsProvider'
 import { TodoProvider } from '@/components/providers/TodoProvider';
 import { SettingsProvider } from '@/components/providers/SettingsProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import { FriendProvider } from '@/components/providers/FriendProvider';
 
 export const metadata: Metadata = {
   title: 'S.I.G.I.L.',
@@ -42,10 +43,12 @@ export default function RootLayout({
           <SettingsProvider>
             <TooltipProvider delayDuration={100}>
               <UserRecordsProvider>
-                <TodoProvider>
-                  {children}
-                  <Toaster />
-                </TodoProvider>
+                <FriendProvider>
+                  <TodoProvider>
+                    {children}
+                    <Toaster />
+                  </TodoProvider>
+                </FriendProvider>
               </UserRecordsProvider>
             </TooltipProvider>
           </SettingsProvider>

@@ -3,11 +3,11 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot, collection, getDocs, limit } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User, updateProfile } from 'firebase/auth';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import type { RecordEntry, TaskDefinition, TodoItem, HighGoal, DashboardSettings } from '@/types';
+import type { RecordEntry, TaskDefinition, TodoItem, HighGoal, DashboardSettings, UserData } from '@/types';
 
 const FAKE_DOMAIN = 'sigil.local';
 
@@ -17,32 +17,18 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   setupCredentials: (username: string, password: string) => Promise<boolean>;
-  userData: AllUserData | null;
+  userData: UserData | null;
   loading: boolean;
   isUserDataLoaded: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AllUserData {
-    records?: RecordEntry[];
-    taskDefinitions?: TaskDefinition[];
-    bonusPoints?: number;
-    unlockedAchievements?: string[];
-    spentSkillPoints?: Record<string, number>;
-    unlockedSkills?: string[];
-    freezeCrystals?: number;
-    awardedStreakMilestones?: Record<string, number[]>;
-    highGoals?: HighGoal[];
-    todoItems?: TodoItem[];
-    dashboardSettings?: DashboardSettings;
-}
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
-  const [userData, setUserData] = useState<AllUserData | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -62,7 +48,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const docRef = doc(db, 'users', user.uid);
           const unsubscribe = onSnapshot(docRef, (docSnap) => {
               if (docSnap.exists()) {
-                  setUserData(docSnap.data() as AllUserData);
+                  setUserData(docSnap.data() as UserData);
               } else {
                   setUserData(null);
               }
@@ -121,8 +107,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const email = `${username.toLowerCase()}@${FAKE_DOMAIN}`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
+      // Also set the displayName on the auth user object itself
+      await updateProfile(userCredential.user, { displayName: username });
+
       const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, { username: username.toLowerCase() });
+      await setDoc(userDocRef, { username: username });
 
       toast({ title: 'Account Created!', description: 'Welcome to S.I.G.I.L.' });
       router.push('/');
@@ -138,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [auth, router, toast]);
 
-  if (loading || (!user && pathname !== '/login')) {
+  if (loading || (!user && pathname !== '/login' && !pathname.startsWith('/friends/'))) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
           <div className="text-primary">Loading S.I.G.I.L...</div>
