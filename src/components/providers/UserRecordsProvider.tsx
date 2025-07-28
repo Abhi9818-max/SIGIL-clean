@@ -128,7 +128,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [user, userData, isUserDataLoaded]);
 
   // Generic function to update a specific field in the user's Firestore document
-  const updateUserDataInDb = useCallback(async (field: string, data: any) => {
+  const saveToDb = useCallback(async (field: string, data: any) => {
     if (user && isLoaded) {
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -139,15 +139,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [user, isLoaded]);
 
-  useEffect(() => { updateUserDataInDb('records', records); }, [records, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('taskDefinitions', taskDefinitions); }, [taskDefinitions, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('bonusPoints', totalBonusPoints); }, [totalBonusPoints, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('unlockedAchievements', unlockedAchievements); }, [unlockedAchievements, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('spentSkillPoints', spentSkillPoints); }, [spentSkillPoints, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('unlockedSkills', unlockedSkills); }, [unlockedSkills, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('freezeCrystals', freezeCrystals); }, [freezeCrystals, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('awardedStreakMilestones', awardedStreakMilestones); }, [awardedStreakMilestones, updateUserDataInDb]);
-  useEffect(() => { updateUserDataInDb('highGoals', highGoals); }, [highGoals, updateUserDataInDb]);
+  useEffect(() => { saveToDb('records', records); }, [records, saveToDb]);
+  useEffect(() => { saveToDb('taskDefinitions', taskDefinitions); }, [taskDefinitions, saveToDb]);
+  useEffect(() => { saveToDb('bonusPoints', totalBonusPoints); }, [totalBonusPoints, saveToDb]);
+  useEffect(() => { saveToDb('unlockedAchievements', unlockedAchievements); }, [unlockedAchievements, saveToDb]);
+  useEffect(() => { saveToDb('spentSkillPoints', spentSkillPoints); }, [spentSkillPoints, saveToDb]);
+  useEffect(() => { saveToDb('unlockedSkills', unlockedSkills); }, [unlockedSkills, saveToDb]);
+  useEffect(() => { saveToDb('freezeCrystals', freezeCrystals); }, [freezeCrystals, saveToDb]);
+  useEffect(() => { saveToDb('awardedStreakMilestones', awardedStreakMilestones); }, [awardedStreakMilestones, saveToDb]);
+  useEffect(() => { saveToDb('highGoals', highGoals); }, [highGoals, saveToDb]);
 
   const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
     return taskDefinitions.find(task => task.id === taskId);
@@ -288,6 +288,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const startDate = startOfDay(subDays(today, days - 1));
   
     let relevantRecords = getRecordsForDateRange(startDate, today);
+    
+    if (taskId) {
+      relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    }
+    
     const recordDates = new Set(relevantRecords.map(r => r.date));
   
     if (!taskId) {
@@ -330,7 +335,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       return Math.round((successfulWeeks / totalWeeks) * 100);
     }
   
-  }, [getRecordsForDateRange, isLoaded, getTaskDefinitionById]);
+  }, [getRecordsForDateRange, isLoaded, getTaskDefinitionById, records, taskDefinitions]);
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
@@ -602,15 +607,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getHighGoalProgress,
   }), [
     records,
-    taskDefinitions,
-    totalBonusPoints,
-    unlockedAchievements,
-    spentSkillPoints,
-    unlockedSkills,
-    freezeCrystals,
-    awardedStreakMilestones,
-    highGoals,
-    isLoaded,
     addRecord,
     updateRecord,
     deleteRecord,
@@ -621,6 +617,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getAllRecordsStringified,
     getDailyConsistency,
     getCurrentStreak,
+    taskDefinitions,
     addTaskDefinition,
     updateTaskDefinition,
     deleteTaskDefinition,
@@ -628,6 +625,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getStatsForCompletedWeek,
     getWeeklyAggregatesForChart,
     getUserLevelInfo,
+    totalBonusPoints,
     awardTierEntryBonus,
     deductBonusPoints,
     getAvailableSkillPoints,
@@ -636,12 +634,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     constellations,
     getTaskDistribution,
     getProductivityByDay,
+    freezeCrystals,
     useFreezeCrystal,
-    checkAchievements,
+    unlockedAchievements,
+    highGoals,
     addHighGoal,
     updateHighGoal,
     deleteHighGoal,
-    getHighGoalProgress
+    getHighGoalProgress,
+    checkAchievements
   ]);
 
 
@@ -659,3 +660,4 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
+
