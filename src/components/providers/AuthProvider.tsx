@@ -7,7 +7,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, on
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import type { RecordEntry, TaskDefinition, TodoItem, HighGoal, DashboardSettings, UserData } from '@/types';
+import type { UserData } from '@/types';
 
 const FAKE_DOMAIN = 'sigil.local';
 
@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               if (docSnap.exists()) {
                   setUserData(docSnap.data() as UserData);
               } else {
+                  // This case can happen briefly if a user is created but the doc hasn't been written yet.
                   setUserData(null);
               }
               setIsUserDataLoaded(true);
@@ -131,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [auth, router, toast]);
 
-  if (loading || (!user && pathname !== '/login' && !pathname.startsWith('/friends/'))) {
+  if (loading || (!user && pathname !== '/login')) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
           <div className="text-primary">Loading S.I.G.I.L...</div>

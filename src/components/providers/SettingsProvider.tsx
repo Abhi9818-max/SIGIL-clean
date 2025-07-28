@@ -4,7 +4,7 @@
 import type { DashboardSettings } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthProvider';
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const defaultSettings: DashboardSettings = {
@@ -19,7 +19,6 @@ const defaultSettings: DashboardSettings = {
   showTodoList: true,
   showProgressChart: true,
   showAISuggestions: true,
-  showHighGoalsCard: true,
 };
 
 interface SettingsContextType {
@@ -31,43 +30,37 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettings>(defaultSettings);
-  const [isLoaded, setIsLoaded] = useState(false);
   const { user, userData, isUserDataLoaded } = useAuth();
 
   useEffect(() => {
     if (isUserDataLoaded && userData?.dashboardSettings) {
       const mergedSettings = { ...defaultSettings, ...userData.dashboardSettings };
       setDashboardSettings(mergedSettings);
+    } else if (isUserDataLoaded) {
+      setDashboardSettings(defaultSettings);
     }
-    setIsLoaded(true);
   }, [userData, isUserDataLoaded]);
 
   const updateDashboardSetting = useCallback(<K extends keyof DashboardSettings>(key: K, value: DashboardSettings[K]) => {
-    setDashboardSettings(prevSettings => {
-      const newSettings = {
-        ...prevSettings,
-        [key]: value,
+    const newSettings = {
+      ...dashboardSettings, // Start with current state
+      [key]: value,
+    };
+    setDashboardSettings(newSettings);
+    
+    // Save to Firestore
+    if (user) {
+      const updateDb = async () => {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          await setDoc(userDocRef, { dashboardSettings: newSettings }, { merge: true });
+        } catch (e) {
+           console.error("Failed to save dashboard settings to Firestore:", e);
+        }
       };
-      
-      // Save to Firestore
-      if (user) {
-        const updateDb = async () => {
-          try {
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, { dashboardSettings: newSettings });
-          } catch (e) {
-             if ((e as any).code === 'not-found') {
-                await setDoc(doc(db, 'users', user.uid), { dashboardSettings: newSettings });
-             } else {
-                console.error("Failed to save dashboard settings to Firestore:", e);
-             }
-          }
-        };
-        updateDb();
-      }
-      return newSettings;
-    });
-  }, [user]);
+      updateDb();
+    }
+  }, [user, dashboardSettings]);
 
   return (
     <SettingsContext.Provider value={{ dashboardSettings, updateDashboardSetting }}>

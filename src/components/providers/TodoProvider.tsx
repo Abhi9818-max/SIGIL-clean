@@ -7,7 +7,7 @@ import { useUserRecords } from './UserRecordsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { isPast, startOfDay, format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
 import { useAuth } from './AuthProvider';
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -46,7 +46,6 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (isUserDataLoaded && userData) {
       const allStoredItems = userData.todoItems || [];
-      const todayStr = format(new Date(), 'yyyy-MM-dd');
       
       let processedItems = [...allStoredItems];
       let penaltiesApplied = false;
@@ -80,6 +79,8 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       setTodoItems(relevantItems);
+    } else if (isUserDataLoaded) {
+      setTodoItems([]);
     }
     setIsLoaded(true);
   }, [userData, isUserDataLoaded, applyPenalty, toast]);
@@ -90,14 +91,9 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (isLoaded && user) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
-          await updateDoc(userDocRef, { todoItems });
+          await setDoc(userDocRef, { todoItems }, { merge: true });
         } catch (e) {
-           if ((e as any).code === 'not-found') {
-                const userDocRef = doc(db, 'users', user.uid);
-                await setDoc(userDocRef, { todoItems });
-            } else {
-                console.error(`Failed to update todoItems in Firestore:`, e);
-            }
+           console.error(`Failed to update todoItems in Firestore:`, e);
         }
       }
     };

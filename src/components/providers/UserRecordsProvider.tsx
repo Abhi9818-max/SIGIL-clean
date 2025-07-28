@@ -101,12 +101,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   useEffect(() => {
     if (isUserDataLoaded && userData) {
-      const recordsWithIds = (userData.records || []).map(rec => ({ ...rec, id: rec.id || uuidv4() }));
-      setRecords(recordsWithIds);
-
-      const tasks = userData.taskDefinitions || DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
-      setTaskDefinitions(tasks);
-
+      setRecords(userData.records || []);
+      setTaskDefinitions(userData.taskDefinitions || DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: uuidv4()})));
       setTotalBonusPoints(userData.bonusPoints || 0);
       setUnlockedAchievements(userData.unlockedAchievements || []);
       setSpentSkillPoints(userData.spentSkillPoints || {});
@@ -114,43 +110,44 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       setFreezeCrystals(userData.freezeCrystals || 0);
       setAwardedStreakMilestones(userData.awardedStreakMilestones || {});
       setHighGoals(userData.highGoals || []);
-      
       setIsLoaded(true);
     } else if (isUserDataLoaded && !userData && user) {
         // This is a new user with no data yet, initialize with defaults
         const defaultTasks = DEFAULT_TASK_DEFINITIONS.map(task => ({ ...task, id: uuidv4() }));
         setTaskDefinitions(defaultTasks);
+        setRecords([]);
+        setTotalBonusPoints(0);
+        setUnlockedAchievements([]);
+        setSpentSkillPoints({});
+        setUnlockedSkills([]);
+        setFreezeCrystals(0);
+        setAwardedStreakMilestones({});
+        setHighGoals([]);
         setIsLoaded(true); // Ready to save new data
     }
   }, [user, userData, isUserDataLoaded]);
 
   // Generic function to update a specific field in the user's Firestore document
   const updateUserDataInDb = useCallback(async (field: string, data: any) => {
-    if (user) {
+    if (user && isLoaded) {
       try {
         const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, { [field]: data });
+        await setDoc(userDocRef, { [field]: data }, { merge: true });
       } catch (e) {
-         // If doc doesn't exist, create it.
-        if ((e as any).code === 'not-found') {
-            const userDocRef = doc(db, 'users', user.uid);
-            await setDoc(userDocRef, { [field]: data });
-        } else {
-            console.error(`Failed to update ${field} in Firestore:`, e);
-        }
+        console.error(`Failed to update ${field} in Firestore:`, e);
       }
     }
-  }, [user]);
+  }, [user, isLoaded]);
 
-  useEffect(() => { if (isLoaded) updateUserDataInDb('records', records); }, [records, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('taskDefinitions', taskDefinitions); }, [taskDefinitions, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('bonusPoints', totalBonusPoints); }, [totalBonusPoints, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('unlockedAchievements', unlockedAchievements); }, [unlockedAchievements, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('spentSkillPoints', spentSkillPoints); }, [spentSkillPoints, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('unlockedSkills', unlockedSkills); }, [unlockedSkills, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('freezeCrystals', freezeCrystals); }, [freezeCrystals, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('awardedStreakMilestones', awardedStreakMilestones); }, [awardedStreakMilestones, isLoaded, updateUserDataInDb]);
-  useEffect(() => { if (isLoaded) updateUserDataInDb('highGoals', highGoals); }, [highGoals, isLoaded, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('records', records); }, [records, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('taskDefinitions', taskDefinitions); }, [taskDefinitions, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('bonusPoints', totalBonusPoints); }, [totalBonusPoints, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('unlockedAchievements', unlockedAchievements); }, [unlockedAchievements, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('spentSkillPoints', spentSkillPoints); }, [spentSkillPoints, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('unlockedSkills', unlockedSkills); }, [unlockedSkills, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('freezeCrystals', freezeCrystals); }, [freezeCrystals, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('awardedStreakMilestones', awardedStreakMilestones); }, [awardedStreakMilestones, updateUserDataInDb]);
+  useEffect(() => { updateUserDataInDb('highGoals', highGoals); }, [highGoals, updateUserDataInDb]);
 
   const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
     return taskDefinitions.find(task => task.id === taskId);
