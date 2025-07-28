@@ -3,106 +3,158 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // Ensure db is exported from your firebase config
+import { useToast } from "@/hooks/use-toast";
+import type { RecordEntry, TaskDefinition, TodoItem, HighGoal, DashboardSettings } from '@/types';
 
-const LOCAL_STORAGE_AUTH_KEY = 'sigil_credentials';
-const SESSION_STORAGE_AUTH_KEY = 'sigil_session_auth';
+const FAKE_DOMAIN = 'sigil.local';
 
 interface AuthContextType {
+  user: User | null;
   isAuthenticated: boolean;
   isInitialSetup: boolean;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  setupCredentials: (username: string, password: string) => void;
+  setupCredentials: (username: string, password: string) => Promise<boolean>;
+  userData: AllUserData | null;
+  loading: boolean;
+  isUserDataLoaded: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+interface AllUserData {
+    records?: RecordEntry[];
+    taskDefinitions?: TaskDefinition[];
+    bonusPoints?: number;
+    unlockedAchievements?: string[];
+    spentSkillPoints?: Record<string, number>;
+    unlockedSkills?: string[];
+    freezeCrystals?: number;
+    awardedStreakMilestones?: Record<string, number[]>;
+    highGoals?: HighGoal[];
+    todoItems?: TodoItem[];
+    dashboardSettings?: DashboardSettings;
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isInitialSetup, setIsInitialSetup] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isInitialSetup, setIsInitialSetup] = useState(false); // This will now track if a user is logged in but has no data doc
+  const [loading, setLoading] = useState(true);
+  const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
+  const [userData, setUserData] = useState<AllUserData | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
+  const auth = getAuth();
 
   useEffect(() => {
-    try {
-      const storedCredentials = localStorage.getItem(LOCAL_STORAGE_AUTH_KEY);
-      const sessionAuth = sessionStorage.getItem(SESSION_STORAGE_AUTH_KEY);
-
-      if (!storedCredentials) {
-        setIsInitialSetup(true);
-      } else if (sessionAuth === 'true') {
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error("Error accessing storage for auth check:", error);
-    }
-    setIsLoading(false);
-  }, []);
-  
-  useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated && pathname !== '/login') {
-        router.push('/login');
-      } else if (isAuthenticated && pathname === '/login') {
-        router.push('/');
-      }
-    }
-  }, [isAuthenticated, isLoading, pathname, router]);
-
-  const login = useCallback((username: string, password: string): boolean => {
-    try {
-        const storedCredentials = localStorage.getItem(LOCAL_STORAGE_AUTH_KEY);
-        if (storedCredentials) {
-            const { u, p } = JSON.parse(storedCredentials);
-            if (username === u && password === p) {
-                setIsAuthenticated(true);
-                sessionStorage.setItem(SESSION_STORAGE_AUTH_KEY, 'true');
-                router.push('/');
-                return true;
-            }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user) {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
+          // New user, data needs to be created.
+          // For simplicity, we'll create it on first data save.
+           setIsInitialSetup(true);
+        } else {
+           setIsInitialSetup(false);
         }
-    } catch (error) {
-        console.error("Login failed:", error);
-    }
-    return false;
-  }, [router]);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [auth]);
 
-  const logout = useCallback(() => {
-    try {
-        setIsAuthenticated(false);
-        sessionStorage.removeItem(SESSION_STORAGE_AUTH_KEY);
+  useEffect(() => {
+      if (user) {
+          const docRef = doc(db, 'users', user.uid);
+          const unsubscribe = onSnapshot(docRef, (docSnap) => {
+              if (docSnap.exists()) {
+                  setUserData(docSnap.data() as AllUserData);
+              } else {
+                  // User exists, but no data document yet.
+                  setUserData(null);
+              }
+              setIsUserDataLoaded(true);
+          });
+          return () => unsubscribe();
+      } else {
+          // No user logged in
+          setUserData(null);
+          setIsUserDataLoaded(false);
+      }
+  }, [user]);
+
+  useEffect(() => {
+    if (!loading) {
+      const isAuthPage = pathname === '/login';
+      if (!user && !isAuthPage) {
         router.push('/login');
-    } catch (error) {
-        console.error("Logout failed:", error);
-    }
-  }, [router]);
-
-  const setupCredentials = useCallback((username: string, password: string) => {
-    try {
-        const credentials = JSON.stringify({ u: username, p: password });
-        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, credentials);
-        setIsInitialSetup(false);
-        // Automatically log in after setup
-        setIsAuthenticated(true);
-        sessionStorage.setItem(SESSION_STORAGE_AUTH_KEY, 'true');
+      } else if (user && isAuthPage) {
         router.push('/');
-    } catch (error) {
-        console.error("Credential setup failed:", error);
+      }
     }
-  }, [router]);
+  }, [user, loading, pathname, router]);
 
-  // Render a loading screen or null while checking auth state to prevent flash of content
-  if (isLoading || (!isAuthenticated && pathname !== '/login')) {
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
-            <div className="text-primary">Loading S.I.G.I.L...</div>
-        </div>
-      );
+  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
+    try {
+      const email = `${username.toLowerCase()}@${FAKE_DOMAIN}`;
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Login Successful', description: 'Welcome back!' });
+      router.push('/');
+      return true;
+    } catch (error: any) {
+      toast({ title: 'Login Failed', description: 'Invalid username or password.', variant: 'destructive' });
+      return false;
+    }
+  }, [auth, router, toast]);
+
+  const logout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast({ title: 'Logout Failed', description: 'Could not log you out. Please try again.', variant: 'destructive' });
+    }
+  }, [auth, router, toast]);
+
+  const setupCredentials = useCallback(async (username: string, password: string): Promise<boolean> => {
+    try {
+      const email = `${username.toLowerCase()}@${FAKE_DOMAIN}`;
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // We can create the initial user document here if we want
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      await setDoc(userDocRef, { username: username.toLowerCase() }); // Save username for reference
+
+      toast({ title: 'Account Created!', description: 'Welcome to S.I.G.I.L.' });
+      router.push('/');
+      return true;
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        toast({ title: 'Setup Failed', description: 'This username is already taken.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Setup Failed', description: 'Could not create account. Please try again.', variant: 'destructive' });
+      }
+      return false;
+    }
+  }, [auth, router, toast]);
+
+  if (loading || (!user && pathname !== '/login')) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="text-primary">Loading S.I.G.I.L...</div>
+      </div>
+    );
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isInitialSetup, login, logout, setupCredentials }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isInitialSetup, login, logout, setupCredentials, userData, loading, isUserDataLoaded }}>
       {children}
     </AuthContext.Provider>
   );
