@@ -1,30 +1,45 @@
 // src/lib/firebase.ts
 
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
-// 🔐 Your Firebase config (from Firebase console)
+
+// 🔐 Your Firebase config should be in environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyCtDbA951-mNmP0t725_4RH8Yf5aVWkXw",
-  authDomain: "pelagic-rig-465410-a2.firebaseapp.com",
-  projectId: "pelagic-rig-465410-a2",
-  storageBucket: "pelagic-rig-465410-a2.appspot.com",
-  messagingSenderId: "207391020723",
-  appId: "1:207391020723:web:49d14e1817e03374a9c2c6",
-  measurementId: "G-50PK6BHNLW"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 // 🚀 Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
+
 
 // 📊 Set up analytics safely (won’t crash on server)
 let analytics: ReturnType<typeof getAnalytics> | null = null;
 
-isSupported().then((enabled) => {
-  if (enabled) {
-    analytics = getAnalytics(app);
-  }
-});
+if (typeof window !== 'undefined') {
+    isSupported().then((enabled) => {
+      if (enabled) {
+        analytics = getAnalytics(app);
+      }
+    });
+}
 
-// 🧠 Export the app and analytics
-export { app, analytics };
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+
+// 🧠 Export the app and other Firebase services
+export { app, analytics, auth, db };
