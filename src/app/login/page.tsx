@@ -39,22 +39,22 @@ export default function LoginPage() {
     defaultValues: { username: '', password: '' },
   });
 
-  const handleLogin = (data: LoginForm) => {
+  const handleLogin = async (data: LoginForm) => {
     setError(null);
-    const success = login(data.username, data.password);
+    const success = await login(data.username, data.password);
     if (!success) {
       setError("Invalid username or password.");
     }
   };
 
-  const handleSetup = (data: SetupForm) => {
+  const handleSetup = async (data: SetupForm) => {
     setError(null);
-    setupCredentials(data.username, data.password);
+    await setupCredentials(data.username, data.password);
   };
   
+  // Use the isInitialSetup flag to determine which form to show
   const FormComponent = isInitialSetup ? setupForm : loginForm;
   const onSubmit = isInitialSetup ? handleSetup : handleLogin;
-  const formSchema = isInitialSetup ? setupSchema : loginSchema;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -66,7 +66,7 @@ export default function LoginPage() {
           </div>
           <CardDescription>
             {isInitialSetup 
-              ? "Set up your credentials to secure your data locally." 
+              ? "Create your account to begin your journey." 
               : "Enter your credentials to access your records."
             }
           </CardDescription>
@@ -98,8 +98,8 @@ export default function LoginPage() {
             
             <p className="text-xs text-muted-foreground text-center pt-2">
               {isInitialSetup 
-                ? "This account is stored only on this device."
-                : "Forgot your password? Clear your browser's site data to reset the app."
+                ? "Your data will be securely stored in the cloud."
+                : "Forgot your password? There is no recovery process."
               }
             </p>
           </form>

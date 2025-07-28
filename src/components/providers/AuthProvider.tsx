@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { usePathname, useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // Ensure db is exported from your firebase config
+import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import type { RecordEntry, TaskDefinition, TodoItem, HighGoal, DashboardSettings } from '@/types';
 
@@ -41,7 +41,7 @@ interface AllUserData {
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isInitialSetup, setIsInitialSetup] = useState(false); // This will now track if a user is logged in but has no data doc
+  const [isInitialSetup, setIsInitialSetup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
   const [userData, setUserData] = useState<AllUserData | null>(null);
@@ -54,15 +54,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        const docRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-          // New user, data needs to be created.
-          // For simplicity, we'll create it on first data save.
-           setIsInitialSetup(true);
-        } else {
-           setIsInitialSetup(false);
-        }
+        // A user is logged in, so it's not the initial setup for the app itself.
+        // We'll handle data doc creation later.
+        setIsInitialSetup(false);
+      } else {
+        // No user is logged in. This could be an initial setup state.
+        // For simplicity, we'll treat the login page as the decider.
+        // Let's assume if no one is logged in, the first action is to sign up or sign in.
+        // We'll manage this state on the login page itself.
+        // The most important thing is to protect other routes.
+        setIsInitialSetup(true); // Default to setup/login if no user
       }
       setLoading(false);
     });
@@ -108,7 +109,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       router.push('/');
       return true;
     } catch (error: any) {
-      toast({ title: 'Login Failed', description: 'Invalid username or password.', variant: 'destructive' });
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+        toast({ title: 'Login Failed', description: 'Invalid username or password.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Login Failed', description: 'An unexpected error occurred.', variant: 'destructive' });
+        console.error("Login error:", error);
+      }
       return false;
     }
   }, [auth, router, toast]);
@@ -128,7 +134,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const email = `${username.toLowerCase()}@${FAKE_DOMAIN}`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // We can create the initial user document here if we want
       const userDocRef = doc(db, 'users', userCredential.user.uid);
       await setDoc(userDocRef, { username: username.toLowerCase() }); // Save username for reference
 
@@ -140,10 +145,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast({ title: 'Setup Failed', description: 'This username is already taken.', variant: 'destructive' });
       } else {
         toast({ title: 'Setup Failed', description: 'Could not create account. Please try again.', variant: 'destructive' });
+        console.error("Setup error:", error);
       }
       return false;
     }
-  }, [auth, router, toast]);
+  }, [auth, router, toast, db]);
 
   if (loading || (!user && pathname !== '/login')) {
     return (

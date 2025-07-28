@@ -2,10 +2,11 @@
 "use client";
 
 import type { DashboardSettings } from '@/types';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY } from '@/lib/config';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useAuth } from './AuthProvider';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-// Define the default settings
 const defaultSettings: DashboardSettings = {
   showTotalLast30Days: true,
   totalDays: 30,
@@ -31,46 +32,42 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettings>(defaultSettings);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { user, userData, isUserDataLoaded } = useAuth();
 
   useEffect(() => {
-    try {
-      const storedSettings = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY);
-      if (storedSettings) {
-        // Merge stored settings with defaults to ensure all keys are present
-        const parsedSettings = JSON.parse(storedSettings);
-        // Handle migration from old 'showStatsPanel' setting
-        if (parsedSettings.hasOwnProperty('showStatsPanel')) {
-            const showStats = parsedSettings.showStatsPanel;
-            delete parsedSettings.showStatsPanel;
-            if (!parsedSettings.hasOwnProperty('showTotalLast30Days')) parsedSettings.showTotalLast30Days = showStats;
-            if (!parsedSettings.hasOwnProperty('showCurrentStreak')) parsedSettings.showCurrentStreak = showStats;
-            if (!parsedSettings.hasOwnProperty('showDailyConsistency')) parsedSettings.showDailyConsistency = showStats;
-            if (!parsedSettings.hasOwnProperty('showHighGoalStat')) parsedSettings.showHighGoalStat = showStats;
-        }
-        setDashboardSettings({ ...defaultSettings, ...parsedSettings });
-      }
-    } catch (error) {
-      console.error("Failed to load dashboard settings from localStorage:", error);
+    if (isUserDataLoaded && userData?.dashboardSettings) {
+      const mergedSettings = { ...defaultSettings, ...userData.dashboardSettings };
+      setDashboardSettings(mergedSettings);
     }
     setIsLoaded(true);
-  }, []);
+  }, [userData, isUserDataLoaded]);
 
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY, JSON.stringify(dashboardSettings));
-      } catch (error) {
-        console.error("Failed to save dashboard settings to localStorage:", error);
+  const updateDashboardSetting = useCallback(<K extends keyof DashboardSettings>(key: K, value: DashboardSettings[K]) => {
+    setDashboardSettings(prevSettings => {
+      const newSettings = {
+        ...prevSettings,
+        [key]: value,
+      };
+      
+      // Save to Firestore
+      if (user) {
+        const updateDb = async () => {
+          try {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, { dashboardSettings: newSettings });
+          } catch (e) {
+             if ((e as any).code === 'not-found') {
+                await setDoc(doc(db, 'users', user.uid), { dashboardSettings: newSettings });
+             } else {
+                console.error("Failed to save dashboard settings to Firestore:", e);
+             }
+          }
+        };
+        updateDb();
       }
-    }
-  }, [dashboardSettings, isLoaded]);
-
-  const updateDashboardSetting = <K extends keyof DashboardSettings>(key: K, value: DashboardSettings[K]) => {
-    setDashboardSettings(prevSettings => ({
-      ...prevSettings,
-      [key]: value,
-    }));
-  };
+      return newSettings;
+    });
+  }, [user]);
 
   return (
     <SettingsContext.Provider value={{ dashboardSettings, updateDashboardSetting }}>

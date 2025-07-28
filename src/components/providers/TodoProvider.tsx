@@ -3,11 +3,13 @@
 
 import type { TodoItem } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { LOCAL_STORAGE_TODO_KEY, LOCAL_STORAGE_LAST_VISITED_DATE_KEY } from '@/lib/config';
-import { v4 as uuidv4 } from 'uuid';
 import { useUserRecords } from './UserRecordsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { isPast, startOfDay, format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
+import { useAuth } from './AuthProvider';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TodoContextType {
   todoItems: TodoItem[];
@@ -23,6 +25,7 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const userRecords = useUserRecords();
+  const { user, userData, isUserDataLoaded } = useAuth();
   const { toast } = useToast();
 
   const applyPenalty = useCallback((item: TodoItem) => {
@@ -34,93 +37,72 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         variant: "destructive",
         duration: 7000,
       });
-      // Return a new item with the penalty applied
       return { ...item, penaltyApplied: true };
     }
     return item;
   }, [userRecords, toast]);
 
-  // This effect runs once on load to handle daily state management
+  // Load from Firebase on auth state change
   useEffect(() => {
-    let allStoredItems: TodoItem[] = [];
-    try {
-      const storedTodoItems = localStorage.getItem(LOCAL_STORAGE_TODO_KEY);
-      if (storedTodoItems) {
-        allStoredItems = JSON.parse(storedTodoItems);
-      }
-    } catch (error) {
-      console.error("Failed to load to-do items from localStorage:", error);
-    }
-
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    let lastVisitedDateStr: string | null = null;
-    try {
-        lastVisitedDateStr = localStorage.getItem(LOCAL_STORAGE_LAST_VISITED_DATE_KEY);
-    } catch(error) {
-        console.error("Failed to load last visited date from localStorage:", error);
-    }
-    
-    let processedItems = [...allStoredItems];
-
-    // If it's a new day, process overdue penalties from previous day(s)
-    if (lastVisitedDateStr && lastVisitedDateStr !== todayStr) {
-      const lastVisitedDate = startOfDay(parseISO(lastVisitedDateStr));
+    if (isUserDataLoaded && userData) {
+      const allStoredItems = userData.todoItems || [];
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
       
-      let penaltyToastShown = false;
-      processedItems = processedItems.map(item => {
-         if (!item.completed && !item.penaltyApplied && item.dueDate) {
-             const dueDate = startOfDay(parseISO(item.dueDate));
-             if (dueDate <= lastVisitedDate) {
-                penaltyToastShown = true;
-                return applyPenalty(item);
-             }
-         }
-         return item;
+      let processedItems = [...allStoredItems];
+      let penaltiesApplied = false;
+
+      processedItems = allStoredItems.map(item => {
+        if (!item.completed && !item.penaltyApplied && item.dueDate) {
+          const dueDate = startOfDay(parseISO(item.dueDate));
+          if (isPast(dueDate)) {
+            penaltiesApplied = true;
+            return applyPenalty(item);
+          }
+        }
+        return item;
       });
-      
-      if (penaltyToastShown) {
-          toast({
+
+      if (penaltiesApplied) {
+         toast({
             title: "Pacts Judged",
             description: `Incomplete pacts from previous days have been penalized.`,
             variant: "destructive",
             duration: 7000,
           });
       }
+      
+      const yesterday = subDays(new Date(), 1);
+      const relevantItems = processedItems.filter(item => {
+        try {
+          const itemDate = new Date(item.createdAt);
+          return isToday(itemDate) || isYesterday(itemDate);
+        } catch (e) { return false; }
+      });
+      
+      setTodoItems(relevantItems);
     }
-    
-    // Filter out old pacts (older than yesterday) but keep today's and yesterday's
-    const yesterday = subDays(new Date(), 1);
-    const relevantItems = processedItems.filter(item => {
-      try {
-        const itemDate = new Date(item.createdAt);
-        return isToday(itemDate) || isYesterday(itemDate);
-      } catch (e) {
-        return false;
-      }
-    });
-
-    setTodoItems(relevantItems);
-
-    // Update the last visited date
-    try {
-      localStorage.setItem(LOCAL_STORAGE_LAST_VISITED_DATE_KEY, todayStr);
-    } catch(error) {
-        console.error("Failed to save last visited date to localStorage:", error);
-    }
-    
     setIsLoaded(true);
-  }, []); // Intentionally empty dependency array to run only once on mount
+  }, [userData, isUserDataLoaded, applyPenalty, toast]);
 
-
+  // Save to Firebase when todoItems change
   useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_TODO_KEY, JSON.stringify(todoItems));
-      } catch (error) {
-        console.error("Failed to save to-do items to localStorage:", error);
+    const updateDb = async () => {
+      if (isLoaded && user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, { todoItems });
+        } catch (e) {
+           if ((e as any).code === 'not-found') {
+                const userDocRef = doc(db, 'users', user.uid);
+                await setDoc(userDocRef, { todoItems });
+            } else {
+                console.error(`Failed to update todoItems in Firestore:`, e);
+            }
+        }
       }
-    }
-  }, [todoItems, isLoaded]);
+    };
+    updateDb();
+  }, [todoItems, isLoaded, user]);
 
   const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
@@ -142,7 +124,6 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (item.id === id) {
           const isOverdue = item.dueDate && !item.completed && isPast(startOfDay(new Date(item.dueDate)));
           
-          // Apply penalty if completing an overdue task
           if (isOverdue && !item.penaltyApplied) {
             const updatedItemWithPenalty = applyPenalty(item);
             return { ...updatedItemWithPenalty, completed: !item.completed };
@@ -155,12 +136,10 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   }, [applyPenalty]);
 
-
   const deleteTodoItem = useCallback((id: string) => {
     const item = todoItems.find(i => i.id === id);
     if (!item) return;
     
-    // Deleting is only allowed for today's pacts to prevent accidental deletion of yesterday's reviewable items.
     if (!isToday(new Date(item.createdAt))) return;
 
     setTodoItems(prevItems => prevItems.filter(i => i.id !== id));

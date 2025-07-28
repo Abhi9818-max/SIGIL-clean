@@ -4,21 +4,14 @@
 
 import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import { doc, setDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from './AuthProvider';
 import {
-  LOCAL_STORAGE_KEY,
-  LOCAL_STORAGE_TASKS_KEY,
-  LOCAL_STORAGE_BONUS_POINTS_KEY,
-  LOCAL_STORAGE_LORE_KEY,
-  LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
-  LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
-  LOCAL_STORAGE_FREEZE_CRYSTALS_KEY,
-  LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
-  LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY,
-  LOCAL_STORAGE_HIGH_GOALS_KEY,
-  LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
   calculateUserLevelInfo,
-  STREAK_MILESTONES_FOR_CRYSTALS
+  STREAK_MILESTONES_FOR_CRYSTALS,
+  LOCAL_STORAGE_LORE_KEY, // still needed for one check
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
 import { ACHIEVEMENTS } from '@/lib/achievements';
@@ -93,6 +86,7 @@ interface UserRecordsContextType {
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
 
 export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user, userData, isUserDataLoaded } = useAuth();
   const [records, setRecords] = useState<RecordEntry[]>([]);
   const [taskDefinitions, setTaskDefinitions] = useState<TaskDefinition[]>([]);
   const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
@@ -106,201 +100,57 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (storedRecords) {
-        // Ensure all records have a unique ID, back-filling if necessary
-        const parsedRecords: RecordEntry[] = JSON.parse(storedRecords);
-        const recordsWithIds = parsedRecords.map(rec => ({ ...rec, id: rec.id || uuidv4() }));
-        setRecords(recordsWithIds);
-      }
-    } catch (error) {
-      console.error("Failed to load records from localStorage:", error);
-    }
+    if (isUserDataLoaded && userData) {
+      const recordsWithIds = (userData.records || []).map(rec => ({ ...rec, id: rec.id || uuidv4() }));
+      setRecords(recordsWithIds);
 
-    try {
-      const storedTasks = localStorage.getItem(LOCAL_STORAGE_TASKS_KEY);
-      if (storedTasks) {
-        const parsedTasks = JSON.parse(storedTasks) as TaskDefinition[];
-        if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
-            setTaskDefinitions(parsedTasks.map(task => ({
-                ...task,
-                id: task.id || uuidv4(),
-                intensityThresholds: task.intensityThresholds,
-                darkStreakEnabled: task.darkStreakEnabled ?? false,
-            })));
+      const tasks = userData.taskDefinitions || DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
+      setTaskDefinitions(tasks);
+
+      setTotalBonusPoints(userData.bonusPoints || 0);
+      setUnlockedAchievements(userData.unlockedAchievements || []);
+      setSpentSkillPoints(userData.spentSkillPoints || {});
+      setUnlockedSkills(userData.unlockedSkills || []);
+      setFreezeCrystals(userData.freezeCrystals || 0);
+      setAwardedStreakMilestones(userData.awardedStreakMilestones || {});
+      setHighGoals(userData.highGoals || []);
+      
+      setIsLoaded(true);
+    } else if (isUserDataLoaded && !userData && user) {
+        // This is a new user with no data yet, initialize with defaults
+        const defaultTasks = DEFAULT_TASK_DEFINITIONS.map(task => ({ ...task, id: uuidv4() }));
+        setTaskDefinitions(defaultTasks);
+        setIsLoaded(true); // Ready to save new data
+    }
+  }, [user, userData, isUserDataLoaded]);
+
+  // Generic function to update a specific field in the user's Firestore document
+  const updateUserDataInDb = useCallback(async (field: string, data: any) => {
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, { [field]: data });
+      } catch (e) {
+         // If doc doesn't exist, create it.
+        if ((e as any).code === 'not-found') {
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, { [field]: data });
         } else {
-            const defaultTasksWithId = DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
-            setTaskDefinitions(defaultTasksWithId);
-            localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(defaultTasksWithId));
+            console.error(`Failed to update ${field} in Firestore:`, e);
         }
-      } else {
-        const defaultTasksWithId = DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
-        setTaskDefinitions(defaultTasksWithId);
-        localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(defaultTasksWithId));
-      }
-    } catch (error) {
-      console.error("Failed to load task definitions from localStorage:", error);
-      setTaskDefinitions(DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()})));
-    }
-
-    try {
-      const storedBonusPoints = localStorage.getItem(LOCAL_STORAGE_BONUS_POINTS_KEY);
-      if (storedBonusPoints) {
-        setTotalBonusPoints(JSON.parse(storedBonusPoints));
-      }
-    } catch (error) {
-      console.error("Failed to load bonus points from localStorage:", error);
-    }
-    
-    try {
-      const storedUnlockedAchievements = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY);
-      if (storedUnlockedAchievements) {
-        setUnlockedAchievements(JSON.parse(storedUnlockedAchievements));
-      }
-    } catch (error) {
-        console.error("Failed to load unlocked achievements from localStorage:", error);
-    }
-
-    try {
-        const storedSpentPoints = localStorage.getItem(LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY);
-        if (storedSpentPoints) {
-            setSpentSkillPoints(JSON.parse(storedSpentPoints));
-        }
-    } catch (error) {
-        console.error("Failed to load spent skill points from localStorage:", error);
-    }
-
-    try {
-        const storedUnlockedSkills = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_SKILLS_KEY);
-        if (storedUnlockedSkills) {
-            setUnlockedSkills(JSON.parse(storedUnlockedSkills));
-        }
-    } catch (error) {
-        console.error("Failed to load unlocked skills from localStorage:", error);
-    }
-    
-    try {
-        const storedCrystals = localStorage.getItem(LOCAL_STORAGE_FREEZE_CRYSTALS_KEY);
-        if (storedCrystals) {
-            setFreezeCrystals(JSON.parse(storedCrystals));
-        }
-    } catch (error) {
-        console.error("Failed to load freeze crystals from localStorage:", error);
-    }
-
-    try {
-        const storedMilestones = localStorage.getItem(LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY);
-        if (storedMilestones) {
-            setAwardedStreakMilestones(JSON.parse(storedMilestones));
-        }
-    } catch (error) {
-        console.error("Failed to load awarded streak milestones from localStorage:", error);
-    }
-    
-     try {
-        const storedHighGoals = localStorage.getItem(LOCAL_STORAGE_HIGH_GOALS_KEY);
-        if (storedHighGoals) {
-            setHighGoals(JSON.parse(storedHighGoals));
-        }
-    } catch (error) {
-        console.error("Failed to load high goals from localStorage:", error);
-    }
-
-
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
-      } catch (error) {
-        console.error("Failed to save records to localStorage:", error);
       }
     }
-  }, [records, isLoaded]);
+  }, [user]);
 
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(taskDefinitions));
-      } catch (error) {
-        console.error("Failed to save task definitions to localStorage:", error);
-      }
-    }
-  }, [taskDefinitions, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_BONUS_POINTS_KEY, JSON.stringify(totalBonusPoints));
-      } catch (error) {
-        console.error("Failed to save bonus points to localStorage:", error);
-      }
-    }
-  }, [totalBonusPoints, isLoaded]);
-
-   useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY, JSON.stringify(unlockedAchievements));
-      } catch (error) {
-        console.error("Failed to save unlocked achievements to localStorage:", error);
-      }
-    }
-  }, [unlockedAchievements, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem(LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY, JSON.stringify(spentSkillPoints));
-        } catch (error) {
-            console.error("Failed to save spent skill points from localStorage:", error);
-        }
-    }
-  }, [spentSkillPoints, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem(LOCAL_STORAGE_UNLOCKED_SKILLS_KEY, JSON.stringify(unlockedSkills));
-        } catch (error) {
-            console.error("Failed to save unlocked skills from localStorage:", error);
-        }
-    }
-  }, [unlockedSkills, isLoaded]);
-  
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem(LOCAL_STORAGE_FREEZE_CRYSTALS_KEY, JSON.stringify(freezeCrystals));
-        } catch (error) {
-            console.error("Failed to save freeze crystals from localStorage:", error);
-        }
-    }
-    }, [freezeCrystals, isLoaded]);
-
-    useEffect(() => {
-        if (isLoaded) {
-            try {
-                localStorage.setItem(LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY, JSON.stringify(awardedStreakMilestones));
-            } catch (error) {
-                console.error("Failed to save awarded streak milestones from localStorage:", error);
-            }
-        }
-    }, [awardedStreakMilestones, isLoaded]);
-
-    useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem(LOCAL_STORAGE_HIGH_GOALS_KEY, JSON.stringify(highGoals));
-        } catch (error) {
-            console.error("Failed to save high goals from localStorage:", error);
-        }
-    }
-  }, [highGoals, isLoaded]);
-
+  useEffect(() => { if (isLoaded) updateUserDataInDb('records', records); }, [records, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('taskDefinitions', taskDefinitions); }, [taskDefinitions, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('bonusPoints', totalBonusPoints); }, [totalBonusPoints, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('unlockedAchievements', unlockedAchievements); }, [unlockedAchievements, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('spentSkillPoints', spentSkillPoints); }, [spentSkillPoints, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('unlockedSkills', unlockedSkills); }, [unlockedSkills, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('freezeCrystals', freezeCrystals); }, [freezeCrystals, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('awardedStreakMilestones', awardedStreakMilestones); }, [awardedStreakMilestones, isLoaded, updateUserDataInDb]);
+  useEffect(() => { if (isLoaded) updateUserDataInDb('highGoals', highGoals); }, [highGoals, isLoaded, updateUserDataInDb]);
 
   const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
     return taskDefinitions.find(task => task.id === taskId);
