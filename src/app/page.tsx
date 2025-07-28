@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
 import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
 
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [currentLevelInfo, setCurrentLevelInfo] = useState<UserLevelInfo | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const {
     taskDefinitions,
@@ -45,6 +47,7 @@ export default function HomePage() {
     awardTierEntryBonus,
   } = useUserRecords();
   const { dashboardSettings } = useSettings();
+  const { isUserDataLoaded } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,9 +60,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const levelInfo = getUserLevelInfo();
-    setCurrentLevelInfo(levelInfo);
-  }, [getUserLevelInfo, records, totalBonusPoints]);
+    if (isUserDataLoaded) {
+      const levelInfo = getUserLevelInfo();
+      setCurrentLevelInfo(levelInfo);
+      setIsLoading(false);
+    }
+  }, [isUserDataLoaded, getUserLevelInfo, records, totalBonusPoints]);
 
 
   useEffect(() => {
@@ -117,6 +123,14 @@ export default function HomePage() {
     setIsManageTasksModalOpen(true);
   };
 
+  if (isLoading || !currentLevelInfo) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-primary">Loading your S.I.G.I.L...</div>
+      </div>
+    );
+  }
+  
   const pageTierClass = currentLevelInfo ? `page-tier-group-${currentLevelInfo.tierGroup}` : 'page-tier-group-1';
   
   const showStatsPanel = dashboardSettings.showTotalLast30Days || dashboardSettings.showCurrentStreak || dashboardSettings.showDailyConsistency || dashboardSettings.showHighGoalStat;
