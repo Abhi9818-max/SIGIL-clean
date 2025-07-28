@@ -97,15 +97,20 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
+    
     const newItem: TodoItem = {
       id: uuidv4(),
       text,
       completed: false,
       createdAt: new Date().toISOString(),
       dueDate,
-      penalty: (dueDate && penalty && penalty > 0) ? penalty : undefined,
       penaltyApplied: false,
     };
+    
+    if (dueDate && penalty && penalty > 0) {
+      newItem.penalty = penalty;
+    }
+
     setTodoItems(prevItems => {
         const newItems = [newItem, ...prevItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         updateDbWithTodos(newItems);
