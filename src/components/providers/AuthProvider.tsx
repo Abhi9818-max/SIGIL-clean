@@ -14,7 +14,6 @@ const FAKE_DOMAIN = 'sigil.local';
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isInitialSetup: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   setupCredentials: (username: string, password: string) => Promise<boolean>;
@@ -41,7 +40,6 @@ interface AllUserData {
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isInitialSetup, setIsInitialSetup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
   const [userData, setUserData] = useState<AllUserData | null>(null);
@@ -50,27 +48,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
   const auth = getAuth();
 
-   const checkForInitialSetup = async () => {
-    try {
-      const usersCollectionRef = collection(db, "users");
-      const q = limit(1);
-      const querySnapshot = await getDocs(usersCollectionRef);
-      setIsInitialSetup(querySnapshot.empty);
-    } catch (error) {
-      console.error("Error checking for initial setup:", error);
-      // Fallback to true to allow at least one user to attempt to sign up
-      setIsInitialSetup(true);
-    }
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      if (!user) {
-        await checkForInitialSetup();
-      } else {
-        setIsInitialSetup(false);
-      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -155,7 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return false;
     }
-  }, [auth, router, toast, db]);
+  }, [auth, router, toast]);
 
   if (loading || (!user && pathname !== '/login')) {
     return (
@@ -166,7 +147,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isInitialSetup, login, logout, setupCredentials, userData, loading, isUserDataLoaded }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, setupCredentials, userData, loading, isUserDataLoaded }}>
       {children}
     </AuthContext.Provider>
   );

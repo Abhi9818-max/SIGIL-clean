@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TrendingUp, KeyRound, User } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required."),
@@ -26,7 +27,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 type SetupForm = z.infer<typeof setupSchema>;
 
 export default function LoginPage() {
-  const { isInitialSetup, login, setupCredentials, loading } = useAuth();
+  const { login, setupCredentials, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const loginForm = useForm<LoginForm>({
@@ -44,12 +45,16 @@ export default function LoginPage() {
     const success = await login(data.username, data.password);
     if (!success) {
       setError("Invalid username or password.");
+      loginForm.reset();
     }
   };
 
   const handleSetup = async (data: SetupForm) => {
     setError(null);
-    await setupCredentials(data.username, data.password);
+    const success = await setupCredentials(data.username, data.password);
+    if (!success) {
+      setError("An account with this username may already exist, or another error occurred.");
+    }
   };
   
   if (loading) {
@@ -60,9 +65,6 @@ export default function LoginPage() {
     );
   }
 
-  const FormComponent = isInitialSetup ? setupForm : loginForm;
-  const onSubmit = isInitialSetup ? handleSetup : handleLogin;
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="max-w-md w-full shadow-2xl animate-fade-in-up">
@@ -72,44 +74,68 @@ export default function LoginPage() {
             <CardTitle>Welcome to S.I.G.I.L.</CardTitle>
           </div>
           <CardDescription>
-            {isInitialSetup 
-              ? "Create your account to begin your journey." 
-              : "Enter your credentials to access your records."
-            }
+             Enter your credentials to access your records.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={FormComponent.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="username" type="text" {...FormComponent.register('username')} className="pl-10" />
-              </div>
-              {FormComponent.formState.errors.username && <p className="text-sm text-destructive mt-1">{FormComponent.formState.errors.username.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" {...FormComponent.register('password')} className="pl-10" />
-              </div>
-              {FormComponent.formState.errors.password && <p className="text-sm text-destructive mt-1">{FormComponent.formState.errors.password.message}</p>}
-            </div>
-            
-            {error && <p className="text-sm text-destructive text-center">{error}</p>}
+            <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="login">Login</TabsTrigger>
+                    <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+                <TabsContent value="login">
+                     <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-6 pt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="login-username">Username</Label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="login-username" type="text" {...loginForm.register('username')} className="pl-10" />
+                          </div>
+                          {loginForm.formState.errors.username && <p className="text-sm text-destructive mt-1">{loginForm.formState.errors.username.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="login-password">Password</Label>
+                          <div className="relative">
+                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="login-password" type="password" {...loginForm.register('password')} className="pl-10" />
+                          </div>
+                          {loginForm.formState.errors.password && <p className="text-sm text-destructive mt-1">{loginForm.formState.errors.password.message}</p>}
+                        </div>
+                        
+                        {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
-            <Button type="submit" className="w-full" disabled={FormComponent.formState.isSubmitting}>
-              {FormComponent.formState.isSubmitting ? "Processing..." : (isInitialSetup ? 'Create Account & Enter' : 'Login')}
-            </Button>
-            
-            <p className="text-xs text-muted-foreground text-center pt-2">
-              {isInitialSetup 
-                ? "Your data will be securely stored in the cloud."
-                : "Forgot your password? There is no recovery process."
-              }
-            </p>
-          </form>
+                        <Button type="submit" className="w-full" disabled={loginForm.formState.isSubmitting}>
+                          {loginForm.formState.isSubmitting ? "Logging in..." : 'Login'}
+                        </Button>
+                      </form>
+                </TabsContent>
+                <TabsContent value="signup">
+                    <form onSubmit={setupForm.handleSubmit(handleSetup)} className="space-y-6 pt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-username">Username</Label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="signup-username" type="text" {...setupForm.register('username')} className="pl-10" />
+                          </div>
+                          {setupForm.formState.errors.username && <p className="text-sm text-destructive mt-1">{setupForm.formState.errors.username.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-password">Password</Label>
+                          <div className="relative">
+                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="signup-password" type="password" {...setupForm.register('password')} className="pl-10" />
+                          </div>
+                          {setupForm.formState.errors.password && <p className="text-sm text-destructive mt-1">{setupForm.formState.errors.password.message}</p>}
+                        </div>
+                        
+                        {error && <p className="text-sm text-destructive text-center">{error}</p>}
+
+                        <Button type="submit" className="w-full" disabled={setupForm.formState.isSubmitting}>
+                          {setupForm.formState.isSubmitting ? "Creating Account..." : 'Create Account & Enter'}
+                        </Button>
+                      </form>
+                </TabsContent>
+            </Tabs>
         </CardContent>
       </Card>
     </div>
