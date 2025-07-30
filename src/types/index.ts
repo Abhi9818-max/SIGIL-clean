@@ -191,6 +191,7 @@ export interface UserData {
 export interface SearchedUser {
     uid: string;
     username: string;
+    photoURL?: string;
 }
 
 export interface FriendRequest {

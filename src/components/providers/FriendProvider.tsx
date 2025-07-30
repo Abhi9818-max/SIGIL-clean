@@ -71,9 +71,11 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
 
         const userDoc = querySnapshot.docs[0];
+        const foundUserData = userDoc.data();
         return {
             uid: userDoc.id,
-            username: userDoc.data().username,
+            username: foundUserData.username,
+            photoURL: foundUserData.photoURL,
         };
     }, []);
 

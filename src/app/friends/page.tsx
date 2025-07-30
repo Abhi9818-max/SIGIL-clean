@@ -125,7 +125,7 @@ const FriendsContent = () => {
                                     <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
                                         <div className="flex items-center gap-3">
                                             <Avatar>
-                                                <AvatarImage src={getAvatarForId(searchedUser.uid)} />
+                                                <AvatarImage src={searchedUser.photoURL || getAvatarForId(searchedUser.uid)} />
                                                 <AvatarFallback>{searchedUser.username.charAt(0).toUpperCase()}</AvatarFallback>
                                             </Avatar>
                                             <span className="font-medium">{searchedUser.username}</span>
