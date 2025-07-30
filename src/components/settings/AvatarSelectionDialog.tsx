@@ -18,7 +18,7 @@ import { CheckCircle } from 'lucide-react';
 const TOTAL_AVATARS = 12; // The number of avatar images you have in the folder
 const PREDEFINED_AVATARS = Array.from(
   { length: TOTAL_AVATARS },
-  (_, i) => `/images/avatars/avatar-${i + 1}.png`
+  (_, i) => `/images/avatars/avatar-${i + 1}.jpeg`
 );
 
 interface AvatarSelectionDialogProps {
