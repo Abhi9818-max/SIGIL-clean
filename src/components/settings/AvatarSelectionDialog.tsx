@@ -1,0 +1,94 @@
+
+"use client";
+
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { CheckCircle } from 'lucide-react';
+
+const PREDEFINED_AVATARS = [
+  'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+  'https://i.pravatar.cc/150?u=a042581f4e29026705d',
+  'https://i.pravatar.cc/150?u=a042581f4e29026706d',
+  'https://i.pravatar.cc/150?u=a042581f4e29026707d',
+  'https://i.pravatar.cc/150?u=a042581f4e29026708d',
+  'https://i.pravatar.cc/150?u=a042581f4e29026709d',
+  'https://i.pravatar.cc/150?u=a042581f4e2902670ad',
+  'https://i.pravatar.cc/150?u=a042581f4e2902670bd',
+  'https://i.pravatar.cc/150?u=a042581f4e2902670cd',
+  'https://i.pravatar.cc/150?u=a042581f4e2902670dd',
+  'https://i.pravatar.cc/150?u=a042581f4e2902670ed',
+  'https://i.pravatar.cc/150?u=a042581f4e2902670fd',
+];
+
+interface AvatarSelectionDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onSelect: (url: string) => void;
+  currentAvatar?: string | null;
+}
+
+const AvatarSelectionDialog: React.FC<AvatarSelectionDialogProps> = ({
+  isOpen,
+  onOpenChange,
+  onSelect,
+  currentAvatar,
+}) => {
+  const handleSelect = (url: string) => {
+    onSelect(url);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Choose Your Avatar</DialogTitle>
+          <DialogDescription>
+            Select a new profile picture from the gallery.
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="h-[60vh] md:h-[400px]">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 p-1">
+            {PREDEFINED_AVATARS.map((url) => {
+                const isSelected = currentAvatar === url;
+                return (
+                <div key={url} className="relative">
+                    <button
+                    onClick={() => handleSelect(url)}
+                    className={cn(
+                        'w-full aspect-square rounded-full overflow-hidden border-2 transition-all',
+                        isSelected
+                        ? 'border-primary ring-2 ring-primary/50'
+                        : 'border-transparent hover:border-primary/50'
+                    )}
+                    >
+                    <Avatar className="w-full h-full">
+                        <AvatarImage src={url} alt={`Avatar option`} />
+                        <AvatarFallback>?</AvatarFallback>
+                    </Avatar>
+                    </button>
+                    {isSelected && (
+                    <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5 pointer-events-none">
+                        <CheckCircle className="h-5 w-5" />
+                    </div>
+                    )}
+                </div>
+                );
+            })}
+            </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default AvatarSelectionDialog;

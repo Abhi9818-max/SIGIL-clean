@@ -7,7 +7,7 @@ import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays, Database, User, Camera } from 'lucide-react';
+import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays, Database, User, Camera, Image as ImageIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import {
@@ -30,6 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AvatarSelectionDialog from '@/components/settings/AvatarSelectionDialog';
 
 
 export default function SettingsPage() {
@@ -39,7 +40,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isClearing, setIsClearing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const levelInfo = getUserLevelInfo();
@@ -123,20 +124,6 @@ export default function SettingsPage() {
     };
     reader.readAsText(file);
   };
-  
-  const handleProfilePictureChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    setIsUploading(true);
-    await updateProfilePicture(file);
-    setIsUploading(false);
-    
-    // Reset file input
-    if(fileInputRef.current) {
-        fileInputRef.current.value = "";
-    }
-  };
 
   const handleClearData = () => {
     setIsClearing(true);
@@ -199,6 +186,7 @@ export default function SettingsPage() {
 
 
   return (
+    <>
     <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
       <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
       <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up">
@@ -234,11 +222,15 @@ export default function SettingsPage() {
                         <div>
                           <p className="text-xl font-semibold">{userData?.username}</p>
                           <p className="text-sm text-muted-foreground">Level {levelInfo?.currentLevel} {levelInfo?.levelName}</p>
-                          <Label htmlFor="picture-upload" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), "mt-2 cursor-pointer")}>
-                            <Camera className="mr-2 h-4 w-4" />
-                            {isUploading ? "Uploading..." : "Change Picture"}
-                          </Label>
-                          <Input id="picture-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleProfilePictureChange} ref={fileInputRef} disabled={isUploading}/>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-2" 
+                            onClick={() => setIsAvatarDialogOpen(true)}
+                          >
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            Change Avatar
+                          </Button>
                         </div>
                       </div>
                   </div>
@@ -361,5 +353,12 @@ export default function SettingsPage() {
         </Card>
       </main>
     </div>
+    <AvatarSelectionDialog
+        isOpen={isAvatarDialogOpen}
+        onOpenChange={setIsAvatarDialogOpen}
+        onSelect={(url) => updateProfilePicture(url)}
+        currentAvatar={userData?.photoURL}
+    />
+    </>
   );
 }

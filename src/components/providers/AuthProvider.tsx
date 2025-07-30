@@ -18,7 +18,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   setupCredentials: (username: string, password: string) => Promise<boolean>;
-  updateProfilePicture: (file: File) => Promise<string | null>;
+  updateProfilePicture: (url: string) => Promise<string | null>;
   userData: UserData | null;
   loading: boolean;
   isUserDataLoaded: boolean;
@@ -132,30 +132,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [auth, router, toast]);
   
-  const updateProfilePicture = useCallback(async (file: File): Promise<string | null> => {
+  const updateProfilePicture = useCallback(async (url: string): Promise<string | null> => {
     if (!user) {
-        toast({ title: "Not Authenticated", description: "You must be logged in to upload a picture.", variant: "destructive" });
+        toast({ title: "Not Authenticated", description: "You must be logged in to update your avatar.", variant: "destructive" });
         return null;
     }
 
-    const storageRef = ref(storage, `profile-pictures/${user.uid}`);
     try {
-        await uploadBytes(storageRef, file);
-        const photoURL = await getDownloadURL(storageRef);
-
         // Update auth profile
-        await updateProfile(user, { photoURL });
+        await updateProfile(user, { photoURL: url });
         
         // Update Firestore document
         const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, { photoURL }, { merge: true });
+        await setDoc(userDocRef, { photoURL: url }, { merge: true });
 
-        toast({ title: "Profile Picture Updated", description: "Your new avatar has been saved." });
-        return photoURL;
+        toast({ title: "Avatar Updated", description: "Your new avatar has been saved." });
+        return url;
 
     } catch (error) {
         console.error("Error updating profile picture:", error);
-        toast({ title: "Upload Failed", description: "Could not upload your profile picture.", variant: "destructive" });
+        toast({ title: "Update Failed", description: "Could not update your avatar.", variant: "destructive" });
         return null;
     }
   }, [user, toast]);
