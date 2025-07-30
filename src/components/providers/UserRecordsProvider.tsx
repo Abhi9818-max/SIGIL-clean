@@ -568,6 +568,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   // Achievement Check
   const checkAchievements = useCallback(() => {
+    if (!isUserDataLoaded) return;
     const levelInfo = getUserLevelInfo();
     const streaks: Record<string, number> = {};
     taskDefinitions.forEach(task => {
@@ -602,7 +603,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         return updatedAchievements;
       });
     }
-  }, [getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast, updateUserDataInDb]);
+  }, [isUserDataLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast, updateUserDataInDb]);
 
   useEffect(() => {
     if (isUserDataLoaded) {
