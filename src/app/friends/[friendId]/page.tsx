@@ -18,6 +18,17 @@ import LevelIndicator from '@/components/layout/LevelIndicator';
 import ContributionGraph from '@/components/records/ContributionGraph';
 import { calculateUserLevelInfo } from '@/lib/config';
 
+// Simple hash function to get a number from a string
+const simpleHash = (s: string) => {
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        const char = s.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+};
+
 const FriendProfileContent = () => {
     const params = useParams();
     const router = useRouter();
@@ -73,6 +84,10 @@ const FriendProfileContent = () => {
     const totalExperience = friendRecords.reduce((sum, r) => sum + r.value, 0) + friendBonusPoints;
     const friendLevelInfo = calculateUserLevelInfo(totalExperience);
 
+    // Use a consistent avatar from local assets if no photoURL is set
+    const avatarNumber = (simpleHash(friendId) % 12) + 1;
+    const friendAvatar = friendData.photoURL || `/images/avatars/avatar-${avatarNumber}.jpeg`;
+
     return (
         <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
             <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
@@ -84,7 +99,7 @@ const FriendProfileContent = () => {
                 <Card>
                     <CardHeader className="flex flex-col md:flex-row items-start md:items-center gap-4">
                         <Avatar className="h-20 w-20">
-                            <AvatarImage src={friendData.photoURL} />
+                            <AvatarImage src={friendAvatar} />
                             <AvatarFallback>{friendData.username.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-grow">

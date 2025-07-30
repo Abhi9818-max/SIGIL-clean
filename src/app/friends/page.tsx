@@ -17,6 +17,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 
+// Simple hash function to get a number from a string
+const simpleHash = (s: string) => {
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        const char = s.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+};
+
 const FriendsContent = () => {
     const { user } = useAuth();
     const { getUserLevelInfo } = useUserRecords();
@@ -77,6 +88,11 @@ const FriendsContent = () => {
     const requestAlreadySent = searchedUser && pendingRequests.some(req => req.recipientId === searchedUser.uid);
     const isAlreadyFriend = searchedUser && friends.some(friend => friend.uid === searchedUser.uid);
     const hasIncomingRequest = searchedUser && incomingRequests.some(req => req.senderId === searchedUser.uid);
+    
+    const getAvatarForId = (id: string) => {
+        const avatarNumber = (simpleHash(id) % 12) + 1;
+        return `/images/avatars/avatar-${avatarNumber}.jpeg`;
+    }
 
     return (
         <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
@@ -109,7 +125,7 @@ const FriendsContent = () => {
                                     <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
                                         <div className="flex items-center gap-3">
                                             <Avatar>
-                                                <AvatarImage src={`https://i.pravatar.cc/150?u=${searchedUser.uid}`} />
+                                                <AvatarImage src={getAvatarForId(searchedUser.uid)} />
                                                 <AvatarFallback>{searchedUser.username.charAt(0).toUpperCase()}</AvatarFallback>
                                             </Avatar>
                                             <span className="font-medium">{searchedUser.username}</span>
@@ -148,7 +164,7 @@ const FriendsContent = () => {
                                                 <div className="p-3 border rounded-lg flex items-center justify-between bg-card hover:bg-muted/50 transition-colors cursor-pointer">
                                                     <div className="flex items-center gap-3">
                                                         <Avatar>
-                                                            <AvatarImage src={friend.photoURL} />
+                                                            <AvatarImage src={friend.photoURL || getAvatarForId(friend.uid)} />
                                                             <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
                                                         </Avatar>
                                                         <span className="font-medium">{friend.username}</span>
@@ -180,7 +196,7 @@ const FriendsContent = () => {
                                             <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
                                                 <div className="flex items-center gap-3">
                                                     <Avatar>
-                                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${req.senderId}`} />
+                                                        <AvatarImage src={getAvatarForId(req.senderId)} />
                                                         <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
                                                     </Avatar>
                                                     <span className="font-medium text-sm">{req.senderUsername}</span>
@@ -210,7 +226,7 @@ const FriendsContent = () => {
                                             <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
                                                  <div className="flex items-center gap-3">
                                                     <Avatar>
-                                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${req.recipientId}`} />
+                                                        <AvatarImage src={getAvatarForId(req.recipientId)} />
                                                         <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
                                                     </Avatar>
                                                     <span className="font-medium text-sm">{req.recipientUsername}</span>
