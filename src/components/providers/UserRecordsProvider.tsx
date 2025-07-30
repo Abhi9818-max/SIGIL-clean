@@ -716,7 +716,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     updateHighGoal,
     deleteHighGoal,
     getHighGoalProgress,
-    checkAchievements
   ]);
 
 
@@ -734,3 +733,4 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
+
