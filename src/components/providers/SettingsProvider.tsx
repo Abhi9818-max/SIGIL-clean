@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { DashboardSettings } from '@/types';
@@ -19,6 +20,7 @@ const defaultSettings: DashboardSettings = {
   showTodoList: true,
   showProgressChart: true,
   showAISuggestions: true,
+  showTimeBreakdownChart: true,
 };
 
 interface SettingsContextType {

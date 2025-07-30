@@ -1,4 +1,5 @@
 
+
 export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic' | 'custom';
 export type TaskFrequency = 'daily' | 'weekly';
 
@@ -126,6 +127,13 @@ export interface ProductivityByDayData {
     total: number;
 }
 
+export interface DailyTimeBreakdownData {
+  name: string;
+  value: number; // in minutes
+  color: string;
+}
+
+
 // For Achievements
 export type AchievementCategory = 'level' | 'streak' | 'skills' | 'creation';
 
@@ -167,6 +175,7 @@ export interface DashboardSettings {
   showTodoList: boolean;
   showProgressChart: boolean;
   showAISuggestions: boolean;
+  showTimeBreakdownChart: boolean;
 }
 
 // For Auth/User Data

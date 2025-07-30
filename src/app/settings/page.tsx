@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useRef } from 'react';
@@ -157,6 +158,7 @@ export default function SettingsPage() {
       { key: 'showContributionGraph', label: 'Contribution Graph', category: 'Main' },
       { key: 'showTodoList', label: 'Pacts Card', category: 'Main' },
       { key: 'showProgressChart', label: 'Progress Chart', category: 'Main' },
+      { key: 'showTimeBreakdownChart', label: 'Daily Time Breakdown', category: 'Main' },
       { key: 'showAISuggestions', label: 'AI Coach Card', category: 'Main' },
   ];
 

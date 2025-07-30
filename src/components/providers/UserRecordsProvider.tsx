@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal, DailyTimeBreakdownData } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { doc, setDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -69,6 +70,7 @@ interface UserRecordsContextType {
   // Insights
   getTaskDistribution: (startDate: Date, endDate: Date, taskId?: string | null) => TaskDistributionData[];
   getProductivityByDay: (startDate: Date, endDate: Date, taskId?: string | null) => ProductivityByDayData[];
+  getDailyTimeBreakdown: () => DailyTimeBreakdownData[];
   // Freeze Crystals
   freezeCrystals: number;
   useFreezeCrystal: () => void;
@@ -528,6 +530,42 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return dayTotals;
   }, [getRecordsForDateRange]);
 
+  const getDailyTimeBreakdown = useCallback((): DailyTimeBreakdownData[] => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const todaysRecords = getRecordsByDate(todayStr);
+    
+    const timeBasedTasks = taskDefinitions.filter(t => t.unit === 'minutes' || t.unit === 'hours');
+    if (timeBasedTasks.length === 0) return [];
+    
+    const timeBreakdown = new Map<string, { name: string; value: number; color: string }>();
+    let totalMinutes = 0;
+
+    todaysRecords.forEach(record => {
+      if (!record.taskType) return;
+      const task = getTaskDefinitionById(record.taskType);
+      if (task && (task.unit === 'minutes' || task.unit === 'hours')) {
+        const minutes = task.unit === 'hours' ? record.value * 60 : record.value;
+        const current = timeBreakdown.get(task.id) || { name: task.name, value: 0, color: task.color };
+        current.value += minutes;
+        timeBreakdown.set(task.id, current);
+        totalMinutes += minutes;
+      }
+    });
+
+    const result: DailyTimeBreakdownData[] = Array.from(timeBreakdown.values());
+    
+    const remainingMinutes = 1440 - totalMinutes;
+    if (remainingMinutes > 0) {
+      result.push({
+        name: 'Unallocated',
+        value: remainingMinutes,
+        color: 'hsl(var(--muted))'
+      });
+    }
+
+    return result;
+  }, [getRecordsByDate, taskDefinitions, getTaskDefinitionById]);
+
   // Achievement Check
   const checkAchievements = useCallback(() => {
     const levelInfo = getUserLevelInfo();
@@ -631,6 +669,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     constellations,
     getTaskDistribution,
     getProductivityByDay,
+    getDailyTimeBreakdown,
     freezeCrystals,
     useFreezeCrystal,
     unlockedAchievements,
@@ -668,6 +707,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     constellations,
     getTaskDistribution,
     getProductivityByDay,
+    getDailyTimeBreakdown,
     freezeCrystals,
     useFreezeCrystal,
     unlockedAchievements,

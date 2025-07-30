@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
 import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
+import DailyTimeBreakdownChart from '@/components/dashboard/DailyTimeBreakdownChart';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
@@ -192,6 +193,11 @@ export default function HomePage() {
              {dashboardSettings.showAISuggestions && (
                 <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
                     <AISuggestionsCard />
+                </div>
+            )}
+            {dashboardSettings.showTimeBreakdownChart && (
+                <div className="animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+                    <DailyTimeBreakdownChart />
                 </div>
             )}
         </div>
