@@ -14,20 +14,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CheckCircle } from 'lucide-react';
 
-const PREDEFINED_AVATARS = [
-  'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-  'https://i.pravatar.cc/150?u=a042581f4e29026705d',
-  'https://i.pravatar.cc/150?u=a042581f4e29026706d',
-  'https://i.pravatar.cc/150?u=a042581f4e29026707d',
-  'https://i.pravatar.cc/150?u=a042581f4e29026708d',
-  'https://i.pravatar.cc/150?u=a042581f4e29026709d',
-  'https://i.pravatar.cc/150?u=a042581f4e2902670ad',
-  'https://i.pravatar.cc/150?u=a042581f4e2902670bd',
-  'https://i.pravatar.cc/150?u=a042581f4e2902670cd',
-  'https://i.pravatar.cc/150?u=a042581f4e2902670dd',
-  'https://i.pravatar.cc/150?u=a042581f4e2902670ed',
-  'https://i.pravatar.cc/150?u=a042581f4e2902670fd',
-];
+// Generate paths for local avatars
+const TOTAL_AVATARS = 12; // The number of avatar images you have in the folder
+const PREDEFINED_AVATARS = Array.from(
+  { length: TOTAL_AVATARS },
+  (_, i) => `/images/avatars/avatar-${i + 1}.png`
+);
 
 interface AvatarSelectionDialogProps {
   isOpen: boolean;
