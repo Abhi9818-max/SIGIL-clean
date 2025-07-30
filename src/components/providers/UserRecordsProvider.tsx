@@ -555,7 +555,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const result: DailyTimeBreakdownData[] = Array.from(timeBreakdown.values());
     
     const remainingMinutes = 1440 - totalMinutes;
-    if (remainingMinutes > 0) {
+    if (remainingMinutes > 0 || result.length === 0) {
       result.push({
         name: 'Unallocated',
         value: remainingMinutes,

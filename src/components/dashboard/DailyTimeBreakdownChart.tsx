@@ -59,26 +59,6 @@ const DailyTimeBreakdownChart = () => {
         )
     }
 
-    if (!data || data.every(d => d.name === 'Unallocated')) {
-        return (
-             <Card className="shadow-lg">
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Clock className="h-6 w-6 text-accent" />
-                        <CardTitle>Daily Time Breakdown</CardTitle>
-                    </div>
-                    <CardDescription>A 24-hour visualization of your time-based tasks.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <div className="h-[300px] flex items-center justify-center text-center text-muted-foreground">
-                        <p>No time recorded for today yet.</p>
-                    </div>
-                </CardContent>
-            </Card>
-        )
-    }
-
-
     return (
         <Card className="shadow-lg">
             <CardHeader>
