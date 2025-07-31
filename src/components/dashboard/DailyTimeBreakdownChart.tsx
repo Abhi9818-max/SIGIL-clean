@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import { Clock, PlusCircle, EyeOff, Eye } from 'lucide-react';
+import { Clock, PlusCircle, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { Separator } from '../ui/separator';
 import type { TaskUnit } from '@/types';
 import { Label } from '../ui/label';
+import { cn } from '@/lib/utils';
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
@@ -48,7 +49,7 @@ const DailyTimeBreakdownChart = () => {
     const data = getDailyTimeBreakdown();
     const { toast } = useToast();
 
-    const [showQuickLogForm, setShowQuickLogForm] = useState(true);
+    const [showQuickLogForm, setShowQuickLogForm] = useState(false);
     const [newTaskName, setNewTaskName] = useState('');
     const [unit, setUnit] = useState<TaskUnit>('minutes');
     const [quickLogValue, setQuickLogValue] = useState<string>('');
@@ -145,14 +146,15 @@ const DailyTimeBreakdownChart = () => {
                 )}
             </CardContent>
             <Separator />
-            <CardFooter className="pt-6 flex-col items-start gap-4">
-                <div className="w-full flex justify-between items-center">
+            <CardFooter className="pt-4 flex-col items-start gap-4">
+                <button 
+                  className="w-full flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors"
+                  onClick={() => setShowQuickLogForm(!showQuickLogForm)}
+                  aria-expanded={showQuickLogForm}
+                >
                     <p className="text-sm font-medium text-muted-foreground">Quick Log Time</p>
-                    <Button variant="ghost" size="sm" onClick={() => setShowQuickLogForm(!showQuickLogForm)}>
-                        {showQuickLogForm ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                        {showQuickLogForm ? 'Hide' : 'Show'}
-                    </Button>
-                </div>
+                    <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showQuickLogForm && "rotate-180")} />
+                </button>
                 {showQuickLogForm && (
                     <div className="w-full space-y-3 animate-fade-in-up">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
