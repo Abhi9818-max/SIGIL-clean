@@ -56,7 +56,6 @@ const FriendsContent = () => {
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
     const [searchMessage, setSearchMessage] = useState<string | null>(null);
     const [isSearchVisible, setIsSearchVisible] = useState(false);
-    const [requestsOpen, setRequestsOpen] = useState(false);
     const { toast } = useToast();
 
     const handleSearch = async () => {
@@ -110,106 +109,103 @@ const FriendsContent = () => {
             <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
             <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {!requestsOpen && (
-                        <div className="lg:col-span-2 space-y-8">
-                            <Card>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <UserSearch className="h-6 w-6 text-primary" />
-                                            <CardTitle>Find Friends</CardTitle>
-                                        </div>
-                                        {!isSearchVisible && (
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                onClick={() => setIsSearchVisible(true)}
-                                                aria-label="Open search bar"
-                                            >
-                                                <Search className="h-5 w-5" />
-                                            </Button>
-                                        )}
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <UserSearch className="h-6 w-6 text-primary" />
+                                        <CardTitle>Find Friends</CardTitle>
                                     </div>
-                                </CardHeader>
-                                {isSearchVisible && (
-                                    <CardContent className="animate-fade-in-up">
-                                        <div className="flex gap-2">
-                                            <Input
-                                                placeholder="Enter username..."
-                                                value={usernameQuery}
-                                                onChange={(e) => setUsernameQuery(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                                autoFocus
-                                            />
-                                            <Button onClick={handleSearch} disabled={isLoadingSearch} size="icon">
-                                                <Search className="h-4 w-4" />
-                                                <span className="sr-only">Search</span>
-                                            </Button>
-                                        </div>
-                                        {isLoadingSearch && <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Searching...</div>}
-                                        {searchMessage && <p className="text-sm text-muted-foreground mt-3">{searchMessage}</p>}
-                                        {searchedUser && (
-                                            <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar>
-                                                        <AvatarImage src={searchedUser.photoURL || getAvatarForId(searchedUser.uid)} />
-                                                        <AvatarFallback>{searchedUser.username.charAt(0).toUpperCase()}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium">{searchedUser.username}</span>
-                                                </div>
-                                                {isAlreadyFriend ? (
-                                                    <p className="text-sm text-green-500">Already Friends</p>
-                                                ) : hasIncomingRequest ? (
-                                                     <p className="text-sm text-blue-500">Check incoming requests</p>
-                                                ) : requestAlreadySent ? (
-                                                    <p className="text-sm text-muted-foreground">Request Sent</p>
-                                                ) : (
-                                                    <Button size="sm" onClick={() => handleSendRequest(searchedUser.uid, searchedUser.username)}>
-                                                        <UserPlus className="h-4 w-4 mr-2" /> Add Friend
-                                                    </Button>
-                                                )}
+                                    {!isSearchVisible && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => setIsSearchVisible(true)}
+                                            aria-label="Open search bar"
+                                        >
+                                            <Search className="h-5 w-5" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            {isSearchVisible && (
+                                <CardContent className="animate-fade-in-up">
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Enter username..."
+                                            value={usernameQuery}
+                                            onChange={(e) => setUsernameQuery(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                            autoFocus
+                                        />
+                                        <Button onClick={handleSearch} disabled={isLoadingSearch} size="icon">
+                                            {isLoadingSearch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                            <span className="sr-only">Search</span>
+                                        </Button>
+                                    </div>
+                                    {searchMessage && <p className="text-sm text-muted-foreground mt-3">{searchMessage}</p>}
+                                    {searchedUser && (
+                                        <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={searchedUser.photoURL || getAvatarForId(searchedUser.uid)} />
+                                                    <AvatarFallback>{searchedUser.username.charAt(0).toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{searchedUser.username}</span>
                                             </div>
-                                        )}
-                                    </CardContent>
-                                )}
-                            </Card>
-                            
-                            <Card>
-                                <CardHeader>
-                                     <div className="flex items-center gap-2">
-                                        <Users className="h-6 w-6 text-primary" />
-                                        <CardTitle>Your Friends</CardTitle>
-                                    </div>
-                                    <CardDescription>View your connected friends and their progress.</CardDescription>
-                                </CardHeader>
-                                 <CardContent>
-                                    {friends.length === 0 ? (
-                                        <p className="text-center text-muted-foreground py-4">You have no friends yet.</p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {friends.map(friend => (
-                                                <Link href={`/friends/${friend.uid}`} key={friend.uid}>
-                                                    <div className="p-3 border rounded-lg flex items-center justify-between bg-card hover:bg-muted/50 transition-colors cursor-pointer">
-                                                        <div className="flex items-center gap-3">
-                                                            <Avatar>
-                                                                <AvatarImage src={friend.photoURL || getAvatarForId(friend.uid)} />
-                                                                <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
-                                                            </Avatar>
-                                                            <span className="font-medium">{friend.username}</span>
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                            ))}
+                                            {isAlreadyFriend ? (
+                                                <p className="text-sm text-green-500">Already Friends</p>
+                                            ) : hasIncomingRequest ? (
+                                                 <p className="text-sm text-blue-500">Check incoming requests</p>
+                                            ) : requestAlreadySent ? (
+                                                <p className="text-sm text-muted-foreground">Request Sent</p>
+                                            ) : (
+                                                <Button size="sm" onClick={() => handleSendRequest(searchedUser.uid, searchedUser.username)}>
+                                                    <UserPlus className="h-4 w-4 mr-2" /> Add Friend
+                                                </Button>
+                                            )}
                                         </div>
                                     )}
                                 </CardContent>
-                            </Card>
-                        </div>
-                    )}
+                            )}
+                        </Card>
+                        
+                        <Card>
+                             <CardHeader>
+                                 <div className="flex items-center gap-2">
+                                    <Users className="h-6 w-6 text-primary" />
+                                    <CardTitle>Your Friends</CardTitle>
+                                </div>
+                                <CardDescription>View your connected friends and their progress.</CardDescription>
+                             </CardHeader>
+                             <CardContent>
+                                {friends.length === 0 ? (
+                                    <p className="text-center text-muted-foreground py-4">You have no friends yet.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {friends.map(friend => (
+                                            <Link href={`/friends/${friend.uid}`} key={friend.uid}>
+                                                <div className="p-3 border rounded-lg flex items-center justify-between bg-card hover:bg-muted/50 transition-colors cursor-pointer">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar>
+                                                            <AvatarImage src={friend.photoURL || getAvatarForId(friend.uid)} />
+                                                            <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="font-medium">{friend.username}</span>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                    <div className={cn(requestsOpen ? "lg:col-span-3" : "lg:col-span-1")}>
+                    <div className="lg:col-span-1">
                          <Card>
-                             <Accordion type="single" collapsible className="w-full" onValueChange={(value) => setRequestsOpen(!!value)}>
+                             <Accordion type="single" collapsible className="w-full">
                                 <AccordionItem value="item-1" className="border-b-0">
                                    <CardHeader>
                                        <AccordionTrigger className="p-0 text-left w-full hover:no-underline focus:no-underline">
@@ -221,9 +217,9 @@ const FriendsContent = () => {
                                        </AccordionTrigger>
                                    </CardHeader>
                                    <AccordionContent>
-                                        <CardDescription className="px-6 pb-4">
-                                            Manage your friend requests.
-                                        </CardDescription>
+                                       <CardDescription className="px-6 pb-4">
+                                           Manage your friend requests.
+                                       </CardDescription>
                                        <CardContent className="flex justify-around items-center pt-2">
                                           <Popover>
                                               <PopoverTrigger asChild>
