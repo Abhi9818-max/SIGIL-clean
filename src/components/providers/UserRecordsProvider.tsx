@@ -473,9 +473,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const todaysRecords = getRecordsByDate(todayStr);
     
-    const timeBasedTasks = taskDefinitions.filter(t => t.unit === 'minutes' || t.unit === 'hours');
-    if (timeBasedTasks.length === 0) return [];
-    
     const timeBreakdown = new Map<string, { name: string; value: number; color: string }>();
     let totalMinutes = 0;
 
