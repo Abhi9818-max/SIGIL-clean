@@ -55,6 +55,7 @@ const FriendsContent = () => {
     const [searchedUser, setSearchedUser] = useState<SearchedUser | null>(null);
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
     const [searchMessage, setSearchMessage] = useState<string | null>(null);
+    const [isSearchVisible, setIsSearchVisible] = useState(false);
     const { toast } = useToast();
 
     const handleSearch = async () => {
@@ -111,49 +112,64 @@ const FriendsContent = () => {
                     <div className="lg:col-span-2 space-y-8">
                         <Card>
                             <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <UserSearch className="h-6 w-6 text-primary" />
-                                    <CardTitle>Find Friends</CardTitle>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <UserSearch className="h-6 w-6 text-primary" />
+                                        <CardTitle>Find Friends</CardTitle>
+                                    </div>
+                                    {!isSearchVisible && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => setIsSearchVisible(true)}
+                                            aria-label="Open search bar"
+                                        >
+                                            <Search className="h-5 w-5" />
+                                        </Button>
+                                    )}
                                 </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Enter username..."
-                                        value={usernameQuery}
-                                        onChange={(e) => setUsernameQuery(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    />
-                                    <Button onClick={handleSearch} disabled={isLoadingSearch} size="icon">
-                                        <Search className="h-4 w-4" />
-                                        <span className="sr-only">Search</span>
-                                    </Button>
-                                </div>
-                                {isLoadingSearch && <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Searching...</div>}
-                                {searchMessage && <p className="text-sm text-muted-foreground mt-3">{searchMessage}</p>}
-                                {searchedUser && (
-                                    <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar>
-                                                <AvatarImage src={searchedUser.photoURL || getAvatarForId(searchedUser.uid)} />
-                                                <AvatarFallback>{searchedUser.username.charAt(0).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{searchedUser.username}</span>
-                                        </div>
-                                        {isAlreadyFriend ? (
-                                            <p className="text-sm text-green-500">Already Friends</p>
-                                        ) : hasIncomingRequest ? (
-                                             <p className="text-sm text-blue-500">Check incoming requests</p>
-                                        ) : requestAlreadySent ? (
-                                            <p className="text-sm text-muted-foreground">Request Sent</p>
-                                        ) : (
-                                            <Button size="sm" onClick={() => handleSendRequest(searchedUser.uid, searchedUser.username)}>
-                                                <UserPlus className="h-4 w-4 mr-2" /> Add Friend
-                                            </Button>
-                                        )}
+                            {isSearchVisible && (
+                                <CardContent className="animate-fade-in-up">
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Enter username..."
+                                            value={usernameQuery}
+                                            onChange={(e) => setUsernameQuery(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                            autoFocus
+                                        />
+                                        <Button onClick={handleSearch} disabled={isLoadingSearch} size="icon">
+                                            <Search className="h-4 w-4" />
+                                            <span className="sr-only">Search</span>
+                                        </Button>
                                     </div>
-                                )}
-                            </CardContent>
+                                    {isLoadingSearch && <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Searching...</div>}
+                                    {searchMessage && <p className="text-sm text-muted-foreground mt-3">{searchMessage}</p>}
+                                    {searchedUser && (
+                                        <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={searchedUser.photoURL || getAvatarForId(searchedUser.uid)} />
+                                                    <AvatarFallback>{searchedUser.username.charAt(0).toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{searchedUser.username}</span>
+                                            </div>
+                                            {isAlreadyFriend ? (
+                                                <p className="text-sm text-green-500">Already Friends</p>
+                                            ) : hasIncomingRequest ? (
+                                                 <p className="text-sm text-blue-500">Check incoming requests</p>
+                                            ) : requestAlreadySent ? (
+                                                <p className="text-sm text-muted-foreground">Request Sent</p>
+                                            ) : (
+                                                <Button size="sm" onClick={() => handleSendRequest(searchedUser.uid, searchedUser.username)}>
+                                                    <UserPlus className="h-4 w-4 mr-2" /> Add Friend
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            )}
                         </Card>
                         
                         <Card>
