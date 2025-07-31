@@ -130,6 +130,7 @@ const FriendsContent = () => {
                                         <span className="sr-only">Search</span>
                                     </Button>
                                 </div>
+                                {isLoadingSearch && <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Searching...</div>}
                                 {searchMessage && <p className="text-sm text-muted-foreground mt-3">{searchMessage}</p>}
                                 {searchedUser && (
                                     <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-muted/50">
