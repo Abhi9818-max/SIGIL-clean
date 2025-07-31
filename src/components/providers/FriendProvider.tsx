@@ -46,10 +46,26 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setPendingRequests(requests);
         });
         
-        // Listen for friends
+        // Listen for friends and fetch their full, up-to-date data
         const friendsQuery = collection(db, `users/${user.uid}/friends`);
-        const unsubscribeFriends = onSnapshot(friendsQuery, (snapshot) => {
-            const friendsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Friend));
+        const unsubscribeFriends = onSnapshot(friendsQuery, async (snapshot) => {
+            const friendsListPromises = snapshot.docs.map(async (friendDoc) => {
+                const friendId = friendDoc.id;
+                const userDocRef = doc(db, 'users', friendId);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const friendUserData = userDocSnap.data() as UserData;
+                    return {
+                        uid: friendId,
+                        username: friendUserData.username,
+                        photoURL: friendUserData.photoURL || null,
+                        since: friendDoc.data().since,
+                    };
+                }
+                return null;
+            });
+            
+            const friendsList = (await Promise.all(friendsListPromises)).filter(Boolean) as Friend[];
             setFriends(friendsList);
         });
 
@@ -107,11 +123,9 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (!user || !user.displayName || !userData) return;
         const batch = writeBatch(db);
         
-        // Get the sender's data to include their photoURL
         const senderDataDoc = await getDoc(doc(db, 'users', request.senderId));
         const senderData = senderDataDoc.data() as UserData;
 
-        // Add to each other's friends subcollection
         const currentUserFriendRef = doc(db, `users/${user.uid}/friends`, request.senderId);
         batch.set(currentUserFriendRef, { 
             uid: request.senderId, 
@@ -128,7 +142,6 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             since: new Date().toISOString() 
         });
         
-        // Delete the request
         const requestRef = doc(db, 'friend_requests', request.id);
         batch.delete(requestRef);
 
@@ -151,7 +164,6 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const getFriendData = useCallback(async (friendId: string): Promise<UserData | null> => {
         if (!user) return null;
         
-        // Check if they are actually a friend first
         const friendRef = doc(db, `users/${user.uid}/friends`, friendId);
         const friendSnap = await getDoc(friendRef);
         if (!friendSnap.exists()) {
