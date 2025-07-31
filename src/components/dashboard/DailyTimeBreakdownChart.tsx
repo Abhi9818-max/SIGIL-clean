@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -24,7 +24,32 @@ interface DailyTimeBreakdownChartProps {
   hideFooter?: boolean;
 }
 
-const RADIAN = Math.PI / 180;
+const CustomTooltip = ({ active, payload, settings }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const totalMinutes = payload.reduce((sum: number, entry: any) => sum + entry.value, 0);
+      const percentage = totalMinutes > 0 ? (data.value / totalMinutes) * 100 : 0;
+  
+      let displayValue;
+      if (settings.pieChartLabelFormat === 'time') {
+          const hours = Math.floor(data.value / 60);
+          const minutes = data.value % 60;
+          displayValue = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      } else {
+          displayValue = `${percentage.toFixed(0)}%`;
+      }
+  
+      return (
+        <div className="rounded-lg border bg-background p-2.5 shadow-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
+            <p className="text-sm font-medium text-foreground">{data.name}: <span className="font-bold">{displayValue}</span></p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
 const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date, hideFooter = false }) => {
     const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition } = useUserRecords();
@@ -36,41 +61,12 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
     const [newTaskName, setNewTaskName] = useState('');
     const [unit, setUnit] = useState<TaskUnit>('minutes');
     const [quickLogValue, setQuickLogValue] = useState<string>('');
-
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }: any) => {
-        const radius = innerRadius + (outerRadius - innerRadius) * 1.2;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-        const textAnchor = x > cx ? 'start' : 'end';
-
-        const lineRadiusStart = outerRadius + 5;
-        const xLineStart = cx + lineRadiusStart * Math.cos(-midAngle * RADIAN);
-        const yLineStart = cy + lineRadiusStart * Math.sin(-midAngle * RADIAN);
-
-        const lineRadiusEnd = outerRadius + 20;
-        const xLineEnd = cx + lineRadiusEnd * Math.cos(-midAngle * RADIAN);
-        const yLineEnd = cy + lineRadiusEnd * Math.sin(-midAngle * RADIAN);
-        
-        const xText = xLineEnd + (x > cx ? 1 : -1) * 5;
-
-        let displayValue;
-        if (dashboardSettings.pieChartLabelFormat === 'time') {
-            const hours = Math.floor(value / 60);
-            const minutes = value % 60;
-            displayValue = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        } else {
-            displayValue = `${(percent * 100).toFixed(0)}%`;
-        }
-
-        return (
-            <g>
-                <path d={`M${xLineStart},${yLineStart} L${xLineEnd},${yLineEnd} L${xText},${yLineEnd}`} stroke="var(--color-label)" fill="none" />
-                <circle cx={xLineStart} cy={yLineStart} r={2} fill="var(--color-label)" stroke="none" />
-                <text x={xText} y={yLineEnd} textAnchor={textAnchor} fill="var(--color-text)" dy={-4} className="text-sm font-semibold">{displayValue}</text>
-                <text x={xText} y={yLineEnd} textAnchor={textAnchor} fill="var(--color-text-muted)" dy={10} className="text-xs">{name}</text>
-            </g>
-        );
-    };
+    
+    const totalLoggedMinutes = useMemo(() => {
+        return data.reduce((sum, entry) => {
+            return entry.name !== 'Unallocated' ? sum + entry.value : sum;
+        }, 0);
+    }, [data]);
 
     const handleQuickLog = () => {
         if (!newTaskName.trim() || !quickLogValue) {
@@ -100,6 +96,8 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         }
         
         if (!taskId) return;
+        
+        const taskDef = getTaskDefinitionById(taskId);
 
         addRecord({
             date: format(date || new Date(), 'yyyy-MM-dd'),
@@ -110,12 +108,14 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
 
         toast({
             title: 'Time Logged!',
-            description: `${quickLogValue} ${task?.unit || unit} logged for "${newTaskName.trim()}".`,
+            description: `${quickLogValue} ${taskDef?.unit || unit} logged for "${newTaskName.trim()}".`,
         });
 
         setNewTaskName('');
         setQuickLogValue('');
     };
+
+    const getTaskDefinitionById = (id: string) => taskDefinitions.find(t => t.id === id);
     
     const timeBasedTasksExist = useMemo(() => {
         return taskDefinitions.some(t => t.unit === 'minutes' || t.unit === 'hours');
@@ -134,27 +134,20 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
                 <CardDescription>{chartDescription}</CardDescription>
             </CardHeader>
             <CardContent>
-                {data.length === 1 && data[0].name === 'Unallocated' ? (
-                     <div className="h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
-                        <p>No time-based tasks logged for this day.</p>
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart style={{
-                            '--color-label': 'hsl(var(--muted-foreground))',
-                            '--color-text': 'hsl(var(--foreground))',
-                            '--color-text-muted': 'hsl(var(--muted-foreground))'
-                            } as React.CSSProperties}>
+                <div className="h-[300px] w-full relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                             <Tooltip content={<CustomTooltip settings={dashboardSettings} />} />
                             <Pie
                                 data={data}
                                 cx="50%"
                                 cy="50%"
-                                labelLine={false}
-                                label={renderCustomizedLabel}
+                                innerRadius={60}
                                 outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"
                                 strokeWidth={2}
+                                stroke="hsl(var(--background))"
                             >
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -162,7 +155,13 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
                             </Pie>
                         </PieChart>
                     </ResponsiveContainer>
-                )}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-bold text-foreground">
+                            {`${Math.floor(totalLoggedMinutes / 60)}h ${totalLoggedMinutes % 60}m`}
+                        </span>
+                        <span className="text-xs text-muted-foreground">Logged Today</span>
+                    </div>
+                </div>
             </CardContent>
             {!hideFooter && (
                 <>
@@ -219,3 +218,5 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
 }
 
 export default DailyTimeBreakdownChart;
+
+    
