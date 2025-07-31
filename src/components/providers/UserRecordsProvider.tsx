@@ -403,7 +403,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const totalPoints = getAggregateSum(new Date("1900-01-01"), new Date(), taskId);
     const spentPoints = spentSkillPoints[taskId] || 0;
     return totalPoints - spentPoints;
-  }, [records, getAggregateSum, spentSkillPoints]);
+  }, [getAggregateSum, records, spentSkillPoints]);
 
   const isSkillUnlocked = useCallback((skillId: string): boolean => {
     return unlockedSkills.includes(skillId);
@@ -601,7 +601,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [records, taskDefinitions, awardedStreakMilestones, freezeCrystals, isUserDataLoaded, user, getCurrentStreak, updateUserDataInDb, toast]);
 
 
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     records,
     addRecord,
     updateRecord,
@@ -640,7 +640,46 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     updateHighGoal,
     deleteHighGoal,
     getHighGoalProgress,
-  };
+  }), [
+      records,
+      addRecord,
+      updateRecord,
+      deleteRecord,
+      getRecordsByDate,
+      getRecordsForDateRange,
+      getAggregateSum,
+      getYearlySum,
+      getAllRecordsStringified,
+      getDailyConsistency,
+      getCurrentStreak,
+      taskDefinitions,
+      addTaskDefinition,
+      updateTaskDefinition,
+      deleteTaskDefinition,
+      getTaskDefinitionById,
+      getStatsForCompletedWeek,
+      getWeeklyAggregatesForChart,
+      getUserLevelInfo,
+      totalBonusPoints,
+      awardTierEntryBonus,
+      deductBonusPoints,
+      updateUserDataInDb,
+      getAvailableSkillPoints,
+      unlockSkill,
+      isSkillUnlocked,
+      constellations,
+      getTaskDistribution,
+      getProductivityByDay,
+      getDailyTimeBreakdown,
+      freezeCrystals,
+      useFreezeCrystal,
+      unlockedAchievements,
+      highGoals,
+      addHighGoal,
+      updateHighGoal,
+      deleteHighGoal,
+      getHighGoalProgress,
+  ]);
 
 
   return (
@@ -657,4 +696,3 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
-
