@@ -21,6 +21,7 @@ const defaultSettings: DashboardSettings = {
   showProgressChart: true,
   showAISuggestions: true,
   showTimeBreakdownChart: true,
+  pieChartLabelFormat: 'percentage',
 };
 
 interface SettingsContextType {

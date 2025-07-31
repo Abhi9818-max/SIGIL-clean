@@ -176,6 +176,7 @@ export interface DashboardSettings {
   showProgressChart: boolean;
   showAISuggestions: boolean;
   showTimeBreakdownChart: boolean;
+  pieChartLabelFormat?: 'percentage' | 'time';
 }
 
 // For Auth/User Data

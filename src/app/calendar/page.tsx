@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -8,7 +9,7 @@ import RecordModal from '@/components/records/RecordModal';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { CornerDownLeft, ListFilter } from 'lucide-react';
-import { format, getYear } from 'date-fns';
+import { format, getYear, parseISO, isToday } from 'date-fns';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
+import DailyTimeBreakdownChart from '@/components/dashboard/DailyTimeBreakdownChart';
 
 export default function CalendarPage() {
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -27,14 +29,18 @@ export default function CalendarPage() {
   const { getUserLevelInfo, taskDefinitions, records } = useUserRecords();
   const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
   const [selectedTaskFilterId, setSelectedTaskFilterId] = useState<string | null>(null);
+  const [dateForChart, setDateForChart] = useState<Date>(new Date());
 
   const handleDayClick = (date: string) => {
     setSelectedDateForModal(date);
+    setDateForChart(parseISO(date));
     setIsRecordModalOpen(true);
   };
 
   const handleAddRecordClick = () => {
-    setSelectedDateForModal(format(new Date(), 'yyyy-MM-dd'));
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setSelectedDateForModal(todayStr);
+    setDateForChart(new Date());
     setIsRecordModalOpen(true);
   };
   
@@ -54,7 +60,7 @@ export default function CalendarPage() {
           onAddRecordClick={handleAddRecordClick} 
           onManageTasksClick={() => { /* Not needed on this page, but prop is required */ }}
         />
-        <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up">
+        <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up space-y-8">
            <Card className="shadow-lg w-full max-w-7xl mx-auto">
              <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -102,6 +108,10 @@ export default function CalendarPage() {
                 />
              </CardContent>
            </Card>
+
+           <div className="max-w-2xl mx-auto">
+             <DailyTimeBreakdownChart date={dateForChart} hideFooter={true} />
+           </div>
           
            <div className="text-center mt-8">
               <Button asChild variant="outline">

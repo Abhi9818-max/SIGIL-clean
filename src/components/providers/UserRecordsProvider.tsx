@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, HighGoal, DailyTimeBreakdownData, UserData } from '@/types';
@@ -92,7 +93,7 @@ interface UserRecordsContextType {
   // Insights
   getTaskDistribution: (startDate: Date, endDate: Date, taskId?: string | null) => TaskDistributionData[];
   getProductivityByDay: (startDate: Date, endDate: Date, taskId?: string | null) => ProductivityByDayData[];
-  getDailyTimeBreakdown: () => DailyTimeBreakdownData[];
+  getDailyTimeBreakdown: (date?: Date) => DailyTimeBreakdownData[];
   // Freeze Crystals
   freezeCrystals: number;
   useFreezeCrystal: () => void;
@@ -469,14 +470,14 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return dayTotals;
   }, [getRecordsForDateRange]);
 
-  const getDailyTimeBreakdown = useCallback((): DailyTimeBreakdownData[] => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const todaysRecords = getRecordsByDate(todayStr);
+  const getDailyTimeBreakdown = useCallback((date: Date = new Date()): DailyTimeBreakdownData[] => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dailyRecords = getRecordsByDate(dateStr);
     
     const timeBreakdown = new Map<string, { name: string; value: number; color: string }>();
     let totalMinutes = 0;
 
-    todaysRecords.forEach(record => {
+    dailyRecords.forEach(record => {
       if (!record.taskType) return;
       const task = getTaskDefinitionById(record.taskType);
       if (task && (task.unit === 'minutes' || task.unit === 'hours')) {

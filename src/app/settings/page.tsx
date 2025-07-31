@@ -8,7 +8,7 @@ import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays, Database, User, Camera, Image as ImageIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Download, Upload, Trash2, AlertTriangle, LayoutDashboard, CalendarDays, Database, User, Camera, Image as ImageIcon, PieChart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import {
@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import AvatarSelectionDialog from '@/components/settings/AvatarSelectionDialog';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Simple hash function to get a number from a string for consistent default avatars
 const simpleHash = (s: string) => {
@@ -311,6 +312,34 @@ export default function SettingsPage() {
                                   />
                               </div>
                           ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div>
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                          <PieChart className="h-4 w-4"/>
+                          Chart Display
+                        </h4>
+                         <div className="space-y-3 pl-2">
+                          <div>
+                            <Label className="font-normal">Time Pie Chart Labels</Label>
+                            <RadioGroup 
+                              value={dashboardSettings.pieChartLabelFormat || 'percentage'}
+                              onValueChange={(value: 'percentage' | 'time') => updateDashboardSetting('pieChartLabelFormat', value)}
+                              className="mt-2"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="percentage" id="r-percent" />
+                                <Label htmlFor="r-percent" className="font-normal">Percentage</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="time" id="r-time" />
+                                <Label htmlFor="r-time" className="font-normal">Time (HH:MM)</Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
                         </div>
                       </div>
                   </div>
