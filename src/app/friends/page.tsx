@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
-import { UserSearch, UserPlus, Users, Mail, Check, X, Hourglass } from 'lucide-react';
+import { UserSearch, UserPlus, Users, Mail, Check, X, Hourglass, ChevronDown } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { FriendProvider, useFriends } from '@/components/providers/FriendProvider';
@@ -18,6 +18,13 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -181,94 +188,105 @@ const FriendsContent = () => {
                     </div>
 
                     <div className="space-y-8">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Requests</CardTitle>
-                                <CardDescription>Manage your friend requests.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex justify-around items-center">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="relative">
-                                            <Mail className="h-5 w-5" />
-                                            {incomingRequests.length > 0 && (
-                                                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{incomingRequests.length}</Badge>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                        <div className="grid gap-4">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Incoming Requests</h4>
-                                                <p className="text-sm text-muted-foreground">Accept or decline requests.</p>
-                                            </div>
-                                            <ScrollArea className="h-[200px]">
-                                                {incomingRequests.length === 0 ? (
-                                                    <p className="text-center text-sm text-muted-foreground py-4">No incoming requests.</p>
-                                                ) : (
-                                                    <div className="space-y-3 pr-3">
-                                                        {incomingRequests.map(req => (
-                                                            <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between bg-card">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Avatar className="h-8 w-8">
-                                                                        <AvatarImage src={getAvatarForId(req.senderId)} />
-                                                                        <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
-                                                                    </Avatar>
-                                                                    <span className="font-medium text-xs">{req.senderUsername}</span>
+                         <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+                            <AccordionItem value="item-1" className="border-b-0">
+                                <Card>
+                                     <AccordionTrigger className="w-full hover:no-underline">
+                                        <CardHeader className="flex-row justify-between items-center w-full">
+                                          <div>
+                                              <CardTitle>Requests</CardTitle>
+                                              <CardDescription>Manage your friend requests.</CardDescription>
+                                          </div>
+                                          <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground" />
+                                        </CardHeader>
+                                     </AccordionTrigger>
+                                     <AccordionContent>
+                                         <CardContent className="flex justify-around items-center pt-0">
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline" className="relative">
+                                                        <Mail className="h-5 w-5" />
+                                                        {incomingRequests.length > 0 && (
+                                                            <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{incomingRequests.length}</Badge>
+                                                        )}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Incoming Requests</h4>
+                                                            <p className="text-sm text-muted-foreground">Accept or decline requests.</p>
+                                                        </div>
+                                                        <ScrollArea className="h-[200px]">
+                                                            {incomingRequests.length === 0 ? (
+                                                                <p className="text-center text-sm text-muted-foreground py-4">No incoming requests.</p>
+                                                            ) : (
+                                                                <div className="space-y-3 pr-3">
+                                                                    {incomingRequests.map(req => (
+                                                                        <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between bg-card">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Avatar className="h-8 w-8">
+                                                                                    <AvatarImage src={getAvatarForId(req.senderId)} />
+                                                                                    <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                                                                </Avatar>
+                                                                                <span className="font-medium text-xs">{req.senderUsername}</span>
+                                                                            </div>
+                                                                            <div className="flex gap-1">
+                                                                                <Button size="icon" className="h-7 w-7 bg-green-500 hover:bg-green-600" onClick={() => acceptFriendRequest(req)}><Check className="h-4 w-4" /></Button>
+                                                                                <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => declineFriendRequest(req.id)}><X className="h-4 w-4" /></Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
-                                                                <div className="flex gap-1">
-                                                                    <Button size="icon" className="h-7 w-7 bg-green-500 hover:bg-green-600" onClick={() => acceptFriendRequest(req)}><Check className="h-4 w-4" /></Button>
-                                                                    <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => declineFriendRequest(req.id)}><X className="h-4 w-4" /></Button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                            )}
+                                                        </ScrollArea>
                                                     </div>
-                                                )}
-                                            </ScrollArea>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="relative">
-                                            <Hourglass className="h-5 w-5" />
-                                            {pendingRequests.length > 0 && (
-                                                <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{pendingRequests.length}</Badge>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                        <div className="grid gap-4">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Pending Requests</h4>
-                                                <p className="text-sm text-muted-foreground">Requests you've sent.</p>
-                                            </div>
-                                            <ScrollArea className="h-[200px]">
-                                                {pendingRequests.length === 0 ? (
-                                                    <p className="text-center text-sm text-muted-foreground py-4">No pending requests.</p>
-                                                ) : (
-                                                    <div className="space-y-3 pr-3">
-                                                        {pendingRequests.map(req => (
-                                                            <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between bg-card">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Avatar className="h-8 w-8">
-                                                                        <AvatarImage src={getAvatarForId(req.recipientId)} />
-                                                                        <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
-                                                                    </Avatar>
-                                                                    <span className="font-medium text-xs">{req.recipientUsername}</span>
+                                                </PopoverContent>
+                                            </Popover>
+                                            
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline" className="relative">
+                                                        <Hourglass className="h-5 w-5" />
+                                                        {pendingRequests.length > 0 && (
+                                                            <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{pendingRequests.length}</Badge>
+                                                        )}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Pending Requests</h4>
+                                                            <p className="text-sm text-muted-foreground">Requests you've sent.</p>
+                                                        </div>
+                                                        <ScrollArea className="h-[200px]">
+                                                            {pendingRequests.length === 0 ? (
+                                                                <p className="text-center text-sm text-muted-foreground py-4">No pending requests.</p>
+                                                            ) : (
+                                                                <div className="space-y-3 pr-3">
+                                                                    {pendingRequests.map(req => (
+                                                                        <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between bg-card">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Avatar className="h-8 w-8">
+                                                                                    <AvatarImage src={getAvatarForId(req.recipientId)} />
+                                                                                    <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                                                                </Avatar>
+                                                                                <span className="font-medium text-xs">{req.recipientUsername}</span>
+                                                                            </div>
+                                                                            <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => cancelFriendRequest(req.id)}>Cancel</Button>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
-                                                                <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => cancelFriendRequest(req.id)}>Cancel</Button>
-                                                            </div>
-                                                        ))}
+                                                            )}
+                                                        </ScrollArea>
                                                     </div>
-                                                )}
-                                            </ScrollArea>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </CardContent>
-                        </Card>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </CardContent>
+                                     </AccordionContent>
+                                </Card>
+                            </AccordionItem>
+                        </Accordion>
                     </div>
                 </div>
             </main>
