@@ -115,7 +115,6 @@ const FriendsContent = () => {
                                     <UserSearch className="h-6 w-6 text-primary" />
                                     <CardTitle>Find Friends</CardTitle>
                                 </div>
-                                <CardDescription>Search for other users by their exact username to connect.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex gap-2">
