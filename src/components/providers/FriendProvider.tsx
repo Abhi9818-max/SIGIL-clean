@@ -14,6 +14,7 @@ interface FriendContextType {
     acceptFriendRequest: (request: FriendRequest) => Promise<void>;
     declineFriendRequest: (requestId: string) => Promise<void>;
     cancelFriendRequest: (requestId: string) => Promise<void>;
+    unfriendUser: (friendId: string) => Promise<void>;
     getFriendData: (friendId: string) => Promise<UserData | null>;
     incomingRequests: FriendRequest[];
     pendingRequests: FriendRequest[];
@@ -133,6 +134,7 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             return;
         }
         const senderData = senderDataDoc.data() as UserData;
+        const recipientData = userData; // Use the already available and complete userData for the recipient (current user)
 
         // Add sender to current user's friend list
         const currentUserFriendRef = doc(db, `users/${user.uid}/friends`, request.senderId);
@@ -147,8 +149,8 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const senderFriendRef = doc(db, `users/${request.senderId}/friends`, user.uid);
         batch.set(senderFriendRef, { 
             uid: user.uid, 
-            username: userData.username, 
-            photoURL: userData.photoURL || null,
+            username: recipientData.username, 
+            photoURL: recipientData.photoURL || null,
             since: new Date().toISOString() 
         });
         
@@ -177,6 +179,31 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         await deleteDoc(requestRef);
         toast({ title: 'Request Cancelled' });
     }, [toast]);
+
+    const unfriendUser = useCallback(async (friendId: string) => {
+        if (!user) {
+            toast({ title: "Not Authenticated", variant: "destructive" });
+            return;
+        }
+
+        const batch = writeBatch(db);
+
+        // Remove friend from current user's list
+        const currentUserFriendRef = doc(db, `users/${user.uid}/friends`, friendId);
+        batch.delete(currentUserFriendRef);
+
+        // Remove current user from friend's list
+        const friendUserFriendRef = doc(db, `users/${friendId}/friends`, user.uid);
+        batch.delete(friendUserFriendRef);
+
+        try {
+            await batch.commit();
+            toast({ title: "Unfriended", description: "The user has been removed from your friends list." });
+        } catch (error) {
+            console.error("Error unfriending user:", error);
+            toast({ title: "Error", description: "Could not unfriend user. Please try again.", variant: "destructive" });
+        }
+    }, [user, toast]);
     
     const getFriendData = useCallback(async (friendId: string): Promise<UserData | null> => {
         if (!user) return null;
@@ -205,6 +232,7 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             acceptFriendRequest,
             declineFriendRequest,
             cancelFriendRequest,
+            unfriendUser,
             getFriendData,
             incomingRequests, 
             pendingRequests, 

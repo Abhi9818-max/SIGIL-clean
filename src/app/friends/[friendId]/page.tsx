@@ -7,7 +7,7 @@ import Header from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, User, UserX } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { FriendProvider, useFriends } from '@/components/providers/FriendProvider';
@@ -23,6 +23,8 @@ import { subDays, startOfWeek, endOfWeek, isWithinInterval, startOfDay } from 'd
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DailyTimeBreakdownChart from '@/components/dashboard/DailyTimeBreakdownChart';
 import TaskFilterBar from '@/components/records/TaskFilterBar';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -41,7 +43,7 @@ const FriendProfileContent = () => {
     const friendId = params.friendId as string;
     
     const { user } = useAuth();
-    const { friends, getFriendData } = useFriends();
+    const { friends, getFriendData, unfriendUser } = useFriends();
     const [friendData, setFriendData] = useState<UserData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedTaskFilterId, setSelectedTaskFilterId] = useState<string | null>(null);
@@ -72,37 +74,16 @@ const FriendProfileContent = () => {
         fetchFriendData();
     }, [friendId, getFriendData, router]);
 
-    const friendStats = useMemo(() => {
-        if (!friendData) return { streak: 0, consistency: 0, aggregate: 0, highGoal: null, highGoalProgress: 0 };
-        
-        const friendRecords = friendData.records || [];
-        const friendTasks = friendData.taskDefinitions || [];
-        
-        // Aggregate
-        const today = new Date();
-        const startDate = subDays(today, 29);
-        const aggregate = friendRecords
-            .filter(r => new Date(r.date) >= startDate && new Date(r.date) <= today)
-            .reduce((sum, r) => sum + r.value, 0);
-
-        // Consistency
-        const recordDates = new Set(friendRecords.map(r => r.date));
-        const activeDays = Array.from(recordDates).filter(d => new Date(d) >= startDate && new Date(d) <= today).length;
-        const consistency = Math.round((activeDays / 30) * 100);
-
-        // Streak
-        let streak = 0;
-        let currentDate = startOfDay(new Date());
-        if (!recordDates.has(currentDate.toISOString().split('T')[0])) {
-            currentDate = subDays(currentDate, 1);
+    const handleUnfriend = async () => {
+        if (!friendData) return;
+        try {
+            await unfriendUser(friendId);
+            router.push('/friends');
+        } catch (error) {
+            // Toast is handled in provider
         }
-        while (recordDates.has(currentDate.toISOString().split('T')[0])) {
-            streak++;
-            currentDate = subDays(currentDate, 1);
-        }
+    };
 
-        return { streak, consistency, aggregate, highGoal: null, highGoalProgress: 0 };
-    }, [friendData]);
 
     if (isLoading) {
         return <div className="flex items-center justify-center min-h-screen">Loading friend's profile...</div>;
@@ -133,10 +114,33 @@ const FriendProfileContent = () => {
         <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
             <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
             <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up space-y-8">
-                <Button variant="outline" onClick={() => router.push('/friends')} className="mb-4">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Friends
-                </Button>
+                <div className="flex justify-between items-center mb-4">
+                    <Button variant="outline" onClick={() => router.push('/friends')}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Friends
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <UserX className="mr-2 h-4 w-4" /> Unfriend
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will remove {friendData.username} from your friends list. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleUnfriend}>
+                                    Unfriend
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
                 <Card>
                     <CardHeader className="flex flex-col md:flex-row items-start md:items-center gap-4">
                         <Avatar className="h-20 w-20">

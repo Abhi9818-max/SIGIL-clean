@@ -181,9 +181,10 @@ export interface DashboardSettings {
 
 // For Auth/User Data
 export interface UserData {
+    uid?: string; // Optional uid, will be present on fetched data
     username: string;
     username_lowercase?: string; // For case-insensitive search
-    photoURL?: string; // Add photoURL for profile pictures
+    photoURL?: string | null; // Add photoURL for profile pictures
     records?: RecordEntry[];
     taskDefinitions?: TaskDefinition[];
     bonusPoints?: number;
@@ -201,7 +202,7 @@ export interface UserData {
 export interface SearchedUser {
     uid: string;
     username: string;
-    photoURL?: string;
+    photoURL?: string | null;
 }
 
 export interface FriendRequest {
@@ -217,6 +218,6 @@ export interface FriendRequest {
 export interface Friend {
     uid: string;
     username: string;
-    photoURL?: string;
+    photoURL?: string | null;
     since: string;
 }
