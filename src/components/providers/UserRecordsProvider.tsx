@@ -477,22 +477,35 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const timeBreakdown = new Map<string, { name: string; value: number; color: string }>();
     let totalMinutes = 0;
 
-    dailyRecords.forEach(record => {
-      if (!record.taskType) return;
-      const task = getTaskDefinitionById(record.taskType);
-      if (task && (task.unit === 'minutes' || task.unit === 'hours')) {
-        const minutes = task.unit === 'hours' ? record.value * 60 : record.value;
-        const current = timeBreakdown.get(task.id) || { name: task.name, value: 0, color: task.color };
-        current.value += minutes;
-        timeBreakdown.set(task.id, current);
-        totalMinutes += minutes;
-      }
+    const timeBasedRecords = dailyRecords.filter(record => {
+        if (!record.taskType) return false;
+        const task = getTaskDefinitionById(record.taskType);
+        return task && (task.unit === 'minutes' || task.unit === 'hours');
+    });
+
+    timeBasedRecords.forEach(record => {
+      if (!record.taskType) return; // Should not happen due to filter, but for type safety
+      const task = getTaskDefinitionById(record.taskType)!;
+      const minutes = task.unit === 'hours' ? record.value * 60 : record.value;
+      const current = timeBreakdown.get(task.id) || { name: task.name, value: 0, color: task.color };
+      current.value += minutes;
+      timeBreakdown.set(task.id, current);
+      totalMinutes += minutes;
     });
 
     const result: DailyTimeBreakdownData[] = Array.from(timeBreakdown.values());
     
     const remainingMinutes = 1440 - totalMinutes;
-    if (remainingMinutes > 0 || result.length === 0) {
+
+    if (timeBasedRecords.length === 0) {
+      return [{
+          name: 'Unallocated',
+          value: 1440,
+          color: 'hsl(var(--muted))'
+      }];
+    }
+    
+    if (remainingMinutes > 0) {
       result.push({
         name: 'Unallocated',
         value: remainingMinutes,
@@ -644,3 +657,4 @@ export const useUserRecords = (): UserRecordsContextType => {
   }
   return context;
 };
+

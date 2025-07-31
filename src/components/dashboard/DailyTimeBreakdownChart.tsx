@@ -106,7 +106,7 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
     const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, name }: any) => {
       const RADIAN = Math.PI / 180;
       // Increased stagger and adjusted logic
-      const yStagger = (index % 4) * 15; 
+      const yStagger = (index % 4) * 20; 
       const radius = innerRadius + (outerRadius - innerRadius) * 1.25 + yStagger; 
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
       const y = cy + radius * Math.sin(-midAngle * RADIAN);
