@@ -14,16 +14,10 @@ import { FriendProvider, useFriends } from '@/components/providers/FriendProvide
 import type { SearchedUser, FriendRequest } from '@/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -189,88 +183,90 @@ const FriendsContent = () => {
                     <div className="space-y-8">
                         <Card>
                             <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Mail className="h-6 w-6 text-primary" />
-                                        <CardTitle>Incoming</CardTitle>
-                                    </div>
-                                    <Badge variant={incomingRequests.length > 0 ? "default" : "secondary"}>
-                                        {incomingRequests.length}
-                                    </Badge>
-                                </div>
-                                <CardDescription>Accept or decline requests from other users.</CardDescription>
+                                <CardTitle>Requests</CardTitle>
+                                <CardDescription>Manage your friend requests.</CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                {incomingRequests.length === 0 ? (
-                                    <p className="text-center text-muted-foreground text-sm py-4">No incoming requests.</p>
-                                ) : (
-                                    <Accordion type="single" collapsible>
-                                        <AccordionItem value="incoming-requests">
-                                            <AccordionTrigger>View Incoming Requests</AccordionTrigger>
-                                            <AccordionContent>
-                                                <div className="space-y-3 pt-2">
-                                                    {incomingRequests.map(req => (
-                                                        <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
-                                                            <div className="flex items-center gap-3">
-                                                                <Avatar>
-                                                                    <AvatarImage src={getAvatarForId(req.senderId)} />
-                                                                    <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
-                                                                </Avatar>
-                                                                <span className="font-medium text-sm">{req.senderUsername}</span>
+                            <CardContent className="flex justify-around items-center">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="relative">
+                                            <Mail className="h-5 w-5" />
+                                            {incomingRequests.length > 0 && (
+                                                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{incomingRequests.length}</Badge>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Incoming Requests</h4>
+                                                <p className="text-sm text-muted-foreground">Accept or decline requests.</p>
+                                            </div>
+                                            <ScrollArea className="h-[200px]">
+                                                {incomingRequests.length === 0 ? (
+                                                    <p className="text-center text-sm text-muted-foreground py-4">No incoming requests.</p>
+                                                ) : (
+                                                    <div className="space-y-3 pr-3">
+                                                        {incomingRequests.map(req => (
+                                                            <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between bg-card">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Avatar className="h-8 w-8">
+                                                                        <AvatarImage src={getAvatarForId(req.senderId)} />
+                                                                        <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <span className="font-medium text-xs">{req.senderUsername}</span>
+                                                                </div>
+                                                                <div className="flex gap-1">
+                                                                    <Button size="icon" className="h-7 w-7 bg-green-500 hover:bg-green-600" onClick={() => acceptFriendRequest(req)}><Check className="h-4 w-4" /></Button>
+                                                                    <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => declineFriendRequest(req.id)}><X className="h-4 w-4" /></Button>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex gap-2">
-                                                                <Button size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => acceptFriendRequest(req)}><Check className="h-4 w-4" /></Button>
-                                                                <Button size="icon" variant="destructive" className="h-8 w-8" onClick={() => declineFriendRequest(req.id)}><X className="h-4 w-4" /></Button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </ScrollArea>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="relative">
+                                            <Hourglass className="h-5 w-5" />
+                                            {pendingRequests.length > 0 && (
+                                                <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{pendingRequests.length}</Badge>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Pending Requests</h4>
+                                                <p className="text-sm text-muted-foreground">Requests you've sent.</p>
+                                            </div>
+                                            <ScrollArea className="h-[200px]">
+                                                {pendingRequests.length === 0 ? (
+                                                    <p className="text-center text-sm text-muted-foreground py-4">No pending requests.</p>
+                                                ) : (
+                                                    <div className="space-y-3 pr-3">
+                                                        {pendingRequests.map(req => (
+                                                            <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between bg-card">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Avatar className="h-8 w-8">
+                                                                        <AvatarImage src={getAvatarForId(req.recipientId)} />
+                                                                        <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <span className="font-medium text-xs">{req.recipientUsername}</span>
+                                                                </div>
+                                                                <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => cancelFriendRequest(req.id)}>Cancel</Button>
                                                             </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    </Accordion>
-                                )}
-                            </CardContent>
-                        </Card>
-                        
-                         <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                     <div className="flex items-center gap-2">
-                                        <Hourglass className="h-6 w-6 text-primary" />
-                                        <CardTitle>Pending</CardTitle>
-                                    </div>
-                                    <Badge variant={pendingRequests.length > 0 ? "default" : "secondary"}>
-                                        {pendingRequests.length}
-                                    </Badge>
-                                </div>
-                                <CardDescription>Requests you have sent that haven't been answered.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {pendingRequests.length === 0 ? (
-                                    <p className="text-center text-muted-foreground text-sm py-4">No pending requests.</p>
-                                ) : (
-                                    <Accordion type="single" collapsible>
-                                        <AccordionItem value="pending-requests">
-                                            <AccordionTrigger>View Pending Requests</AccordionTrigger>
-                                            <AccordionContent>
-                                                <div className="space-y-3 pt-2">
-                                                    {pendingRequests.map(req => (
-                                                        <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
-                                                             <div className="flex items-center gap-3">
-                                                                <Avatar>
-                                                                    <AvatarImage src={getAvatarForId(req.recipientId)} />
-                                                                    <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
-                                                                </Avatar>
-                                                                <span className="font-medium text-sm">{req.recipientUsername}</span>
-                                                            </div>
-                                                            <Button size="sm" variant="outline" onClick={() => cancelFriendRequest(req.id)}>Cancel</Button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    </Accordion>
-                                )}
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </ScrollArea>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </CardContent>
                         </Card>
                     </div>
