@@ -1,4 +1,5 @@
 
+
 import {
   format,
   startOfMonth,
@@ -7,149 +8,182 @@ import {
   setDate,
   getYear,
   getMonth,
-  isAfter,
+  isFuture,
   startOfDay,
+  eachDayOfInterval,
+  subWeeks,
+  endOfDay,
+  startOfYear,
+  endOfYear
 } from 'date-fns';
 import type { RecordEntry, MonthColumn, MonthlyDayData, TaskDefinition } from '@/types';
-import { getContributionLevel, DEFAULT_TASK_COLOR } from './config';
+import { getContributionLevel, DEFAULT_TASK_COLOR, NUM_WEEKS_TO_DISPLAY } from './config';
 
 export const getMonthlyGraphData = (
   records: RecordEntry[], 
   taskDefinitions: TaskDefinition[],
   filterByTaskId: string | null = null,
-  currentSystemDate: Date // Pass the current date to compare against
+  currentSystemDate: Date,
+  displayMode: 'full' | 'current_month' = 'current_month',
+  year?: number
 ): MonthColumn[] => {
-  const today = startOfDay(currentSystemDate); // Use startOfDay for consistent comparison
-  const currentYear = getYear(today);
-  const monthlyData: MonthColumn[] = [];
+  const today = startOfDay(currentSystemDate);
+  const monthlyDataMap = new Map<string, { monthLabel: string; year: number; month: number; days: MonthlyDayData[] }>();
+
+  // Determine the date range
+  let startDate: Date;
+  let endDate: Date;
+
+  if (year) {
+    // If a specific year is provided, show the whole year
+    startDate = startOfYear(new Date(year, 0, 1));
+    endDate = endOfYear(new Date(year, 11, 31));
+  } else if (displayMode === 'full') {
+    // Default full view: 52-week rolling period
+    endDate = endOfDay(today);
+    startDate = startOfDay(subWeeks(today, NUM_WEEKS_TO_DISPLAY - 1));
+  } else {
+    // Current month view for the dashboard
+    startDate = startOfMonth(today);
+    endDate = endOfDay(today);
+  }
   
-  const recordsMap = new Map<string, RecordEntry>();
-  records.forEach(record => recordsMap.set(record.date, record));
+  const allDaysInRange = eachDayOfInterval({ start: startDate, end: endDate });
+
+  const recordsMap = new Map<string, RecordEntry[]>();
+  records.forEach(record => {
+    if (!recordsMap.has(record.date)) {
+      recordsMap.set(record.date, []);
+    }
+    recordsMap.get(record.date)!.push(record);
+  });
 
   const taskDefinitionMap = new Map<string, TaskDefinition>();
   taskDefinitions.forEach(task => taskDefinitionMap.set(task.id, task));
+  
+  // Populate all days in the range
+  allDaysInRange.forEach(dateObj => {
+    const year = getYear(dateObj);
+    const month = getMonth(dateObj);
+    const monthKey = `${year}-${month}`;
 
-  // Generate data for all 12 months of the current year
-  for (let monthIndex = 0; monthIndex < 12; monthIndex++) { 
-    const targetMonthDate = new Date(currentYear, monthIndex, 1);
+    if (!monthlyDataMap.has(monthKey)) {
+      monthlyDataMap.set(monthKey, {
+        monthLabel: format(dateObj, 'MMM'),
+        year,
+        month,
+        days: [],
+      });
+    }
     
-    const year = getYear(targetMonthDate);
-    const currentMonthLoopIndex = getMonth(targetMonthDate);
+    const dateStr = format(dateObj, 'yyyy-MM-dd');
+    const dailyRecords = recordsMap.get(dateStr) || [];
+    const relevantRecords = filterByTaskId 
+      ? dailyRecords.filter(r => r.taskType === filterByTaskId) 
+      : dailyRecords;
+    
+    const totalValue = relevantRecords.reduce((sum, r) => sum + r.value, 0);
 
-    const firstDayOfMonth = startOfMonth(targetMonthDate);
-    const daysInMonth = getDaysInMonth(targetMonthDate);
+    let displayValue: number | null = null;
+    let displayLevel = 0;
+    let taskColor: string | undefined = undefined;
+    let taskName: string | undefined = undefined;
+    let taskType: string | undefined = undefined;
+    let taskIntensityThresholds: readonly number[] | undefined = undefined;
 
-    const monthLabel = format(firstDayOfMonth, 'MMM yyyy');
-    const currentMonthWeeks: MonthlyDayData[][] = [];
-    let currentWeek: MonthlyDayData[] = [];
+    if (relevantRecords.length > 0) {
+      displayValue = totalValue;
+      const representativeRecord = relevantRecords[0];
+      const taskDef = representativeRecord.taskType ? taskDefinitionMap.get(representativeRecord.taskType) : undefined;
+      
+      if (taskDef) {
+        taskColor = taskDef.color;
+        taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : taskDef.name;
+        taskType = taskDef.id;
+        if (taskDef.intensityThresholds && taskDef.intensityThresholds.length === 4) {
+          taskIntensityThresholds = taskDef.intensityThresholds;
+        }
+      } else {
+        taskColor = DEFAULT_TASK_COLOR;
+        taskName = relevantRecords.length > 1 ? `${relevantRecords.length} tasks` : 'Unassigned';
+      }
+      displayLevel = getContributionLevel(totalValue, taskIntensityThresholds);
+    }
+    
+    monthlyDataMap.get(monthKey)!.days.push({
+      date: dateStr,
+      value: displayValue,
+      level: displayLevel,
+      taskType: taskType,
+      taskName: taskName,
+      taskColor: taskColor,
+      isPlaceholder: false,
+    });
+  });
 
-    const firstDayOfMonthWeekDay = getDay(firstDayOfMonth); 
+  const finalColumns: MonthColumn[] = [];
 
+  monthlyDataMap.forEach((data) => {
+    const { monthLabel, year, month, days } = data;
+    const firstDayOfMonth = new Date(year, month, 1);
+    const firstDayOfMonthWeekDay = getDay(firstDayOfMonth);
+
+    const allMonthCells: MonthlyDayData[] = [];
+
+    // Add placeholders for the start of the month
     for (let j = 0; j < firstDayOfMonthWeekDay; j++) {
-      currentWeek.push({
-        date: `placeholder-start-${year}-${currentMonthLoopIndex}-${j}`,
+      allMonthCells.push({
+        date: `placeholder-start-${year}-${month}-${j}`,
         value: null,
         level: 0,
         isPlaceholder: true,
       });
     }
 
-    for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
-      const currentDateObj = setDate(firstDayOfMonth, dayNum);
-      const dateStr = format(currentDateObj, 'yyyy-MM-dd');
-      
-      // Skip processing for days that are in the future
-      if (isAfter(startOfDay(currentDateObj), today)) {
-         currentWeek.push({
-          date: dateStr,
-          value: null,
-          level: 0, // Or a specific "future" level if needed for styling
-          isPlaceholder: false, // It's a real date, but in the future
-          taskColor: 'hsl(var(--muted) / 0.1)', // Dimmer for future dates
-        });
-      } else {
-        const record = recordsMap.get(dateStr);
-        
-        let displayValue: number | null = null;
-        let displayLevel = 0;
-        let taskColor: string | undefined = undefined;
-        let taskName: string | undefined = undefined;
-        let taskType: string | undefined = undefined;
-        let taskIntensityThresholds: readonly number[] | undefined = undefined;
+    // Add actual days
+    days.forEach(day => {
+        allMonthCells.push(day);
+    });
 
-        if (record) {
-          if (filterByTaskId === null || record.taskType === filterByTaskId) {
-            displayValue = record.value;
-            if (record.taskType) {
-              const taskDef = taskDefinitionMap.get(record.taskType);
-              if (taskDef) {
-                taskColor = taskDef.color;
-                taskName = taskDef.name;
-                taskType = taskDef.id;
-                if (taskDef.intensityThresholds && taskDef.intensityThresholds.length === 4) {
-                  taskIntensityThresholds = taskDef.intensityThresholds;
-                }
-              } else {
-                taskColor = DEFAULT_TASK_COLOR;
-              }
-            }
-            displayLevel = getContributionLevel(record.value, taskIntensityThresholds);
-          }
-        }
-        currentWeek.push({
-          date: dateStr,
-          value: displayValue,
-          level: displayLevel,
-          taskType: (filterByTaskId === null || taskType === filterByTaskId) ? taskType : undefined,
-          taskName: (filterByTaskId === null || taskType === filterByTaskId) ? taskName : undefined,
-          taskColor: (filterByTaskId === null || taskType === filterByTaskId) ? taskColor : undefined,
-          isPlaceholder: false,
-        });
-      }
-
-
+    // Structure into weeks
+    const weeks: MonthlyDayData[][] = [];
+    let currentWeek: MonthlyDayData[] = [];
+    allMonthCells.forEach(cell => {
+      currentWeek.push(cell);
       if (currentWeek.length === 7) {
-        currentMonthWeeks.push(currentWeek);
+        weeks.push(currentWeek);
         currentWeek = [];
       }
-    }
-
+    });
     if (currentWeek.length > 0) {
-      const remainingCells = 7 - currentWeek.length;
-      for (let j = 0; j < remainingCells; j++) {
+      while (currentWeek.length < 7) {
         currentWeek.push({
-          date: `placeholder-end-${year}-${currentMonthLoopIndex}-${j}`,
-          value: null,
-          level: 0,
-          isPlaceholder: true,
+            date: `placeholder-end-${year}-${month}-${currentWeek.length}`,
+            value: null,
+            level: 0,
+            isPlaceholder: true,
         });
       }
-      currentMonthWeeks.push(currentWeek);
+      weeks.push(currentWeek);
     }
     
-    while (currentMonthWeeks.length < 6) {
-      const placeholderWeek: MonthlyDayData[] = [];
-      for (let j = 0; j < 7; j++) {
-        placeholderWeek.push({
-          date: `placeholder-fill-${year}-${currentMonthLoopIndex}-${currentMonthWeeks.length}-${j}`,
-          value: null,
-          level: 0,
-          isPlaceholder: true,
-        });
-      }
-      currentMonthWeeks.push(placeholderWeek);
+    // Ensure 6 rows for consistent alignment
+    while(weeks.length < 6) {
+        const placeholderWeek: MonthlyDayData[] = [];
+        for (let j = 0; j < 7; j++) {
+            placeholderWeek.push({
+                date: `placeholder-fill-${year}-${month}-${weeks.length}-${j}`,
+                value: null, level: 0, isPlaceholder: true
+            });
+        }
+        weeks.push(placeholderWeek);
     }
 
-    monthlyData.push({
-      monthLabel,
-      year, 
-      month: currentMonthLoopIndex,
-      weeks: currentMonthWeeks,
-    });
-  }
-  return monthlyData;
+    finalColumns.push({ monthLabel, year, month, weeks });
+  });
+
+  return finalColumns.sort((a,b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
 };
-
-
-export const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const DAY_LABELS_VISIBLE_INDICES = [1, 3, 5];

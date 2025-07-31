@@ -1,20 +1,19 @@
 
+
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, AutomatedGoalCheckResult, Constellation } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, HighGoal, DailyTimeBreakdownData, UserData } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from './AuthProvider';
 import {
-  LOCAL_STORAGE_KEY,
-  LOCAL_STORAGE_TASKS_KEY,
-  LOCAL_STORAGE_BONUS_POINTS_KEY,
-  LOCAL_STORAGE_MET_GOALS_KEY,
-  LOCAL_STORAGE_TODO_KEY,
-  LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
-  LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
   TASK_DEFINITIONS as DEFAULT_TASK_DEFINITIONS,
-  calculateUserLevelInfo
+  calculateUserLevelInfo,
+  STREAK_MILESTONES_FOR_CRYSTALS,
 } from '@/lib/config';
 import { CONSTELLATIONS } from '@/lib/constellations';
+import { ACHIEVEMENTS } from '@/lib/achievements';
 import {
   format,
   parseISO,
@@ -28,23 +27,52 @@ import {
   endOfWeek,
   subWeeks,
   isSameDay,
-  startOfMonth,
-  endOfMonth,
-  subMonths
+  getDay,
+  isWithinInterval,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from "@/hooks/use-toast";
+
+// Helper function to recursively remove undefined values from an object
+const removeUndefinedValues = (obj: any): any => {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefinedValues).filter(v => v !== null && v !== undefined);
+  }
+  if (typeof obj === 'object' && !(obj instanceof Date)) {
+    const newObj: { [key: string]: any } = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = obj[key];
+        if (value !== undefined) {
+          const sanitizedValue = removeUndefinedValues(value);
+          if (sanitizedValue !== null && sanitizedValue !== undefined) {
+            newObj[key] = sanitizedValue;
+          }
+        }
+      }
+    }
+    // Return null if the object becomes empty after cleaning
+    return Object.keys(newObj).length > 0 ? newObj : null;
+  }
+  return obj;
+};
+
 
 interface UserRecordsContextType {
   records: RecordEntry[];
-  addRecord: (entry: Omit<RecordEntry, 'notes'> & { notes?: string; taskType?: string }) => void;
+  addRecord: (entry: Omit<RecordEntry, 'id'>) => void;
   updateRecord: (entry: RecordEntry) => void;
-  deleteRecord: (date: string) => void;
-  getRecordByDate: (date: string) => RecordEntry | undefined;
+  deleteRecord: (recordId: string) => void;
+  getRecordsByDate: (date: string) => RecordEntry[];
   getRecordsForDateRange: (startDate: Date, endDate: Date) => RecordEntry[];
   getAggregateSum: (startDate: Date, endDate: Date, taskId?: string | null) => number;
   getYearlySum: (year: number, taskId?: string | null) => number;
   getAllRecordsStringified: () => string;
-  getDailyConsistencyLast30Days: (taskId?: string | null) => number;
+  getDailyConsistency: (days: number, taskId?: string | null) => number;
+  getCurrentStreak: (taskId?: string | null) => number;
   taskDefinitions: TaskDefinition[];
   addTaskDefinition: (taskData: Omit<TaskDefinition, 'id'>) => string;
   updateTaskDefinition: (task: TaskDefinition) => void;
@@ -53,198 +81,141 @@ interface UserRecordsContextType {
   getStatsForCompletedWeek: (weekOffset: number, taskId?: string | null) => WeeklyProgressStats | null;
   getWeeklyAggregatesForChart: (numberOfWeeks: number, taskId?: string | null) => AggregatedTimeDataPoint[];
   getUserLevelInfo: () => UserLevelInfo;
-  awardGoalCompletionBonus: (taskId: string) => number | null;
   totalBonusPoints: number;
-  checkAndAwardAutomatedGoal: (taskId: string) => Promise<AutomatedGoalCheckResult>;
   awardTierEntryBonus: (bonusAmount: number) => void;
-  isGoalMetForLastPeriod: (taskId: string) => boolean;
   deductBonusPoints: (penalty: number) => void;
+  updateUserDataInDb: (dataToUpdate: Partial<UserData>) => Promise<void>;
   // Constellations
   getAvailableSkillPoints: (taskId: string) => number;
   unlockSkill: (skillId: string, taskId: string, cost: number) => boolean;
   isSkillUnlocked: (skillId: string) => boolean;
   constellations: Constellation[];
+  // Insights
+  getTaskDistribution: (startDate: Date, endDate: Date, taskId?: string | null) => TaskDistributionData[];
+  getProductivityByDay: (startDate: Date, endDate: Date, taskId?: string | null) => ProductivityByDayData[];
+  getDailyTimeBreakdown: (date?: Date) => DailyTimeBreakdownData[];
+  // Freeze Crystals
+  freezeCrystals: number;
+  useFreezeCrystal: () => void;
+  // Achievements
+  unlockedAchievements: string[];
+  // High Goals
+  highGoals: HighGoal[];
+  addHighGoal: (goal: Omit<HighGoal, 'id'>) => void;
+  updateHighGoal: (goal: HighGoal) => void;
+  deleteHighGoal: (goalId: string) => void;
+  getHighGoalProgress: (goal: HighGoal) => number;
 }
 
 const UserRecordsContext = createContext<UserRecordsContextType | undefined>(undefined);
 
 export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [records, setRecords] = useState<RecordEntry[]>([]);
-  const [taskDefinitions, setTaskDefinitions] = useState<TaskDefinition[]>([]);
-  const [totalBonusPoints, setTotalBonusPoints] = useState<number>(0);
-  const [metGoals, setMetGoals] = useState<Record<string, string>>({}); // New state for met goals
-  const [spentSkillPoints, setSpentSkillPoints] = useState<Record<string, number>>({});
-  const [unlockedSkills, setUnlockedSkills] = useState<string[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { user, userData, isUserDataLoaded } = useAuth();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    try {
-      const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (storedRecords) {
-        setRecords(JSON.parse(storedRecords));
-      }
-    } catch (error) {
-      console.error("Failed to load records from localStorage:", error);
+  const records = useMemo(() => userData?.records || [], [userData]);
+  const taskDefinitions = useMemo(() => {
+    if (userData?.taskDefinitions && userData.taskDefinitions.length > 0) {
+      return userData.taskDefinitions;
     }
+    return DEFAULT_TASK_DEFINITIONS.map(task => ({ ...task, id: task.id || uuidv4() }));
+  }, [userData]);
+  const totalBonusPoints = useMemo(() => userData?.bonusPoints || 0, [userData]);
+  const unlockedAchievements = useMemo(() => userData?.unlockedAchievements || [], [userData]);
+  const spentSkillPoints = useMemo(() => userData?.spentSkillPoints || {}, [userData]);
+  const unlockedSkills = useMemo(() => userData?.unlockedSkills || [], [userData]);
+  const freezeCrystals = useMemo(() => userData?.freezeCrystals || 0, [userData]);
+  const awardedStreakMilestones = useMemo(() => userData?.awardedStreakMilestones || {}, [userData]);
+  const highGoals = useMemo(() => userData?.highGoals || [], [userData]);
 
-    try {
-      const storedTasks = localStorage.getItem(LOCAL_STORAGE_TASKS_KEY);
-      if (storedTasks) {
-        const parsedTasks = JSON.parse(storedTasks) as TaskDefinition[];
-        if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
-            setTaskDefinitions(parsedTasks.map(task => ({
-                ...task,
-                id: task.id || uuidv4(),
-                goalValue: task.goalValue,
-                goalInterval: task.goalInterval,
-                intensityThresholds: task.intensityThresholds,
-                goalCompletionBonusPercentage: task.goalCompletionBonusPercentage,
-            })));
+  const updateUserDataInDb = useCallback(async (dataToUpdate: Partial<UserData>) => {
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      try {
+        const sanitizedData = removeUndefinedValues(dataToUpdate);
+        if (sanitizedData && Object.keys(sanitizedData).length > 0) {
+           await setDoc(userDocRef, sanitizedData, { merge: true });
+        }
+      } catch (error) {
+        console.error("Error updating user data in DB:", error);
+      }
+    }
+  }, [user]);
+
+  const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
+    return taskDefinitions.find(task => task.id === taskId);
+  }, [taskDefinitions]);
+    
+  const getCurrentStreak = useCallback((taskId: string | null = null): number => {
+    if (!isUserDataLoaded) return 0;
+  
+    const allRecords = [...records];
+    let taskRelevantRecords = taskId ? allRecords.filter(r => r.taskType === taskId) : allRecords;
+    const recordDates = new Set(taskRelevantRecords.map(r => r.date));
+  
+    const taskDef = taskId ? getTaskDefinitionById(taskId) : null;
+    const isDaily = !taskDef || !taskDef.frequencyType || taskDef.frequencyType === 'daily';
+  
+    let currentDate = startOfDay(new Date());
+    let streak = 0;
+  
+    if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+      currentDate = subDays(currentDate, 1);
+    }
+  
+    if (isDaily) {
+      while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
+        streak++;
+        currentDate = subDays(currentDate, 1);
+      }
+    } else {
+      const freqCount = taskDef?.frequencyCount || 1;
+      let consecutiveWeeks = 0;
+      let continueStreak = true;
+  
+      while (continueStreak) {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+        const recordsThisWeek = [...recordDates].filter(d => 
+          isWithinInterval(parseISO(d), { start: weekStart, end: weekEnd })
+        ).length;
+        
+        if (recordsThisWeek >= freqCount) {
+          consecutiveWeeks++;
+          currentDate = subDays(weekStart, 1);
         } else {
-            const defaultTasksWithId = DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
-            setTaskDefinitions(defaultTasksWithId);
-            localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(defaultTasksWithId));
+          continueStreak = false;
         }
-      } else {
-        const defaultTasksWithId = DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()}));
-        setTaskDefinitions(defaultTasksWithId);
-        localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(defaultTasksWithId));
       }
-    } catch (error) {
-      console.error("Failed to load task definitions from localStorage:", error);
-      setTaskDefinitions(DEFAULT_TASK_DEFINITIONS.map(task => ({...task, id: task.id || uuidv4()})));
+      streak = consecutiveWeeks;
     }
+  
+    return streak;
+  }, [records, getTaskDefinitionById, isUserDataLoaded]);
 
-    try {
-      const storedBonusPoints = localStorage.getItem(LOCAL_STORAGE_BONUS_POINTS_KEY);
-      if (storedBonusPoints) {
-        setTotalBonusPoints(JSON.parse(storedBonusPoints));
-      }
-    } catch (error) {
-      console.error("Failed to load bonus points from localStorage:", error);
-    }
+  const addRecord = useCallback((entry: Omit<RecordEntry, 'id'>) => {
+    const newRecord: RecordEntry = {
+      ...entry,
+      id: uuidv4(),
+      value: Number(entry.value),
+    };
 
-    try {
-      const storedMetGoals = localStorage.getItem(LOCAL_STORAGE_MET_GOALS_KEY);
-      if (storedMetGoals) {
-        setMetGoals(JSON.parse(storedMetGoals));
-      }
-    } catch (error) {
-      console.error("Failed to load met goals from localStorage:", error);
-    }
-
-    try {
-        const storedSpentPoints = localStorage.getItem(LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY);
-        if (storedSpentPoints) {
-            setSpentSkillPoints(JSON.parse(storedSpentPoints));
-        }
-    } catch (error) {
-        console.error("Failed to load spent skill points from localStorage:", error);
-    }
-
-    try {
-        const storedUnlockedSkills = localStorage.getItem(LOCAL_STORAGE_UNLOCKED_SKILLS_KEY);
-        if (storedUnlockedSkills) {
-            setUnlockedSkills(JSON.parse(storedUnlockedSkills));
-        }
-    } catch (error) {
-        console.error("Failed to load unlocked skills from localStorage:", error);
-    }
-
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
-      } catch (error) {
-        console.error("Failed to save records to localStorage:", error);
-      }
-    }
-  }, [records, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(taskDefinitions));
-      } catch (error) {
-        console.error("Failed to save task definitions to localStorage:", error);
-      }
-    }
-  }, [taskDefinitions, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_BONUS_POINTS_KEY, JSON.stringify(totalBonusPoints));
-      } catch (error) {
-        console.error("Failed to save bonus points to localStorage:", error);
-      }
-    }
-  }, [totalBonusPoints, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_MET_GOALS_KEY, JSON.stringify(metGoals));
-      } catch (error) {
-        console.error("Failed to save met goals to localStorage:", error);
-      }
-    }
-  }, [metGoals, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem(LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY, JSON.stringify(spentSkillPoints));
-        } catch (error) {
-            console.error("Failed to save spent skill points to localStorage:", error);
-        }
-    }
-  }, [spentSkillPoints, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem(LOCAL_STORAGE_UNLOCKED_SKILLS_KEY, JSON.stringify(unlockedSkills));
-        } catch (error) {
-            console.error("Failed to save unlocked skills to localStorage:", error);
-        }
-    }
-  }, [unlockedSkills, isLoaded]);
-
-
-  const addRecord = useCallback((entry: Omit<RecordEntry, 'notes'> & { notes?: string; taskType?: string }) => {
-    setRecords(prevRecords => {
-      const existingRecordIndex = prevRecords.findIndex(r => r.date === entry.date);
-      const newRecordData: RecordEntry = {
-        date: entry.date,
-        value: Number(entry.value),
-        notes: entry.notes,
-        taskType: entry.taskType,
-      };
-      if (existingRecordIndex > -1) {
-        const updatedRecords = [...prevRecords];
-        updatedRecords[existingRecordIndex] = { ...updatedRecords[existingRecordIndex], ...newRecordData };
-        return updatedRecords;
-      }
-      return [...prevRecords, newRecordData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    });
-  }, []);
+    const updatedRecords = [...records, newRecord].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    updateUserDataInDb({ records: updatedRecords });
+  }, [records, updateUserDataInDb]);
 
   const updateRecord = useCallback((entry: RecordEntry) => {
-    setRecords(prevRecords =>
-      prevRecords.map(r => r.date === entry.date ? { ...entry, value: Number(entry.value) } : r)
-    );
-  }, []);
+      const updatedRecords = records.map(r => r.id === entry.id ? { ...entry, value: Number(entry.value) } : r);
+      updateUserDataInDb({ records: updatedRecords });
+  }, [records, updateUserDataInDb]);
 
-  const deleteRecord = useCallback((date: string) => {
-    setRecords(prevRecords => prevRecords.filter(r => r.date !== date));
-  }, []);
+  const deleteRecord = useCallback((recordId: string) => {
+      const updatedRecords = records.filter(r => r.id !== recordId);
+      updateUserDataInDb({ records: updatedRecords });
+  }, [records, updateUserDataInDb]);
 
-  const getRecordByDate = useCallback((date: string): RecordEntry | undefined => {
-    return records.find(r => r.date === date);
+  const getRecordsByDate = useCallback((date: string): RecordEntry[] => {
+    return records.filter(r => r.date === date);
   }, [records]);
 
   const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
@@ -280,86 +251,103 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return JSON.stringify(formattedRecords);
   }, [records]);
 
-  const getDailyConsistencyLast30Days = useCallback((taskId: string | null = null): number => {
-    if (!isLoaded) return 0;
+  const getDailyConsistency = useCallback((days: number, taskId: string | null = null): number => {
+    if (!isUserDataLoaded || days <= 0) return 0;
+  
     const today = startOfDay(new Date());
-    const thirtyDaysAgo = startOfDay(subDays(today, 29));
-
-    let relevantRecords = getRecordsForDateRange(thirtyDaysAgo, today);
+    const startDate = startOfDay(subDays(today, days - 1));
+  
+    let relevantRecords = getRecordsForDateRange(startDate, today);
+    
     if (taskId) {
       relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
     }
-
-    const uniqueDaysWithRecords = new Set(relevantRecords.map(r => r.date)).size;
-
-    const daysInPeriod = eachDayOfInterval({ start: thirtyDaysAgo, end: today }).length;
-    if (daysInPeriod === 0) return 0;
-
-    return Math.round((uniqueDaysWithRecords / daysInPeriod) * 100);
-  }, [getRecordsForDateRange, isLoaded]);
-
+    
+    const recordDates = new Set(relevantRecords.map(r => r.date));
+  
+    if (!taskId) {
+      const activeDays = recordDates.size;
+      return Math.round((activeDays / days) * 100);
+    }
+  
+    const taskDef = getTaskDefinitionById(taskId);
+    if (!taskDef || taskDef.frequencyType === 'daily' || !taskDef.frequencyType) {
+      const activeDays = recordDates.size;
+      return Math.round((activeDays / days) * 100);
+    } else {
+      const freqCount = taskDef.frequencyCount || 1;
+      let totalWeeks = 0;
+      let successfulWeeks = 0;
+      let currentDate = today;
+  
+      while(currentDate >= startDate) {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+  
+        const recordsThisWeek = [...recordDates].filter(dateStr => {
+          const d = parseISO(dateStr);
+          return isWithinInterval(d, { start: weekStart, end: weekEnd })
+        }).length;
+  
+        if(isWithinInterval(weekStart, {start: startDate, end: today}) || isWithinInterval(weekEnd, {start: startDate, end: today})) {
+            totalWeeks++;
+            if (recordsThisWeek >= freqCount) {
+                successfulWeeks++;
+            }
+        }
+        currentDate = subDays(weekStart, 1);
+      }
+      
+      if (totalWeeks === 0) return 100;
+      return Math.round((successfulWeeks / totalWeeks) * 100);
+    }
+  
+  }, [getRecordsForDateRange, getTaskDefinitionById, isUserDataLoaded]);
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
-    const goalValue = taskData.goalValue === undefined || taskData.goalValue === null || Number(taskData.goalValue) <= 0 ? undefined : Number(taskData.goalValue);
     const newTask: TaskDefinition = {
       ...taskData,
       id: newId,
-      goalValue: goalValue,
-      goalInterval: goalValue ? taskData.goalInterval : undefined,
     };
-    setTaskDefinitions(prevTasks => [...prevTasks, newTask]);
+    const updatedTasks = [...taskDefinitions, newTask];
+    updateUserDataInDb({ taskDefinitions: updatedTasks });
     return newId;
-  }, []);
+  }, [taskDefinitions, updateUserDataInDb]);
 
   const updateTaskDefinition = useCallback((updatedTask: TaskDefinition) => {
-    const goalValue = updatedTask.goalValue === undefined || updatedTask.goalValue === null || Number(updatedTask.goalValue) <= 0 ? undefined : Number(updatedTask.goalValue);
-    setTaskDefinitions(prevTasks =>
-      prevTasks.map(task => task.id === updatedTask.id ? {
-        ...updatedTask,
-        goalValue: goalValue,
-        goalInterval: goalValue ? updatedTask.goalInterval : undefined,
-      } : task)
-    );
-  }, []);
+    const updatedTasks = taskDefinitions.map(task => task.id === updatedTask.id ? { ...updatedTask } : task);
+    updateUserDataInDb({ taskDefinitions: updatedTasks });
+  }, [taskDefinitions, updateUserDataInDb]);
 
   const deleteTaskDefinition = useCallback((taskId: string) => {
-    setTaskDefinitions(prevTasks => prevTasks.filter(task => task.id !== taskId));
-    setRecords(prevRecords =>
-      prevRecords.map(rec =>
-        rec.taskType === taskId ? {...rec, taskType: undefined} : rec
-      )
-    );
-    // Also remove from metGoals if the task is deleted
-    setMetGoals(prevMetGoals => {
-        const newMetGoals = {...prevMetGoals};
-        delete newMetGoals[taskId];
-        return newMetGoals;
-    });
-  }, []);
-
-  const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
-    return taskDefinitions.find(task => task.id === taskId);
-  }, [taskDefinitions]);
+    const updatedTasks = taskDefinitions.filter(task => task.id !== taskId);
+    const updatedRecords = records.map(rec => rec.taskType === taskId ? {...rec, taskType: undefined} : rec);
+    updateUserDataInDb({ taskDefinitions: updatedTasks, records: updatedRecords });
+  }, [taskDefinitions, records, updateUserDataInDb]);
 
   const getStatsForCompletedWeek = useCallback((weekOffset: number, taskId?: string | null): WeeklyProgressStats | null => {
-    if (!isLoaded) return null;
+    if (records.length === 0) return null;
     const today = new Date();
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const targetWeekStart = subWeeks(currentWeekStart, weekOffset + 1);
-    const targetWeekEnd = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
+    const targetWeekStart = subWeeks(currentWeekStart, weekOffset);
+    let targetWeekEnd = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
 
-     if (targetWeekStart >= currentWeekStart && !isSameDay(targetWeekStart, currentWeekStart)) {
-        return null;
+    if (targetWeekEnd > today) {
+        targetWeekEnd = today;
+    }
+    
+    if (targetWeekStart > today) {
+        return { total: 0, startDate: targetWeekStart, endDate: targetWeekEnd };
     }
 
     const sum = getAggregateSum(targetWeekStart, targetWeekEnd, taskId);
     return { total: sum, startDate: targetWeekStart, endDate: targetWeekEnd };
 
-  }, [isLoaded, getAggregateSum]);
+  }, [records, getAggregateSum]);
 
   const getWeeklyAggregatesForChart = useCallback((numberOfWeeks: number, taskId?: string | null): AggregatedTimeDataPoint[] => {
-    if (!isLoaded) return [];
+    if (records.length === 0) return [];
     const today = new Date();
     const data: AggregatedTimeDataPoint[] = [];
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -377,12 +365,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       });
     }
     return data;
-  }, [isLoaded, getAggregateSum]);
+  }, [records, getAggregateSum]);
 
   const getTotalBaseRecordValue = useCallback((): number => {
-    if (!isLoaded) return 0;
     return records.reduce((sum, record) => sum + (Number(record.value) || 0), 0);
-  }, [records, isLoaded]);
+  }, [records]);
 
   const getUserLevelInfo = useCallback((): UserLevelInfo => {
     const sumOfRecordValues = getTotalBaseRecordValue();
@@ -390,115 +377,33 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     return calculateUserLevelInfo(totalExperience);
   }, [getTotalBaseRecordValue, totalBonusPoints]);
 
-  const awardGoalCompletionBonus = useCallback((taskId: string): number | null => {
-    const task = getTaskDefinitionById(taskId);
-    if (task && task.goalValue && task.goalCompletionBonusPercentage) {
-      const bonus = Math.round(task.goalValue * (task.goalCompletionBonusPercentage / 100));
-      setTotalBonusPoints(prevBonus => prevBonus + bonus);
-      return bonus;
-    }
-    return null;
-  }, [getTaskDefinitionById]);
-
   const awardTierEntryBonus = useCallback((bonusAmount: number) => {
     if (bonusAmount > 0) {
-      setTotalBonusPoints(prevBonus => prevBonus + bonusAmount);
+      const newBonus = totalBonusPoints + bonusAmount;
+      updateUserDataInDb({ bonusPoints: newBonus });
     }
-  }, []);
-
-  const checkAndAwardAutomatedGoal = useCallback(async (taskId: string): Promise<AutomatedGoalCheckResult> => {
-    const task = getTaskDefinitionById(taskId);
-    if (!task || !task.goalValue || !task.goalInterval || task.goalValue <= 0) {
-      return { error: "Goal not properly configured for this task." };
-    }
-
-    const today = new Date();
-    let periodStart: Date;
-    let periodEnd: Date;
-    let periodName: string;
-
-    switch (task.goalInterval) {
-      case 'daily':
-        periodStart = startOfDay(subDays(today, 1));
-        periodEnd = endOfDay(subDays(today, 1));
-        periodName = "yesterday";
-        break;
-      case 'weekly':
-        periodStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
-        periodEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
-        periodName = `last week (${format(periodStart, 'MMM d')} - ${format(periodEnd, 'MMM d')})`;
-        break;
-      case 'monthly':
-        periodStart = startOfMonth(subMonths(today, 1));
-        periodEnd = endOfMonth(subMonths(today, 1));
-        periodName = `last month (${format(periodStart, 'MMMM yyyy')})`;
-        break;
-      default:
-        return { error: "Invalid goal interval." };
-    }
-
-    const actualValue = getAggregateSum(periodStart, periodEnd, taskId);
-    let bonusAwarded: number | null = null;
-    let metGoal = false;
-    const periodIdentifierStr = format(periodEnd, 'yyyy-MM-dd');
-
-    if (actualValue >= task.goalValue) {
-      metGoal = true;
-      if (task.goalCompletionBonusPercentage && task.goalCompletionBonusPercentage > 0) {
-        bonusAwarded = awardGoalCompletionBonus(taskId);
-      }
-      // Store that this goal was met for this period
-      setMetGoals(prev => ({ ...prev, [taskId]: periodIdentifierStr }));
-    }
-
-    return {
-      metGoal,
-      bonusAwarded,
-      actualValue,
-      goalValue: task.goalValue,
-      periodName,
-      periodIdentifier: periodIdentifierStr,
-      taskName: task.name,
-    };
-  }, [getTaskDefinitionById, getAggregateSum, awardGoalCompletionBonus]);
-
-  const isGoalMetForLastPeriod = useCallback((taskId: string): boolean => {
-    const task = getTaskDefinitionById(taskId);
-    if (!task || !task.goalInterval || !isLoaded) return false;
-
-    const today = new Date();
-    let expectedPeriodEnd: Date;
-
-    switch (task.goalInterval) {
-      case 'daily':
-        expectedPeriodEnd = endOfDay(subDays(today, 1));
-        break;
-      case 'weekly':
-        expectedPeriodEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
-        break;
-      case 'monthly':
-        expectedPeriodEnd = endOfMonth(subMonths(today, 1));
-        break;
-      default:
-        return false;
-    }
-    const expectedPeriodIdentifier = format(expectedPeriodEnd, 'yyyy-MM-dd');
-    return metGoals[taskId] === expectedPeriodIdentifier;
-  }, [metGoals, getTaskDefinitionById, isLoaded]);
+  }, [totalBonusPoints, updateUserDataInDb]);
 
   const deductBonusPoints = useCallback((penalty: number) => {
-    const actualPenalty = Math.abs(penalty) * -1;
-    setTotalBonusPoints(prevBonus => prevBonus + actualPenalty);
-  }, []);
+    const newBonus = totalBonusPoints - Math.abs(penalty);
+    updateUserDataInDb({ bonusPoints: newBonus });
+  }, [totalBonusPoints, updateUserDataInDb]);
+
+  const useFreezeCrystal = useCallback(() => {
+    if (freezeCrystals > 0) {
+      const newCrystals = freezeCrystals - 1;
+      updateUserDataInDb({ freezeCrystals: newCrystals });
+    }
+  }, [freezeCrystals, updateUserDataInDb]);
+
 
   // Constellation Functions
   const getAvailableSkillPoints = useCallback((taskId: string): number => {
-    if (!isLoaded) return 0;
-    // Skill points are equivalent to the total value recorded for a task
+    if (records.length === 0) return 0;
     const totalPoints = getAggregateSum(new Date("1900-01-01"), new Date(), taskId);
     const spentPoints = spentSkillPoints[taskId] || 0;
     return totalPoints - spentPoints;
-  }, [isLoaded, getAggregateSum, spentSkillPoints]);
+  }, [getAggregateSum, records, spentSkillPoints]);
 
   const isSkillUnlocked = useCallback((skillId: string): boolean => {
     return unlockedSkills.includes(skillId);
@@ -507,31 +412,246 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const unlockSkill = useCallback((skillId: string, taskId: string, cost: number): boolean => {
     const availablePoints = getAvailableSkillPoints(taskId);
     if (availablePoints >= cost && !isSkillUnlocked(skillId)) {
-      setSpentSkillPoints(prev => ({
-        ...prev,
-        [taskId]: (prev[taskId] || 0) + cost,
-      }));
-      setUnlockedSkills(prev => [...prev, skillId]);
+        const updatedPoints = { ...spentSkillPoints, [taskId]: (spentSkillPoints[taskId] || 0) + cost };
+        const updatedSkills = [...unlockedSkills, skillId];
+        updateUserDataInDb({ spentSkillPoints: updatedPoints, unlockedSkills: updatedSkills });
       return true;
     }
     return false;
-  }, [getAvailableSkillPoints, isSkillUnlocked]);
+  }, [getAvailableSkillPoints, isSkillUnlocked, updateUserDataInDb, spentSkillPoints, unlockedSkills]);
 
   const constellations = useMemo(() => CONSTELLATIONS, []);
 
+  // Insights Functions
+  const getTaskDistribution = useCallback((startDate: Date, endDate: Date, taskId: string | null = null): TaskDistributionData[] => {
+    let relevantRecords = getRecordsForDateRange(startDate, endDate);
+    if (taskId) {
+        relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    }
+    const distribution = new Map<string, { value: number; color: string; name: string }>();
 
-  return (
-    <UserRecordsContext.Provider value={{
+    relevantRecords.forEach(record => {
+      const taskDef = record.taskType ? getTaskDefinitionById(record.taskType) : undefined;
+      const effectiveTaskId = taskDef?.id || 'unassigned';
+      const taskName = taskDef?.name || 'Unassigned';
+      const taskColor = taskDef?.color || '#8884d8';
+
+      const current = distribution.get(effectiveTaskId) || { value: 0, color: taskColor, name: taskName };
+      current.value += record.value;
+      distribution.set(effectiveTaskId, current);
+    });
+
+    return Array.from(distribution.entries()).map(([_, data]) => ({
+      name: data.name,
+      value: data.value,
+      fill: data.name,
+    }));
+  }, [getRecordsForDateRange, getTaskDefinitionById]);
+
+  const getProductivityByDay = useCallback((startDate: Date, endDate: Date, taskId: string | null = null): ProductivityByDayData[] => {
+    let relevantRecords = getRecordsForDateRange(startDate, endDate);
+     if (taskId) {
+        relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    }
+    const dayTotals = [
+        { day: 'Sun', total: 0 }, { day: 'Mon', total: 0 }, { day: 'Tue', total: 0 }, 
+        { day: 'Wed', total: 0 }, { day: 'Thu', total: 0 }, { day: 'Fri', total: 0 }, { day: 'Sat', total: 0 }
+    ];
+
+    relevantRecords.forEach(record => {
+        try {
+            const dayOfWeek = getDay(parseISO(record.date)); // 0 for Sunday, 1 for Monday, etc.
+            dayTotals[dayOfWeek].total += record.value;
+        } catch(e) {
+            // Ignore invalid dates
+        }
+    });
+
+    return dayTotals;
+  }, [getRecordsForDateRange]);
+
+  const getDailyTimeBreakdown = useCallback((date: Date = new Date()): DailyTimeBreakdownData[] => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dailyRecords = getRecordsByDate(dateStr);
+    
+    const timeBreakdown = new Map<string, { name: string; value: number; color: string }>();
+    let totalMinutes = 0;
+
+    const timeBasedRecords = dailyRecords.filter(record => {
+        if (!record.taskType) return false;
+        const task = getTaskDefinitionById(record.taskType);
+        return task && (task.unit === 'minutes' || task.unit === 'hours');
+    });
+
+    timeBasedRecords.forEach(record => {
+      if (!record.taskType) return; // Should not happen due to filter, but for type safety
+      const task = getTaskDefinitionById(record.taskType)!;
+      const minutes = task.unit === 'hours' ? record.value * 60 : record.value;
+      const current = timeBreakdown.get(task.id) || { name: task.name, value: 0, color: task.color };
+      current.value += minutes;
+      timeBreakdown.set(task.id, current);
+      totalMinutes += minutes;
+    });
+
+    const result: DailyTimeBreakdownData[] = Array.from(timeBreakdown.values());
+    
+    const remainingMinutes = 1440 - totalMinutes;
+
+    if (timeBasedRecords.length === 0) {
+      return [{
+          name: 'Unallocated',
+          value: 1440,
+          color: 'hsl(var(--muted))'
+      }];
+    }
+    
+    if (remainingMinutes > 0) {
+      result.push({
+        name: 'Unallocated',
+        value: remainingMinutes,
+        color: 'hsl(var(--muted))'
+      });
+    }
+
+    return result;
+  }, [getRecordsByDate, taskDefinitions, getTaskDefinitionById]);
+
+  // Achievement Check
+  useEffect(() => {
+    if (!isUserDataLoaded) return;
+    const levelInfo = getUserLevelInfo();
+    const streaks: Record<string, number> = {};
+    taskDefinitions.forEach(task => {
+        streaks[task.id] = getCurrentStreak(task.id);
+    });
+    const unlockedSkillCount = unlockedSkills.length;
+    let loreEntryCount = 0; // Lore is disabled, so this will be 0
+
+    const context = { levelInfo, streaks, unlockedSkillCount, loreEntryCount };
+    
+    const newlyUnlocked: string[] = [];
+    ACHIEVEMENTS.forEach(ach => {
+      if (!unlockedAchievements.includes(ach.id) && ach.check(context)) {
+        newlyUnlocked.push(ach.id);
+        toast({
+          title: `🏆 Achievement Unlocked!`,
+          description: ach.name,
+        });
+      }
+    });
+
+    if (newlyUnlocked.length > 0) {
+      const updatedAchievements = [...new Set([...unlockedAchievements, ...newlyUnlocked])];
+      updateUserDataInDb({ unlockedAchievements: updatedAchievements });
+    }
+  }, [isUserDataLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast, updateUserDataInDb]);
+
+  // High Goal Functions
+  const addHighGoal = useCallback((goalData: Omit<HighGoal, 'id'>) => {
+    const newGoal: HighGoal = { ...goalData, id: uuidv4() };
+    const updatedGoals = [...highGoals, newGoal];
+    updateUserDataInDb({ highGoals: updatedGoals });
+  }, [highGoals, updateUserDataInDb]);
+
+  const updateHighGoal = useCallback((updatedGoal: HighGoal) => {
+    const updatedGoals = highGoals.map(g => g.id === updatedGoal.id ? updatedGoal : g);
+    updateUserDataInDb({ highGoals: updatedGoals });
+  }, [highGoals, updateUserDataInDb]);
+
+  const deleteHighGoal = useCallback((goalId: string) => {
+    const updatedGoals = highGoals.filter(g => g.id !== goalId);
+    updateUserDataInDb({ highGoals: updatedGoals });
+  }, [highGoals, updateUserDataInDb]);
+  
+  const getHighGoalProgress = useCallback((goal: HighGoal) => {
+    return getAggregateSum(parseISO(goal.startDate), parseISO(goal.endDate), goal.taskId);
+  }, [getAggregateSum]);
+  
+  // Streak milestone rewards check
+  useEffect(() => {
+    if (!isUserDataLoaded || !user) return;
+    const newMilestones: Record<string, number[]> = {};
+    let crystalsAwarded = 0;
+
+    taskDefinitions.forEach(task => {
+      const streak = getCurrentStreak(task.id);
+      const currentTaskMilestones = awardedStreakMilestones[task.id] || [];
+      const newAwardsForTask: number[] = [];
+
+      STREAK_MILESTONES_FOR_CRYSTALS.forEach(milestone => {
+        if(streak >= milestone && !currentTaskMilestones.includes(milestone)) {
+          crystalsAwarded++;
+          newAwardsForTask.push(milestone);
+        }
+      });
+      if(newAwardsForTask.length > 0) {
+        newMilestones[task.id] = [...currentTaskMilestones, ...newAwardsForTask];
+      }
+    });
+
+    if(crystalsAwarded > 0) {
+      const updatedTotalCrystals = freezeCrystals + crystalsAwarded;
+      const updatedMilestones = {...awardedStreakMilestones, ...newMilestones};
+      updateUserDataInDb({ freezeCrystals: updatedTotalCrystals, awardedStreakMilestones: updatedMilestones });
+      toast({
+        title: "❄️ Freeze Crystal Earned!",
+        description: `Your dedication has rewarded you with ${crystalsAwarded} Freeze Crystal${crystalsAwarded > 1 ? 's' : ''}!`
+      });
+    }
+  }, [records, taskDefinitions, awardedStreakMilestones, freezeCrystals, isUserDataLoaded, user, getCurrentStreak, updateUserDataInDb, toast]);
+
+
+  const contextValue = useMemo(() => ({
+    records,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    getRecordsByDate,
+    getRecordsForDateRange,
+    getAggregateSum,
+    getYearlySum,
+    getAllRecordsStringified,
+    getDailyConsistency,
+    getCurrentStreak,
+    taskDefinitions,
+    addTaskDefinition,
+    updateTaskDefinition,
+    deleteTaskDefinition,
+    getTaskDefinitionById,
+    getStatsForCompletedWeek,
+    getWeeklyAggregatesForChart,
+    getUserLevelInfo,
+    totalBonusPoints,
+    awardTierEntryBonus,
+    deductBonusPoints,
+    updateUserDataInDb,
+    getAvailableSkillPoints,
+    unlockSkill,
+    isSkillUnlocked,
+    constellations,
+    getTaskDistribution,
+    getProductivityByDay,
+    getDailyTimeBreakdown,
+    freezeCrystals,
+    useFreezeCrystal,
+    unlockedAchievements,
+    highGoals,
+    addHighGoal,
+    updateHighGoal,
+    deleteHighGoal,
+    getHighGoalProgress,
+  }), [
       records,
       addRecord,
       updateRecord,
       deleteRecord,
-      getRecordByDate,
+      getRecordsByDate,
       getRecordsForDateRange,
       getAggregateSum,
       getYearlySum,
       getAllRecordsStringified,
-      getDailyConsistencyLast30Days,
+      getDailyConsistency,
+      getCurrentStreak,
       taskDefinitions,
       addTaskDefinition,
       updateTaskDefinition,
@@ -540,18 +660,30 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       getStatsForCompletedWeek,
       getWeeklyAggregatesForChart,
       getUserLevelInfo,
-      awardGoalCompletionBonus,
       totalBonusPoints,
-      checkAndAwardAutomatedGoal,
       awardTierEntryBonus,
-      isGoalMetForLastPeriod,
       deductBonusPoints,
-      // Constellations
+      updateUserDataInDb,
       getAvailableSkillPoints,
       unlockSkill,
       isSkillUnlocked,
       constellations,
-    }}>
+      getTaskDistribution,
+      getProductivityByDay,
+      getDailyTimeBreakdown,
+      freezeCrystals,
+      useFreezeCrystal,
+      unlockedAchievements,
+      highGoals,
+      addHighGoal,
+      updateHighGoal,
+      deleteHighGoal,
+      getHighGoalProgress,
+  ]);
+
+
+  return (
+    <UserRecordsContext.Provider value={contextValue}>
       {children}
     </UserRecordsContext.Provider>
   );

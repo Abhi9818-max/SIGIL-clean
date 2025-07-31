@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/layout/Header';
 import QuoteCard from '@/components/layout/QuoteCard';
 import ContributionGraph from '@/components/records/ContributionGraph';
@@ -10,10 +11,8 @@ import StatsPanel from '@/components/records/StatsPanel';
 import ManageTasksModal from '@/components/manage-tasks/ManageTasksModal';
 import TaskFilterBar from '@/components/records/TaskFilterBar';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import { useTodos } from '@/components/providers/TodoProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { format } from 'date-fns';
-import WeeklyProgressCard from '@/components/progress/WeeklyProgressCard';
-import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import type { UserLevelInfo } from '@/types';
@@ -22,6 +21,12 @@ import type { Quote } from '@/lib/quotes';
 import { QUOTES } from '@/lib/quotes';
 import TodoListCard from '@/components/todo/TodoListCard';
 import AISuggestionsCard from '@/components/records/AISuggestionsCard';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Calendar } from 'lucide-react';
+import ProgressOverTimeChart from '@/components/progress/ProgressOverTimeChart';
+import DailyTimeBreakdownChart from '@/components/dashboard/DailyTimeBreakdownChart';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const LOCAL_STORAGE_KEY_SHOWN_TIER_TOASTS = 'shownTierWelcomeToasts';
 
@@ -30,18 +35,15 @@ export default function HomePage() {
   const [selectedDateForModal, setSelectedDateForModal] = useState<string | null>(null);
   const [isManageTasksModalOpen, setIsManageTasksModalOpen] = useState(false);
   const [selectedTaskFilterId, setSelectedTaskFilterId] = useState<string | null>(null);
-  const [currentLevelInfo, setCurrentLevelInfo] = useState<UserLevelInfo | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-
-  const {
-    taskDefinitions,
-    getUserLevelInfo,
-    records,
-    totalBonusPoints,
-    awardTierEntryBonus,
-  } = useUserRecords();
+  
+  const { isUserDataLoaded } = useAuth();
+  const userRecords = useUserRecords();
+  const { dashboardSettings } = useSettings();
   const { toast } = useToast();
+
+  const currentLevelInfo = userRecords.getUserLevelInfo();
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
@@ -51,11 +53,6 @@ export default function HomePage() {
     const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
     setQuote(randomQuote);
   }, []);
-
-  useEffect(() => {
-    const levelInfo = getUserLevelInfo();
-    setCurrentLevelInfo(levelInfo);
-  }, [getUserLevelInfo, records, totalBonusPoints]);
 
   useEffect(() => {
     if (currentLevelInfo) {
@@ -77,7 +74,7 @@ export default function HomePage() {
           let toastDescription = newTierData.welcomeMessage;
 
           if (newTierData.tierEntryBonus && newTierData.tierEntryBonus > 0 && newTierData.minLevel > TIER_INFO[0].minLevel) {
-            awardTierEntryBonus(newTierData.tierEntryBonus);
+            userRecords.awardTierEntryBonus(newTierData.tierEntryBonus);
             toastDescription += ` You earned ${newTierData.tierEntryBonus} bonus XP!`;
           }
 
@@ -96,7 +93,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [currentLevelInfo, toast, awardTierEntryBonus]);
+  }, [currentLevelInfo, toast, userRecords.awardTierEntryBonus]);
 
   const handleDayClick = (date: string) => {
     setSelectedDateForModal(date);
@@ -112,7 +109,18 @@ export default function HomePage() {
     setIsManageTasksModalOpen(true);
   };
 
+  if (!isUserDataLoaded || !currentLevelInfo) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-primary">Loading your S.I.G.I.L...</div>
+      </div>
+    );
+  }
+  
   const pageTierClass = currentLevelInfo ? `page-tier-group-${currentLevelInfo.tierGroup}` : 'page-tier-group-1';
+  
+  const showStatsPanel = dashboardSettings.showTotalLast30Days || dashboardSettings.showCurrentStreak || dashboardSettings.showDailyConsistency || dashboardSettings.showHighGoalStat;
+
 
   return (
     <div className={cn("min-h-screen flex flex-col transition-colors duration-700 ease-in-out", pageTierClass)}>
@@ -122,34 +130,63 @@ export default function HomePage() {
       />
       <QuoteCard quote={quote} />
       <main className="flex-grow container mx-auto p-4 md:p-8 space-y-8 animate-fade-in-up">
-        <StatsPanel selectedTaskFilterId={selectedTaskFilterId} />
+        {showStatsPanel && <StatsPanel selectedTaskFilterId={selectedTaskFilterId} />}
 
-        <TaskFilterBar
-          taskDefinitions={taskDefinitions}
-          selectedTaskId={selectedTaskFilterId}
-          onSelectTask={(taskId) => setSelectedTaskFilterId(taskId)}
-        />
-        <ContributionGraph
-          onDayClick={handleDayClick}
-          selectedTaskFilterId={selectedTaskFilterId}
-        />
-
+        {dashboardSettings.showTaskFilterBar && (
+          <TaskFilterBar
+            taskDefinitions={userRecords.taskDefinitions}
+            selectedTaskId={selectedTaskFilterId}
+            onSelectTask={(taskId) => setSelectedTaskFilterId(taskId)}
+          />
+        )}
+        
+        {dashboardSettings.showContributionGraph && (
+            <>
+                <ContributionGraph
+                    onDayClick={handleDayClick}
+                    selectedTaskFilterId={selectedTaskFilterId}
+                    displayMode="full"
+                />
+                <div className="text-center -mt-4">
+                    <Button asChild variant="outline" size="sm">
+                    <Link href="/calendar">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        View Full Calendar
+                    </Link>
+                    </Button>
+                </div>
+            </>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            <TodoListCard />
-          </div>
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
-            </div>
-            <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-              <WeeklyProgressCard selectedTaskFilterId={selectedTaskFilterId} />
-            </div>
-            <div className="sm:col-span-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-              <AISuggestionsCard />
-            </div>
-          </div>
+            {dashboardSettings.showTodoList && (
+                <div className="md:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                    <TodoListCard />
+                </div>
+            )}
+            {dashboardSettings.showProgressChart && (
+                <div className={cn(
+                    "animate-fade-in-up",
+                    dashboardSettings.showTodoList ? "md:col-span-2" : "md:col-span-3"
+                )} style={{ animationDelay: '200ms' }}>
+                    <ProgressOverTimeChart selectedTaskFilterId={selectedTaskFilterId} />
+                </div>
+            )}
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+             {dashboardSettings.showAISuggestions && (
+                <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <AISuggestionsCard />
+                </div>
+            )}
+            {dashboardSettings.showTimeBreakdownChart && (
+                <div className="animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+                    <DailyTimeBreakdownChart />
+                </div>
+            )}
+        </div>
+
       </main>
       <RecordModal
         isOpen={isRecordModalOpen}

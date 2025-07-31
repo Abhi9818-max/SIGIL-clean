@@ -9,7 +9,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'zod';
 
 const SuggestionsInputSchema = z.object({
@@ -32,7 +31,6 @@ export async function generateSuggestions(input: SuggestionsInput): Promise<Sugg
 
 const suggestionsPrompt = ai.definePrompt({
   name: 'suggestionsPrompt',
-  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: SuggestionsInputSchema },
   output: { schema: SuggestionsOutputSchema },
   prompt: `
@@ -60,7 +58,16 @@ const suggestionsFlow = ai.defineFlow(
     outputSchema: SuggestionsOutputSchema,
   },
   async (input) => {
-    const { output } = await suggestionsPrompt(input);
+    const llmResponse = await ai.generate({
+        prompt: suggestionsPrompt.prompt,
+        model: 'googleai/gemini-pro',
+        input,
+        output: {
+            schema: SuggestionsOutputSchema,
+        },
+    });
+
+    const output = llmResponse.output;
     if (!output) {
       throw new Error("The AI failed to generate a suggestion. The output was empty.");
     }

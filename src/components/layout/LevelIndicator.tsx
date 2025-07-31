@@ -1,10 +1,10 @@
 
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { UserLevelInfo } from '@/types';
 import { Progress } from '@/components/ui/progress';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface LevelIndicatorProps {
@@ -22,7 +22,7 @@ const LevelIndicator: React.FC<LevelIndicatorProps> = ({ levelInfo, className })
     levelName, 
     tierIcon, 
     tierName, 
-    tierGroup, // Added tierGroup
+    tierGroup,
     progressPercentage, 
     totalAccumulatedValue,
     valueTowardsNextLevel,
@@ -42,14 +42,16 @@ const LevelIndicator: React.FC<LevelIndicatorProps> = ({ levelInfo, className })
     }
   };
 
-  const progressColorClass = getTierProgressClassName(tierGroup);
-  const maxLevelProgressColorClass = getTierProgressClassName(5); // Use group 5 color for max level text
+  // Memoize these values to prevent unnecessary recalculations
+  const progressColorClass = useMemo(() => getTierProgressClassName(tierGroup), [tierGroup]);
+  const maxLevelProgressColorClass = useMemo(() => getTierProgressClassName(5), []);
 
-  let tooltipText = `${valueTowardsNextLevel.toLocaleString()} / ${pointsForNextLevel ? pointsForNextLevel.toLocaleString() : 'MAX'} XP`;
-  if (isMaxLevel) {
-      tooltipText = `Max Level Reached! Total XP: ${totalAccumulatedValue.toLocaleString()}`;
-  }
-
+  const tooltipText = useMemo(() => {
+    if (isMaxLevel) {
+      return `Max Level Reached! Total XP: ${totalAccumulatedValue.toLocaleString()}`;
+    }
+    return `${valueTowardsNextLevel.toLocaleString()} / ${pointsForNextLevel ? pointsForNextLevel.toLocaleString() : 'MAX'} XP`;
+  }, [isMaxLevel, totalAccumulatedValue, valueTowardsNextLevel, pointsForNextLevel]);
 
   return (
     <div className={cn("flex flex-col items-start", className)}>
@@ -60,21 +62,19 @@ const LevelIndicator: React.FC<LevelIndicatorProps> = ({ levelInfo, className })
         </span>
       </div>
       {!isMaxLevel && (
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-32 md:w-40">
-                 <Progress value={progressPercentage} className="h-2.5" indicatorClassName={progressColorClass} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{tooltipText} ({progressPercentage.toFixed(0)}%)</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="w-32 md:w-40">
+              <Progress value={progressPercentage} className="h-2.5" indicatorClassName={progressColorClass} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltipText} ({progressPercentage.toFixed(0)}%)</p>
+          </TooltipContent>
+        </Tooltip>
       )}
       {isMaxLevel && (
-         <p className={cn("text-xs font-semibold", maxLevelProgressColorClass.replace('bg-', 'text-'))}>{tooltipText}</p>
+        <p className={cn("text-xs font-semibold", maxLevelProgressColorClass.replace('bg-', 'text-'))}>{tooltipText}</p>
       )}
     </div>
   );

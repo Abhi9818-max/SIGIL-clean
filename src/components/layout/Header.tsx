@@ -1,7 +1,7 @@
 
 "use client";
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { TrendingUp, Settings, ListChecks, Menu as MenuIcon, AppWindow, Award, Sparkles, Server, BarChart2, Share2, Trophy, Target, ShieldCheck, LogOut, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LevelIndicator from './LevelIndicator'; 
 import { useUserRecords } from '@/components/providers/UserRecordsProvider'; 
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LevelDetailsModal from './LevelDetailsModal';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface HeaderProps {
   onAddRecordClick: () => void;
@@ -24,23 +25,42 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick }) => {
-  const { getUserLevelInfo, records, totalBonusPoints } = useUserRecords(); 
-  const [levelInfo, setLevelInfo] = useState<UserLevelInfo | null>(null);
+  const { getUserLevelInfo } = useUserRecords(); 
+  const { logout } = useAuth();
   const [isLevelDetailsModalOpen, setIsLevelDetailsModalOpen] = useState(false);
   const pathname = usePathname();
+  const [levelInfo, setLevelInfo] = useState<UserLevelInfo | null>(null);
 
   useEffect(() => {
-    setLevelInfo(getUserLevelInfo());
-  }, [getUserLevelInfo, records, totalBonusPoints]); 
-
+    try {
+      const info = getUserLevelInfo();
+      setLevelInfo(info);
+    } catch (error) {
+      console.error('Error getting level info:', error);
+      setLevelInfo(null);
+    }
+  }, [getUserLevelInfo]);
 
   const headerTierClass = levelInfo ? `header-tier-group-${levelInfo.tierGroup}` : 'header-tier-group-1';
   const isDashboardPage = pathname === '/';
-  const isTodoPage = pathname === '/todo';
-  const isWidgetPage = pathname === '/widget';
-  const isConstellationsPage = pathname === '/constellations';
-  const isTestApiPage = pathname === '/test-api';
 
+  const navLinks = [
+    { href: "/friends", label: "Friends", icon: Users },
+    { href: "/todo", label: "Pacts", icon: ListChecks },
+    { href: "/high-goals", label: "High Goals", icon: ShieldCheck },
+    { href: "/insights", label: "Insights", icon: BarChart2 },
+    { href: "/achievements", label: "Achievements", icon: Trophy },
+    { href: "/constellations", label: "Constellations", icon: Sparkles },
+  ];
+
+  const mobileMenuLinks = [
+    ...navLinks,
+    { href: "/echoes", label: "Echoes", icon: Share2 },
+    { isSeparator: true },
+    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/widget", label: "Widget", icon: AppWindow },
+    { href: "/test-api", label: "Test API", icon: Server },
+  ];
 
   return (
     <>
@@ -64,31 +84,16 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
           </div>
 
           {/* Desktop Buttons */}
-          <div className="hidden md:flex items-center gap-3">
-             <Link href="/constellations" passHref>
-              <Button variant={isConstellationsPage ? "secondary" : "ghost"} size="sm">
-                <Sparkles className="mr-1.5 h-4 w-4" />
-                Constellations
+          <div className="hidden md:flex items-center gap-2">
+            {navLinks.map(link => (
+              <Button asChild key={link.href} variant={pathname === link.href ? "secondary" : "ghost"} size="sm">
+                <Link href={link.href}>
+                  <link.icon className="mr-1.5 h-4 w-4" />
+                  {link.label}
+                </Link>
               </Button>
-            </Link>
-            <Link href="/todo" passHref>
-              <Button variant={isTodoPage ? "secondary" : "ghost"} size="sm">
-                <ListChecks className="mr-1.5 h-4 w-4" />
-                To-Do List
-              </Button>
-            </Link>
-            <Link href="/widget" passHref>
-              <Button variant={isWidgetPage ? "secondary" : "ghost"} size="sm">
-                <AppWindow className="mr-1.5 h-4 w-4" />
-                Widget
-              </Button>
-            </Link>
-             <Link href="/test-api" passHref>
-              <Button variant={isTestApiPage ? "secondary" : "ghost"} size="sm">
-                <Server className="mr-1.5 h-4 w-4" />
-                Test API
-              </Button>
-            </Link>
+            ))}
+            
             {isDashboardPage && (
               <>
                 <Button onClick={onManageTasksClick} variant="ghost" size="sm">
@@ -100,6 +105,26 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                 </Button>
               </>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" size="icon">
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">More Options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" /> Settings
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="flex items-center w-full text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile Menu */}
@@ -117,43 +142,38 @@ const Header: React.FC<HeaderProps> = ({ onAddRecordClick, onManageTasksClick })
                   View Level Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                 <DropdownMenuItem asChild>
-                  <Link href="/constellations" className="flex items-center w-full">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Constellations
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/todo" className="flex items-center w-full">
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    To-Do List
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/widget" className="flex items-center w-full">
-                    <AppWindow className="mr-2 h-4 w-4" />
-                    Widget
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/test-api" className="flex items-center w-full">
-                    <Server className="mr-2 h-4 w-4" />
-                    Test API
-                  </Link>
-                </DropdownMenuItem>
+
                 {isDashboardPage && (
                   <>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onManageTasksClick} className="flex items-center w-full">
                       <Settings className="mr-2 h-4 w-4" />
                       Manage Tasks
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onAddRecordClick} className="flex items-center w-full">
-                       {/* Could add a PlusCircleIcon here if desired for "Add Record" */}
                       Add Record
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                   </>
                 )}
+
+                {mobileMenuLinks.map((link, index) => {
+                  if (link.isSeparator) {
+                    return <DropdownMenuSeparator key={`sep-${index}`} />;
+                  }
+                  return (
+                    <DropdownMenuItem key={link.href} asChild>
+                      <Link href={link.href!} className="flex items-center w-full">
+                        <link.icon className="mr-2 h-4 w-4" />
+                        {link.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="flex items-center w-full text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -9,7 +9,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'zod';
 
 const LoreInputSchema = z.object({
@@ -34,11 +33,10 @@ export async function generateLore(input: LoreInput): Promise<LoreOutput> {
 
 const lorePrompt = ai.definePrompt({
   name: 'lorePrompt',
-  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: LoreInputSchema },
   output: { schema: LoreOutputSchema },
   prompt: `
-    You are the Lorekeeper for S.I.G.I.L., a system of tracking one's growth. Your writing style is mythic, dark, and poetic, reminiscent of souls-like games (Dark Souls, Elden Ring) and dark fantasy. You write short, evocative fragments of a larger, mysterious history.
+    You are the Lorekeeper for S.I.G.I.L., a system of tracking one's growth. Your writing style is mythic, dark, and poetic, reminiscent of souls-like games (Dark Souls, Elden Ring). You write short, evocative fragments of a larger, mysterious history.
 
     The user has provided their current status. Your task is to write a new lore entry for them. The entry should be inspired by their level, level name, and recent activities, but do not mention them directly. Instead, use them as thematic inspiration.
 
@@ -62,7 +60,16 @@ const loreFlow = ai.defineFlow(
     outputSchema: LoreOutputSchema,
   },
   async (input) => {
-    const { output } = await lorePrompt(input);
+    const llmResponse = await ai.generate({
+        prompt: lorePrompt.prompt,
+        model: 'googleai/gemini-pro',
+        input,
+        output: {
+            schema: LoreOutputSchema,
+        },
+    });
+
+    const output = llmResponse.output;
     if (!output) {
       throw new Error("The AI failed to generate a lore entry. The output was empty.");
     }

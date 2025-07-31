@@ -1,4 +1,5 @@
 
+
 import type { TaskDefinition, UserLevelInfo, TierConfig } from '@/types';
 
 export const LOCAL_STORAGE_KEY = 'recordTrackerData';
@@ -10,8 +11,44 @@ export const LOCAL_STORAGE_TODO_KEY = 'sigiLTodoItems';
 export const LOCAL_STORAGE_LORE_KEY = 'sigiLLoreEntries';
 export const LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY = 'sigiLSpentSkillPoints';
 export const LOCAL_STORAGE_UNLOCKED_SKILLS_KEY = 'sigiLUnlockedSkills';
+export const LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY = 'sigiLHandledDarkStreaks';
+export const LOCAL_STORAGE_FREEZE_CRYSTALS_KEY = 'sigiLFreezeCrystals';
+export const LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY = 'sigiLAwardedStreakMilestones';
+export const LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY = 'sigiLUnlockedAchievements';
+export const LOCAL_STORAGE_HIGH_GOALS_KEY = 'sigiLHighGoals';
+export const LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY = 'sigiLDashboardSettings';
+export const LOCAL_STORAGE_LAST_VISITED_DATE_KEY = 'sigiLLastVisitedDate';
+
+export const LOCAL_STORAGE_KEYS = [
+  LOCAL_STORAGE_KEY,
+  LOCAL_STORAGE_TASKS_KEY,
+  LOCAL_STORAGE_BONUS_POINTS_KEY,
+  LOCAL_STORAGE_MET_GOALS_KEY,
+  LOCAL_STORAGE_HANDLED_STREAKS_KEY,
+  LOCAL_STORAGE_TODO_KEY,
+  LOCAL_STORAGE_LORE_KEY,
+  LOCAL_STORAGE_SPENT_SKILL_POINTS_KEY,
+  LOCAL_STORAGE_UNLOCKED_SKILLS_KEY,
+  LOCAL_STORAGE_HANDLED_DARK_STREAKS_KEY,
+  LOCAL_STORAGE_FREEZE_CRYSTALS_KEY,
+  LOCAL_STORAGE_AWARDED_STREAK_MILESTONES_KEY,
+  LOCAL_STORAGE_UNLOCKED_ACHIEVEMENTS_KEY,
+  LOCAL_STORAGE_HIGH_GOALS_KEY,
+  LOCAL_STORAGE_DASHBOARD_SETTINGS_KEY,
+  LOCAL_STORAGE_LAST_VISITED_DATE_KEY,
+];
+
+
 export const MAX_CONTRIBUTION_LEVEL = 4;
 export const NUM_WEEKS_TO_DISPLAY = 52;
+
+// Consistency Breach Settings
+export const CONSISTENCY_BREACH_DAYS = 3; // Days of inactivity to trigger a breach
+export const CONSISTENCY_BREACH_PENALTY = 50; // XP penalty for a breach
+
+// Dark Streak Settings
+export const DARK_STREAK_PENALTY = 150; // High XP penalty for breaking a dark streak
+export const STREAK_MILESTONES_FOR_CRYSTALS = [7, 15]; // Days of streak to earn a freeze crystal
 
 export const VALUE_THRESHOLDS: readonly number[] = [5, 10, 15, 20];
 

@@ -27,6 +27,9 @@
 
 import {googleAI} from '@genkit-ai/googleai';
 import {genkit} from 'genkit';
+import * as path from 'path';
+
+require('dotenv').config({path: path.resolve(__dirname, '../../.env')});
 
 genkit({
   plugins: [

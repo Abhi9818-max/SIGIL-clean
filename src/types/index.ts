@@ -1,6 +1,10 @@
 
 
+export type TaskUnit = 'count' | 'minutes' | 'hours' | 'pages' | 'generic' | 'custom';
+export type TaskFrequency = 'daily' | 'weekly';
+
 export interface RecordEntry {
+  id: string; // Unique identifier for each record
   date: string; // YYYY-MM-DD format
   value: number;
   notes?: string; // Optional notes
@@ -33,10 +37,12 @@ export interface TaskDefinition {
   id: string;
   name: string;
   color: string; // HSL color string e.g., 'hsl(210 90% 70%)'
-  intensityThresholds?: number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
-  goalValue?: number; // Optional: A numerical goal for the task (e.g., hours)
-  goalInterval?: 'daily' | 'weekly' | 'monthly'; // Optional: The interval for the goal
-  goalCompletionBonusPercentage?: number; // Optional: Percentage of goalValue to award as bonus points
+  unit?: TaskUnit; // The unit of measurement for this task's value
+  customUnitName?: string; // Optional: name for the custom unit
+  intensityThresholds?: readonly number[]; // Optional: Array of 4 numbers for custom intensity levels [T1, T2, T3, T4]
+  darkStreakEnabled?: boolean; // Optional: Enable high-stakes daily streak for this task
+  frequencyType?: TaskFrequency; // 'daily' or 'weekly'
+  frequencyCount?: number; // e.g., for 'weekly', how many times per week
 }
 
 // For progress charts
@@ -70,30 +76,7 @@ export interface UserLevelInfo {
   valueTowardsNextLevel: number; // Experience points earned within the current level
   pointsForNextLevel: number | null; // Total experience points needed to reach the next level from start of current level
 }
-
-// For Automated Goal Check Results
-export type AutomatedGoalCheckResult =
-  | {
-      metGoal: boolean;
-      bonusAwarded: number | null;
-      actualValue: number;
-      goalValue: number;
-      periodName: string; // e.g., "yesterday", "last week (May 20 - May 26)"
-      periodIdentifier: string; // YYYY-MM-DD representing the end of the checked period
-      taskName: string;
-      error?: never;
-    }
-  | {
-      error: string;
-      metGoal?: never;
-      bonusAwarded?: never;
-      actualValue?: never;
-      goalValue?: never;
-      periodName?: never;
-      periodIdentifier?: never;
-      taskName?: never;
-    };
-
+    
 // Specific for TIER_INFO in config.ts
 export interface TierConfig {
   name: string;
@@ -113,6 +96,8 @@ export interface TodoItem {
   completed: boolean;
   createdAt: string; // ISO date string
   dueDate?: string; // Optional: YYYY-MM-DD format
+  penalty?: number; // Optional: XP penalty if overdue
+  penaltyApplied?: boolean; // Optional: whether the penalty has been applied
 }
 
 // For Constellations
@@ -128,4 +113,111 @@ export interface Constellation {
   taskName: string;
   taskColor: string;
   nodes: SkillNode[];
+}
+
+// For Insights Page
+export interface TaskDistributionData {
+  name: string;
+  value: number;
+  fill: string;
+}
+
+export interface ProductivityByDayData {
+    day: string;
+    total: number;
+}
+
+export interface DailyTimeBreakdownData {
+  name: string;
+  value: number; // in minutes
+  color: string;
+}
+
+
+// For Achievements
+export type AchievementCategory = 'level' | 'streak' | 'skills' | 'creation';
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  category: AchievementCategory;
+  icon: React.ElementType;
+  isSecret?: boolean; // If true, hide details until unlocked
+  check: (context: {
+    levelInfo: UserLevelInfo;
+    streaks: Record<string, number>;
+    unlockedSkillCount: number;
+    loreEntryCount: number;
+  }) => boolean;
+}
+
+// For High Goals
+export interface HighGoal {
+  id: string;
+  name: string;
+  taskId: string;
+  targetValue: number;
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
+}
+
+// For Settings
+export interface DashboardSettings {
+  showTotalLast30Days: boolean;
+  totalDays: number;
+  showCurrentStreak: boolean;
+  showDailyConsistency: boolean;
+  consistencyDays: number;
+  showHighGoalStat: boolean;
+  showTaskFilterBar: boolean;
+  showContributionGraph: boolean;
+  showTodoList: boolean;
+  showProgressChart: boolean;
+  showAISuggestions: boolean;
+  showTimeBreakdownChart: boolean;
+  pieChartLabelFormat?: 'percentage' | 'time';
+}
+
+// For Auth/User Data
+export interface UserData {
+    uid?: string; // Optional uid, will be present on fetched data
+    username: string;
+    username_lowercase?: string; // For case-insensitive search
+    photoURL?: string | null; // Add photoURL for profile pictures
+    records?: RecordEntry[];
+    taskDefinitions?: TaskDefinition[];
+    bonusPoints?: number;
+    unlockedAchievements?: string[];
+    spentSkillPoints?: Record<string, number>;
+    unlockedSkills?: string[];
+    freezeCrystals?: number;
+    awardedStreakMilestones?: Record<string, number[]>;
+    highGoals?: HighGoal[];
+    todoItems?: TodoItem[];
+    dashboardSettings?: DashboardSettings;
+}
+
+// For Friends feature
+export interface SearchedUser {
+    uid: string;
+    username: string;
+    photoURL?: string | null;
+}
+
+export interface FriendRequest {
+    id: string;
+    senderId: string;
+    senderUsername: string;
+    recipientId: string;
+    recipientUsername: string;
+    status: 'pending' | 'accepted' | 'declined';
+    createdAt: string;
+}
+
+export interface Friend {
+    uid: string;
+    username: string;
+    photoURL?: string | null;
+    since: string;
 }
