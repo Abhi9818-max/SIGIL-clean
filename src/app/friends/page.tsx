@@ -191,15 +191,15 @@ const FriendsContent = () => {
                          <Card>
                              <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
                                 <AccordionItem value="item-1" className="border-b-0">
-                                   <CardHeader>
-                                        <AccordionTrigger>
-                                            <div>
-                                              <CardTitle>Requests</CardTitle>
-                                              <CardDescription>Manage your friend requests.</CardDescription>
-                                            </div>
+                                   <CardHeader className="p-0">
+                                        <AccordionTrigger className="p-6">
+                                            <CardTitle>Requests</CardTitle>
                                         </AccordionTrigger>
                                    </CardHeader>
                                    <AccordionContent>
+                                       <CardDescription className="px-6 pb-4">
+                                            Manage your friend requests.
+                                       </CardDescription>
                                        <CardContent className="flex justify-around items-center pt-2">
                                           <Popover>
                                               <PopoverTrigger asChild>
