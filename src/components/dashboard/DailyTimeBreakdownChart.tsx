@@ -5,13 +5,15 @@ import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
-import { Clock, PlusCircle } from 'lucide-react';
+import { Clock, PlusCircle, EyeOff, Eye } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Separator } from '../ui/separator';
+import type { TaskUnit } from '@/types';
+import { Label } from '../ui/label';
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
@@ -42,45 +44,64 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 
 const DailyTimeBreakdownChart = () => {
-    const { getDailyTimeBreakdown, taskDefinitions, addRecord } = useUserRecords();
+    const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition } = useUserRecords();
     const data = getDailyTimeBreakdown();
     const { toast } = useToast();
 
-    const [selectedQuickLogTask, setSelectedQuickLogTask] = useState<string>('');
+    const [showQuickLogForm, setShowQuickLogForm] = useState(true);
+    const [newTaskName, setNewTaskName] = useState('');
+    const [unit, setUnit] = useState<TaskUnit>('minutes');
     const [quickLogValue, setQuickLogValue] = useState<string>('');
-    
-    const timeBasedTasks = useMemo(() => {
-        return taskDefinitions.filter(t => t.unit === 'minutes' || t.unit === 'hours');
-    }, [taskDefinitions]);
 
     const handleQuickLog = () => {
-        if (!selectedQuickLogTask || !quickLogValue) {
+        if (!newTaskName.trim() || !quickLogValue) {
              toast({
                 title: 'Missing Information',
-                description: 'Please select a task and enter a value.',
+                description: 'Please enter a task name and a value.',
                 variant: 'destructive',
             });
             return;
         }
 
-        const task = taskDefinitions.find(t => t.id === selectedQuickLogTask);
-        if (!task) return;
+        let task = taskDefinitions.find(t => t.name.toLowerCase() === newTaskName.trim().toLowerCase() && (t.unit === 'minutes' || t.unit === 'hours'));
+        let taskId = task?.id;
+
+        if (!task) {
+            // Create a new task if it doesn't exist
+            const newTaskId = addTaskDefinition({
+                name: newTaskName.trim(),
+                color: `hsl(${Math.random() * 360}, 70%, 70%)`, // Random color
+                unit: unit,
+            });
+            taskId = newTaskId;
+            toast({
+                title: 'Task Created!',
+                description: `New task "${newTaskName.trim()}" was created.`,
+            });
+        }
+        
+        if (!taskId) return;
 
         addRecord({
             date: format(new Date(), 'yyyy-MM-dd'),
             value: Number(quickLogValue),
-            taskType: selectedQuickLogTask,
+            taskType: taskId,
             notes: 'Logged via dashboard widget.'
         });
 
         toast({
             title: 'Time Logged!',
-            description: `${quickLogValue} ${task.unit} logged for "${task.name}".`,
+            description: `${quickLogValue} ${task?.unit || unit} logged for "${newTaskName.trim()}".`,
         });
 
+        setNewTaskName('');
         setQuickLogValue('');
-        setSelectedQuickLogTask('');
     };
+    
+    const timeBasedTasksExist = useMemo(() => {
+        return taskDefinitions.some(t => t.unit === 'minutes' || t.unit === 'hours');
+    }, [taskDefinitions]);
+
 
     return (
         <Card className="shadow-lg">
@@ -95,7 +116,7 @@ const DailyTimeBreakdownChart = () => {
                 {data.length === 1 && data[0].name === 'Unallocated' ? (
                      <div className="h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
                         <p>No time-based tasks logged for today.</p>
-                        <p className="text-sm">Log your minutes or hours below.</p>
+                         {!timeBasedTasksExist && <p className="text-sm">Please add a time-based task in "Manage Tasks" to use this chart.</p>}
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height={300}>
@@ -123,39 +144,51 @@ const DailyTimeBreakdownChart = () => {
                     </ResponsiveContainer>
                 )}
             </CardContent>
-             {timeBasedTasks.length > 0 && (
-                <>
-                <Separator />
-                <CardFooter className="pt-6">
-                    <div className="w-full space-y-3">
-                         <p className="text-sm font-medium text-muted-foreground">Quick Log Time</p>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                           <Select value={selectedQuickLogTask} onValueChange={setSelectedQuickLogTask}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a task..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {timeBasedTasks.map(task => (
-                                        <SelectItem key={task.id} value={task.id}>
-                                            {task.name} ({task.unit})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Input 
-                                type="number" 
-                                placeholder="e.g., 30"
-                                value={quickLogValue}
-                                onChange={(e) => setQuickLogValue(e.target.value)}
-                            />
-                            <Button onClick={handleQuickLog} className="w-full sm:w-auto">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Log
-                            </Button>
+            <Separator />
+            <CardFooter className="pt-6 flex-col items-start gap-4">
+                <div className="w-full flex justify-between items-center">
+                    <p className="text-sm font-medium text-muted-foreground">Quick Log Time</p>
+                    <Button variant="ghost" size="sm" onClick={() => setShowQuickLogForm(!showQuickLogForm)}>
+                        {showQuickLogForm ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                        {showQuickLogForm ? 'Hide' : 'Show'}
+                    </Button>
+                </div>
+                {showQuickLogForm && (
+                    <div className="w-full space-y-3 animate-fade-in-up">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                             <div>
+                                <Label htmlFor="quick-task-name" className="sr-only">Task Name</Label>
+                                <Input 
+                                    id="quick-task-name"
+                                    placeholder="Task Name"
+                                    value={newTaskName}
+                                    onChange={(e) => setNewTaskName(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Select value={unit} onValueChange={(value: TaskUnit) => setUnit(value)}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="minutes">Minutes</SelectItem>
+                                        <SelectItem value="hours">Hours</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                 <Input 
+                                    type="number" 
+                                    placeholder="e.g., 30"
+                                    value={quickLogValue}
+                                    onChange={(e) => setQuickLogValue(e.target.value)}
+                                />
+                            </div>
                         </div>
+                        <Button onClick={handleQuickLog} className="w-full">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Log Time
+                        </Button>
                     </div>
-                </CardFooter>
-                </>
-             )}
+                )}
+            </CardFooter>
         </Card>
     );
 }
