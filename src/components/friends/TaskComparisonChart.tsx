@@ -16,26 +16,33 @@ interface TaskComparisonChartProps {
 
 const TaskComparisonChart: React.FC<TaskComparisonChartProps> = ({ friendData }) => {
     const { userData } = useAuth();
-    const { taskDefinitions: currentUserTasks } = useUserRecords();
+    const { taskDefinitions: currentUserTasks, records: currentUserRecordsFromCtx } = useUserRecords();
+    
+    const currentUserRecords = userData?.records || currentUserRecordsFromCtx;
 
     const comparisonData = useMemo(() => {
         const friendTasks = friendData.taskDefinitions || [];
-        const currentUserRecords = userData?.records || [];
         const friendRecords = friendData.records || [];
 
-        const allTaskIds = new Set([...currentUserTasks.map(t => t.id), ...friendTasks.map(t => t.id)]);
+        // Combine all unique task definitions from both users
+        const allTaskDefinitions = new Map<string, TaskDefinition>();
+        [...currentUserTasks, ...friendTasks].forEach(task => {
+            if (!allTaskDefinitions.has(task.id)) {
+                allTaskDefinitions.set(task.id, task);
+            }
+        });
         
-        const data = Array.from(allTaskIds).map(taskId => {
-            const task = currentUserTasks.find(t => t.id === taskId) || friendTasks.find(t => t.id === taskId);
-            if (!task) return null;
-
+        const data = Array.from(allTaskDefinitions.values()).map(task => {
             const currentUserTotal = currentUserRecords
-                .filter(r => r.taskType === taskId)
+                .filter(r => r.taskType === task.id)
                 .reduce((sum, r) => sum + r.value, 0);
             
             const friendUserTotal = friendRecords
-                .filter(r => r.taskType === taskId)
+                .filter(r => r.taskType === task.id)
                 .reduce((sum, r) => sum + r.value, 0);
+            
+            // Only include tasks where at least one person has data
+            if(currentUserTotal === 0 && friendUserTotal === 0) return null;
 
             return {
                 task: task.name,
@@ -45,7 +52,7 @@ const TaskComparisonChart: React.FC<TaskComparisonChartProps> = ({ friendData })
         }).filter(Boolean);
 
         return data as { task: string; [key: string]: number | string; }[];
-    }, [friendData, userData, currentUserTasks]);
+    }, [friendData, userData, currentUserTasks, currentUserRecords]);
 
     if (!comparisonData || comparisonData.length === 0) {
         return (

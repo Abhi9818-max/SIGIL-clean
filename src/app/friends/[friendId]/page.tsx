@@ -22,6 +22,7 @@ import { calculateUserLevelInfo } from '@/lib/config';
 import { subDays, startOfWeek, endOfWeek, isWithinInterval, startOfDay } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DailyTimeBreakdownChart from '@/components/dashboard/DailyTimeBreakdownChart';
+import TaskFilterBar from '@/components/records/TaskFilterBar';
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -43,6 +44,7 @@ const FriendProfileContent = () => {
     const { friends, getFriendData } = useFriends();
     const [friendData, setFriendData] = useState<UserData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedTaskFilterId, setSelectedTaskFilterId] = useState<string | null>(null);
 
     const currentUserRecords = useUserRecords();
     const levelInfo = currentUserRecords.getUserLevelInfo();
@@ -192,13 +194,19 @@ const FriendProfileContent = () => {
                 
                 <Card>
                     <CardHeader>
-                        <h3 className="text-lg font-semibold my-4">Contribution Graph</h3>
+                        <CardTitle>Contribution Graph</CardTitle>
+                        <CardDescription>A full overview of their activity.</CardDescription>
                     </CardHeader>
                     <CardContent>
+                        <TaskFilterBar
+                            taskDefinitions={friendTasks}
+                            selectedTaskId={selectedTaskFilterId}
+                            onSelectTask={setSelectedTaskFilterId}
+                        />
                         <ContributionGraph 
                             year={new Date().getFullYear()}
                             onDayClick={() => {}} 
-                            selectedTaskFilterId={null}
+                            selectedTaskFilterId={selectedTaskFilterId}
                             records={friendRecords} 
                             taskDefinitions={friendTasks}
                             displayMode="full"
