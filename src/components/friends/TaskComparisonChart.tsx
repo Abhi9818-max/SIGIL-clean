@@ -39,7 +39,7 @@ const TaskComparisonChart: React.FC<TaskComparisonChartProps> = ({ friendData })
 
             return {
                 task: task.name,
-                [userData?.username || 'You']: currentUserTotal,
+                'You': currentUserTotal,
                 [friendData.username]: friendUserTotal,
             };
         }).filter(Boolean);
@@ -67,7 +67,7 @@ const TaskComparisonChart: React.FC<TaskComparisonChartProps> = ({ friendData })
     }
     
     const maxVal = Math.max(
-      ...comparisonData.flatMap(d => [d[userData?.username || 'You'] as number, d[friendData.username] as number])
+      ...comparisonData.flatMap(d => [d['You'] as number, d[friendData.username] as number])
     );
     const friendColor = "hsl(var(--destructive))";
     const userColor = "hsl(var(--primary))";
@@ -88,8 +88,8 @@ const TaskComparisonChart: React.FC<TaskComparisonChartProps> = ({ friendData })
                         <PolarAngleAxis dataKey="task" />
                         <PolarRadiusAxis angle={30} domain={[0, maxVal > 0 ? 'auto' : 100]} tick={false} axisLine={false} />
                         <Radar 
-                          name={userData?.username || 'You'} 
-                          dataKey={userData?.username || 'You'} 
+                          name="You" 
+                          dataKey="You" 
                           stroke={userColor} 
                           fill={userColor} 
                           fillOpacity={0.6} 
