@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
-import { UserSearch, UserPlus, Users, Mail, Check, X } from 'lucide-react';
+import { UserSearch, UserPlus, Users, Mail, Check, X, Hourglass } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { FriendProvider, useFriends } from '@/components/providers/FriendProvider';
@@ -16,6 +16,14 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -181,60 +189,87 @@ const FriendsContent = () => {
                     <div className="space-y-8">
                         <Card>
                             <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <Mail className="h-6 w-6 text-primary" />
-                                    <CardTitle>Incoming Requests</CardTitle>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Mail className="h-6 w-6 text-primary" />
+                                        <CardTitle>Incoming</CardTitle>
+                                    </div>
+                                    <Badge variant={incomingRequests.length > 0 ? "default" : "secondary"}>
+                                        {incomingRequests.length}
+                                    </Badge>
                                 </div>
                                 <CardDescription>Accept or decline requests from other users.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {incomingRequests.length === 0 ? (
-                                    <p className="text-center text-muted-foreground py-4">No incoming requests.</p>
+                                    <p className="text-center text-muted-foreground text-sm py-4">No incoming requests.</p>
                                 ) : (
-                                    <div className="space-y-3">
-                                        {incomingRequests.map(req => (
-                                            <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar>
-                                                        <AvatarImage src={getAvatarForId(req.senderId)} />
-                                                        <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium text-sm">{req.senderUsername}</span>
+                                    <Accordion type="single" collapsible>
+                                        <AccordionItem value="incoming-requests">
+                                            <AccordionTrigger>View Incoming Requests</AccordionTrigger>
+                                            <AccordionContent>
+                                                <div className="space-y-3 pt-2">
+                                                    {incomingRequests.map(req => (
+                                                        <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar>
+                                                                    <AvatarImage src={getAvatarForId(req.senderId)} />
+                                                                    <AvatarFallback>{req.senderUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-medium text-sm">{req.senderUsername}</span>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <Button size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => acceptFriendRequest(req)}><Check className="h-4 w-4" /></Button>
+                                                                <Button size="icon" variant="destructive" className="h-8 w-8" onClick={() => declineFriendRequest(req.id)}><X className="h-4 w-4" /></Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <Button size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => acceptFriendRequest(req)}><Check className="h-4 w-4" /></Button>
-                                                    <Button size="icon" variant="destructive" className="h-8 w-8" onClick={() => declineFriendRequest(req.id)}><X className="h-4 w-4" /></Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
                                 )}
                             </CardContent>
                         </Card>
                         
                          <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Pending Requests</CardTitle>
-                                <CardDescription>Requests you have sent.</CardDescription>
+                                <div className="flex items-center justify-between">
+                                     <div className="flex items-center gap-2">
+                                        <Hourglass className="h-6 w-6 text-primary" />
+                                        <CardTitle>Pending</CardTitle>
+                                    </div>
+                                    <Badge variant={pendingRequests.length > 0 ? "default" : "secondary"}>
+                                        {pendingRequests.length}
+                                    </Badge>
+                                </div>
+                                <CardDescription>Requests you have sent that haven't been answered.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {pendingRequests.length === 0 ? (
-                                    <p className="text-center text-muted-foreground py-4">No pending requests.</p>
+                                    <p className="text-center text-muted-foreground text-sm py-4">No pending requests.</p>
                                 ) : (
-                                    <div className="space-y-3">
-                                        {pendingRequests.map(req => (
-                                            <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
-                                                 <div className="flex items-center gap-3">
-                                                    <Avatar>
-                                                        <AvatarImage src={getAvatarForId(req.recipientId)} />
-                                                        <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium text-sm">{req.recipientUsername}</span>
+                                    <Accordion type="single" collapsible>
+                                        <AccordionItem value="pending-requests">
+                                            <AccordionTrigger>View Pending Requests</AccordionTrigger>
+                                            <AccordionContent>
+                                                <div className="space-y-3 pt-2">
+                                                    {pendingRequests.map(req => (
+                                                        <div key={req.id} className="p-3 border rounded-lg flex items-center justify-between bg-card">
+                                                             <div className="flex items-center gap-3">
+                                                                <Avatar>
+                                                                    <AvatarImage src={getAvatarForId(req.recipientId)} />
+                                                                    <AvatarFallback>{req.recipientUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-medium text-sm">{req.recipientUsername}</span>
+                                                            </div>
+                                                            <Button size="sm" variant="outline" onClick={() => cancelFriendRequest(req.id)}>Cancel</Button>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <Button size="sm" variant="outline" onClick={() => cancelFriendRequest(req.id)}>Cancel</Button>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
                                 )}
                             </CardContent>
                         </Card>
