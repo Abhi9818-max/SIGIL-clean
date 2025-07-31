@@ -33,6 +33,16 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import AvatarSelectionDialog from '@/components/settings/AvatarSelectionDialog';
 
+// Simple hash function to get a number from a string for consistent default avatars
+const simpleHash = (s: string) => {
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        const char = s.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+};
 
 export default function SettingsPage() {
   const { getUserLevelInfo } = useUserRecords();
@@ -185,6 +195,14 @@ export default function SettingsPage() {
       updateDashboardSetting(key, 30);
     }
   };
+  
+  const getAvatarForId = (id: string | undefined) => {
+      if (!id) return '';
+      const avatarNumber = (simpleHash(id) % 12) + 1;
+      return `/avatars/avatar-${avatarNumber}.jpeg`;
+  }
+
+  const userAvatar = userData?.photoURL || getAvatarForId(user?.uid);
 
 
   return (
@@ -216,7 +234,7 @@ export default function SettingsPage() {
                   <div className="p-4 border rounded-lg space-y-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-24 w-24">
-                          <AvatarImage src={userData?.photoURL || ''} alt={userData?.username}/>
+                          <AvatarImage src={userAvatar} alt={userData?.username}/>
                           <AvatarFallback className="text-3xl">
                             {userData?.username ? userData.username.charAt(0).toUpperCase() : '?'}
                           </AvatarFallback>
