@@ -120,33 +120,51 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, [user]);
 
     const acceptFriendRequest = useCallback(async (request: FriendRequest) => {
-        if (!user || !user.displayName || !userData) return;
+        if (!user || !userData) {
+            toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
+            return;
+        }
         const batch = writeBatch(db);
         
+        // Fetch full UserData for both users to ensure all info is available
         const senderDataDoc = await getDoc(doc(db, 'users', request.senderId));
+        if (!senderDataDoc.exists()) {
+            toast({ title: 'Error', description: 'Could not find the user who sent the request.', variant: 'destructive' });
+            return;
+        }
         const senderData = senderDataDoc.data() as UserData;
+        const currentUserData = userData; // We already have this from useAuth
 
+        // Add sender to current user's friend list
         const currentUserFriendRef = doc(db, `users/${user.uid}/friends`, request.senderId);
         batch.set(currentUserFriendRef, { 
             uid: request.senderId, 
-            username: request.senderUsername, 
-            photoURL: senderData?.photoURL || null,
+            username: senderData.username, 
+            photoURL: senderData.photoURL || null,
             since: new Date().toISOString() 
         });
 
+        // Add current user to sender's friend list
         const senderFriendRef = doc(db, `users/${request.senderId}/friends`, user.uid);
         batch.set(senderFriendRef, { 
             uid: user.uid, 
-            username: userData.username, 
-            photoURL: userData?.photoURL || null,
+            username: currentUserData.username, 
+            photoURL: currentUserData.photoURL || null,
             since: new Date().toISOString() 
         });
         
+        // Delete the original request
         const requestRef = doc(db, 'friend_requests', request.id);
         batch.delete(requestRef);
 
-        await batch.commit();
-        toast({ title: 'Friend Added', description: `You are now friends with ${request.senderUsername}.` });
+        try {
+            await batch.commit();
+            toast({ title: 'Friend Added', description: `You are now friends with ${request.senderUsername}.` });
+        } catch (error) {
+            console.error("Failed to accept friend request:", error);
+            toast({ title: 'Error', description: 'Could not accept the friend request.', variant: 'destructive' });
+        }
+
     }, [user, userData, toast]);
 
     const declineFriendRequest = useCallback(async (requestId: string) => {
