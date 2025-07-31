@@ -11,7 +11,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Separator } from '../ui/separator';
 import type { TaskUnit } from '@/types';
 import { Label } from '../ui/label';
@@ -24,7 +24,7 @@ interface DailyTimeBreakdownChartProps {
 }
 
 const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date, hideFooter = false }) => {
-    const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition } = useUserRecords();
+    const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition, getTaskDefinitionById } = useUserRecords();
     const { dashboardSettings } = useSettings();
     const data = useMemo(() => getDailyTimeBreakdown(date), [getDailyTimeBreakdown, date]);
     const { toast } = useToast();
@@ -81,12 +81,6 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         setQuickLogValue('');
     };
 
-    const getTaskDefinitionById = (id: string) => taskDefinitions.find(t => t.id === id);
-    
-    const timeBasedTasksExist = useMemo(() => {
-        return taskDefinitions.some(t => t.unit === 'minutes' || t.unit === 'hours');
-    }, [taskDefinitions]);
-
     const chartTitle = date ? `Time Breakdown for ${format(date, 'MMM d, yyyy')}` : 'Daily Time Breakdown';
     const chartDescription = date ? `A visualization of your time-based tasks for this day.` : `A 24-hour visualization of your time-based tasks for today.`
 
@@ -101,8 +95,8 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
     
     const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, name }: any) => {
       const RADIAN = Math.PI / 180;
-      // Stagger y position to prevent overlap
-      const yStagger = (index % 2 === 0 ? 0 : 25); // Increased from 15 to 25
+      // Increased stagger and adjusted logic
+      const yStagger = (index % 4) * 15; 
       const radius = innerRadius + (outerRadius - innerRadius) * 1.25 + yStagger; 
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
       const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -118,17 +112,22 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
       const textAnchor = cos >= 0 ? 'start' : 'end';
     
       if (payload.name === 'Unallocated' || percent === 0) return null;
+      
+      const labelValue = dashboardSettings.pieChartLabelFormat === 'time'
+        ? `${Math.floor(payload.value / 60)}h ${payload.value % 60}m`
+        : `${(percent * 100).toFixed(0)}%`;
+
     
       return (
         <g>
            <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={payload.fill} fill="none" />
            <circle cx={ex} cy={ey} r={2} fill={payload.fill} stroke="none" />
            <text x={ex + (cos >= 0 ? 1 : -1) * 6} y={ey} dy={4} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs">
-               {`${name} (${(percent * 100).toFixed(0)}%)`}
+               {`${name} (${labelValue})`}
            </text>
         </g>
       );
-    }, []);
+    }, [dashboardSettings.pieChartLabelFormat]);
 
     return (
         <Card className="shadow-lg">
