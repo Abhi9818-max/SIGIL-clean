@@ -91,7 +91,7 @@ const FriendsContent = () => {
     
     const getAvatarForId = (id: string) => {
         const avatarNumber = (simpleHash(id) % 12) + 1;
-        return `/images/avatars/avatar-${avatarNumber}.jpeg`;
+        return `/avatars/avatar${avatarNumber}.jpeg`;
     }
 
     return (
