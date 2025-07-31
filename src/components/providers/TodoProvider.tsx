@@ -7,8 +7,6 @@ import { useUserRecords } from './UserRecordsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { isPast, startOfDay, format, parseISO, isToday, isYesterday, subDays } from 'date-fns';
 import { useAuth } from './AuthProvider';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
 interface TodoContextType {
@@ -21,22 +19,10 @@ interface TodoContextType {
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
-// Helper function to create a Firestore-safe object by removing undefined keys
-const sanitizeForFirestore = (obj: any) => {
-  const newObj: any = {};
-  for (const key in obj) {
-    if (obj[key] !== undefined) {
-      newObj[key] = obj[key];
-    }
-  }
-  return newObj;
-};
-
-
 export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const userRecords = useUserRecords();
-  const { user, userData, isUserDataLoaded } = useAuth();
+  const { userData, isUserDataLoaded } = useAuth();
   const { toast } = useToast();
 
   const applyPenalty = useCallback((item: TodoItem): TodoItem => {
@@ -64,16 +50,14 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let penaltiesApplied = false;
 
       processedItems = allStoredItems.map(item => {
-        // Sanitize item first to remove any legacy undefined fields
-        const sanitizedItem = sanitizeForFirestore(item) as TodoItem;
-        if (!sanitizedItem.completed && !sanitizedItem.penaltyApplied && sanitizedItem.dueDate) {
-          const dueDate = startOfDay(parseISO(sanitizedItem.dueDate));
+        if (!item.completed && !item.penaltyApplied && item.dueDate) {
+          const dueDate = startOfDay(parseISO(item.dueDate));
           if (isPast(dueDate)) {
             penaltiesApplied = true;
-            return applyPenalty(sanitizedItem);
+            return applyPenalty(item);
           }
         }
-        return sanitizedItem;
+        return item;
       });
 
       if (penaltiesApplied) {
@@ -94,48 +78,36 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       setTodoItems(relevantItems);
+      // If penalties were applied, we need to save the updated items back to the DB.
+      if (penaltiesApplied) {
+          userRecords.updateUserDataInDb({ todoItems: processedItems });
+      }
+
     } else if (isUserDataLoaded) {
       setTodoItems([]);
     }
-  }, [userData, isUserDataLoaded, applyPenalty, toast]);
+  }, [userData, isUserDataLoaded, applyPenalty, toast, userRecords.updateUserDataInDb]);
 
-  // Save to Firebase when todoItems change
-  const updateDbWithTodos = useCallback(async (newTodos: TodoItem[]) => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          // Sanitize every item before saving to be safe
-          const sanitizedTodos = newTodos.map(item => sanitizeForFirestore(item));
-          await setDoc(userDocRef, { todoItems: sanitizedTodos }, { merge: true });
-        } catch (e) {
-           console.error(`Failed to update todoItems in Firestore:`, e);
-        }
-      }
-  }, [user]);
 
   const addTodoItem = useCallback((text: string, dueDate?: string, penalty?: number) => {
     if (text.trim() === '') return;
     
-    let newItem: TodoItem = {
+    const newItem: TodoItem = {
       id: uuidv4(),
       text,
       completed: false,
       createdAt: new Date().toISOString(),
-      dueDate,
+      ...(dueDate && { dueDate }),
+      ...(dueDate && penalty && penalty > 0 && { penalty }),
       penaltyApplied: false,
     };
-    
-    // Only add penalty field if it has a value
-    if (dueDate && penalty && penalty > 0) {
-      newItem.penalty = penalty;
-    }
 
     setTodoItems(prevItems => {
         const newItems = [newItem, ...prevItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        updateDbWithTodos(newItems);
+        userRecords.updateUserDataInDb({ todoItems: newItems });
         return newItems;
     });
-  }, [updateDbWithTodos]);
+  }, [userRecords.updateUserDataInDb]);
 
   const toggleTodoItem = useCallback((id: string) => {
     setTodoItems(prevItems => {
@@ -152,10 +124,10 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return item;
         });
-        updateDbWithTodos(newItems);
+        userRecords.updateUserDataInDb({ todoItems: newItems });
         return newItems;
     });
-  }, [applyPenalty, updateDbWithTodos]);
+  }, [applyPenalty, userRecords.updateUserDataInDb]);
 
   const deleteTodoItem = useCallback((id: string) => {
     const item = todoItems.find(i => i.id === id);
@@ -163,10 +135,10 @@ export const TodoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setTodoItems(prevItems => {
         const newItems = prevItems.filter(i => i.id !== id);
-        updateDbWithTodos(newItems);
+        userRecords.updateUserDataInDb({ todoItems: newItems });
         return newItems;
     });
-  }, [todoItems, updateDbWithTodos]);
+  }, [todoItems, userRecords.updateUserDataInDb]);
 
   const getTodoItemById = useCallback((id: string): TodoItem | undefined => {
     return todoItems.find(item => item.id === id);

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal, DailyTimeBreakdownData, UserData } from '@/types';
@@ -37,6 +36,33 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
 
+// Helper function to recursively remove undefined values from an object
+const removeUndefinedValues = (obj: any): any => {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefinedValues).filter(v => v !== null);
+  }
+  if (typeof obj === 'object') {
+    const newObj: { [key: string]: any } = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = obj[key];
+        if (value !== undefined) {
+          const sanitizedValue = removeUndefinedValues(value);
+          if (sanitizedValue !== null) {
+            newObj[key] = sanitizedValue;
+          }
+        }
+      }
+    }
+    // Return null if the object becomes empty after cleaning
+    return Object.keys(newObj).length > 0 ? newObj : null;
+  }
+  return obj;
+};
+
 
 interface UserRecordsContextType {
   records: RecordEntry[];
@@ -61,6 +87,7 @@ interface UserRecordsContextType {
   totalBonusPoints: number;
   awardTierEntryBonus: (bonusAmount: number) => void;
   deductBonusPoints: (penalty: number) => void;
+  updateUserDataInDb: (dataToUpdate: Partial<UserData>) => Promise<void>;
   // Constellations
   getAvailableSkillPoints: (taskId: string) => number;
   unlockSkill: (skillId: string, taskId: string, cost: number) => boolean;
@@ -110,7 +137,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
       try {
-        await setDoc(userDocRef, dataToUpdate, { merge: true });
+        // Sanitize data before sending to Firestore
+        const sanitizedData = removeUndefinedValues(dataToUpdate);
+        if (sanitizedData && Object.keys(sanitizedData).length > 0) {
+           await setDoc(userDocRef, sanitizedData, { merge: true });
+        }
       } catch (error) {
         console.error("Error updating user data in DB:", error);
       }
@@ -598,6 +629,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     totalBonusPoints,
     awardTierEntryBonus,
     deductBonusPoints,
+    updateUserDataInDb,
     getAvailableSkillPoints,
     unlockSkill,
     isSkillUnlocked,

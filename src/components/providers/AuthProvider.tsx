@@ -139,12 +139,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
+        const photoURL = url || null;
         // Update auth profile
-        await updateProfile(user, { photoURL: url });
+        await updateProfile(user, { photoURL });
         
         // Update Firestore document
         const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, { photoURL: url }, { merge: true });
+        await setDoc(userDocRef, { photoURL }, { merge: true });
 
         toast({ title: "Avatar Updated", description: "Your new avatar has been saved." });
         return url;
