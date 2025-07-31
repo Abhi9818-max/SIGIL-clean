@@ -48,7 +48,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from '@/components/ui/separator';
-import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer, CalendarCheck } from 'lucide-react';
+import { Pencil, Trash2, Info, Target, Zap, PlusCircle, Timer, CalendarCheck, Clock, Check } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import type { TaskDefinition, TaskUnit } from '@/types';
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,7 @@ import { VALUE_THRESHOLDS } from '@/lib/config';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { format } from 'date-fns';
 
 const createTaskFormSchema = (existingTasks: TaskDefinition[], editingTaskId: string | null) => z.object({
   name: z.string()
@@ -131,9 +132,11 @@ interface ManageTasksModalProps {
 }
 
 const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChange }) => {
-  const { taskDefinitions, addTaskDefinition, updateTaskDefinition, deleteTaskDefinition } = useUserRecords();
+  const { taskDefinitions, addTaskDefinition, updateTaskDefinition, deleteTaskDefinition, addRecord } = useUserRecords();
   const { toast } = useToast();
   const [editingTask, setEditingTask] = useState<TaskDefinition | null>(null);
+  const [quickLogTaskId, setQuickLogTaskId] = useState<string | null>(null);
+  const [quickLogValue, setQuickLogValue] = useState('');
 
   const taskFormSchema = useMemo(() => {
     return createTaskFormSchema(taskDefinitions, editingTask?.id || null);
@@ -176,6 +179,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
   useEffect(() => {
     if (isOpen) { 
       resetFormFields(null);
+      setQuickLogTaskId(null);
     }
   }, [isOpen]);
 
@@ -220,6 +224,27 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
   const watchUnit = form.watch('unit');
   const watchFrequencyType = form.watch('frequencyType');
 
+  const handleQuickLog = (task: TaskDefinition) => {
+    if (!quickLogValue || Number(quickLogValue) <= 0) {
+      toast({ title: 'Invalid Value', description: 'Please enter a positive number to log.', variant: 'destructive' });
+      return;
+    }
+
+    addRecord({
+      date: format(new Date(), 'yyyy-MM-dd'),
+      value: Number(quickLogValue),
+      taskType: task.id,
+      notes: 'Quick log from Manage Tasks',
+    });
+
+    toast({
+      title: 'Time Logged!',
+      description: `${quickLogValue} ${task.unit} logged for "${task.name}".`,
+    });
+
+    setQuickLogValue('');
+    setQuickLogTaskId(null);
+  };
 
   const getUnitLabel = (task: TaskDefinition) => {
     if (task.unit === 'custom' && task.customUnitName) {
@@ -389,7 +414,9 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
               ) : (
                 <TooltipProvider>
                   <div className="space-y-3">
-                    {taskDefinitions.map((task) => (
+                    {taskDefinitions.map((task) => {
+                      const isTimeBased = task.unit === 'minutes' || task.unit === 'hours';
+                      return (
                       <div key={task.id} className={cn("p-3 border rounded-lg transition-all", editingTask?.id === task.id ? 'bg-muted border-primary/50' : 'bg-card-foreground/5')}>
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
@@ -411,6 +438,16 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                             </div>
                           </div>
                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {isTimeBased && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuickLogTaskId(quickLogTaskId === task.id ? null : task.id)}>
+                                      <Clock className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>Quick Log Time</p></TooltipContent>
+                                </Tooltip>
+                              )}
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => resetFormFields(task)}>
                                 <Pencil className="h-4 w-4" />
                                 <span className="sr-only">Edit {task.name}</span>
@@ -432,8 +469,26 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                               </AlertDialog>
                             </div>
                         </div>
+                        {quickLogTaskId === task.id && (
+                          <div className="mt-3 pt-3 border-t border-border/50 animate-fade-in-up">
+                            <Label htmlFor={`quick-log-${task.id}`} className="text-xs text-muted-foreground mb-1">Log time for today ({task.unit})</Label>
+                             <div className="flex gap-2">
+                                <Input
+                                  id={`quick-log-${task.id}`}
+                                  type="number"
+                                  placeholder={`e.g., ${task.unit === 'minutes' ? '30' : '1'}`}
+                                  value={quickLogValue}
+                                  onChange={(e) => setQuickLogValue(e.target.value)}
+                                  onKeyPress={(e) => e.key === 'Enter' && handleQuickLog(task)}
+                                />
+                                <Button size="icon" onClick={() => handleQuickLog(task)}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              </div>
+                          </div>
+                        )}
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </TooltipProvider>
               )}
