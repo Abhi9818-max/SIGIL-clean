@@ -56,7 +56,7 @@ const FriendsContent = () => {
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
     const [searchMessage, setSearchMessage] = useState<string | null>(null);
     const [isSearchVisible, setIsSearchVisible] = useState(false);
-    const [requestsOpen, setRequestsOpen] = useState(true);
+    const [requestsOpen, setRequestsOpen] = useState(false);
     const { toast } = useToast();
 
     const handleSearch = async () => {
@@ -209,7 +209,7 @@ const FriendsContent = () => {
 
                     <div className={cn(requestsOpen ? "lg:col-span-3" : "lg:col-span-1")}>
                          <Card>
-                             <Accordion type="single" collapsible className="w-full" defaultValue="item-1" onValueChange={(value) => setRequestsOpen(!value)}>
+                             <Accordion type="single" collapsible className="w-full" onValueChange={(value) => setRequestsOpen(!!value)}>
                                 <AccordionItem value="item-1" className="border-b-0">
                                    <CardHeader>
                                        <AccordionTrigger className="p-0 text-left w-full hover:no-underline focus:no-underline">
