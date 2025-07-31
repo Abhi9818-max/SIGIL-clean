@@ -13,21 +13,85 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { Separator } from '../ui/separator';
-import type { TaskUnit, RecordEntry } from '@/types';
+import type { TaskUnit, RecordEntry, DailyTimeBreakdownData, TaskDefinition } from '@/types';
 import { Label } from '../ui/label';
 import { cn } from '@/lib/utils';
-import type { DailyTimeBreakdownData } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface DailyTimeBreakdownChartProps {
   date?: Date;
   hideFooter?: boolean;
+  records?: RecordEntry[];
+  taskDefinitions?: TaskDefinition[];
 }
 
-const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date, hideFooter = false }) => {
-    const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition, getTaskDefinitionById, getRecordsByDate, deleteRecord } = useUserRecords();
+const getDailyTimeBreakdown = (
+    date: Date = new Date(),
+    records: RecordEntry[],
+    taskDefinitions: TaskDefinition[]
+): DailyTimeBreakdownData[] => {
+    const getTaskDefinitionById = (taskId: string): TaskDefinition | undefined => {
+        return taskDefinitions.find(task => task.id === taskId);
+    };
+
+    const getRecordsByDate = (dateStr: string): RecordEntry[] => {
+        return records.filter(r => r.date === dateStr);
+    };
+
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dailyRecords = getRecordsByDate(dateStr);
+    
+    const timeBreakdown = new Map<string, { name: string; value: number; color: string }>();
+    let totalMinutes = 0;
+
+    const timeBasedRecords = dailyRecords.filter(record => {
+        if (!record.taskType) return false;
+        const task = getTaskDefinitionById(record.taskType);
+        return task && (task.unit === 'minutes' || task.unit === 'hours');
+    });
+
+    timeBasedRecords.forEach(record => {
+      if (!record.taskType) return; // Should not happen due to filter, but for type safety
+      const task = getTaskDefinitionById(record.taskType)!;
+      const minutes = task.unit === 'hours' ? record.value * 60 : record.value;
+      const current = timeBreakdown.get(task.id) || { name: task.name, value: 0, color: task.color };
+      current.value += minutes;
+      timeBreakdown.set(task.id, current);
+      totalMinutes += minutes;
+    });
+
+    const result: DailyTimeBreakdownData[] = Array.from(timeBreakdown.values());
+    
+    const remainingMinutes = 1440 - totalMinutes;
+
+    if (timeBasedRecords.length === 0) {
+      return [{
+          name: 'Unallocated',
+          value: 1440,
+          color: 'hsl(var(--muted))'
+      }];
+    }
+    
+    if (remainingMinutes > 0) {
+      result.push({
+        name: 'Unallocated',
+        value: remainingMinutes,
+        color: 'hsl(var(--muted))'
+      });
+    }
+
+    return result;
+};
+
+
+const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date, hideFooter = false, records: recordsProp, taskDefinitions: taskDefinitionsProp }) => {
+    const userRecordsContext = useUserRecords();
     const { dashboardSettings } = useSettings();
-    const data = useMemo(() => getDailyTimeBreakdown(date), [getDailyTimeBreakdown, date]);
+    
+    const records = recordsProp ?? userRecordsContext.records;
+    const taskDefinitions = taskDefinitionsProp ?? userRecordsContext.taskDefinitions;
+
+    const data = useMemo(() => getDailyTimeBreakdown(date, records, taskDefinitions), [date, records, taskDefinitions]);
     const { toast } = useToast();
 
     const [showQuickLogForm, setShowQuickLogForm] = useState(false);
@@ -49,10 +113,9 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         let taskId = task?.id;
 
         if (!task) {
-            // Create a new task if it doesn't exist
-            const newTaskId = addTaskDefinition({
+            const newTaskId = userRecordsContext.addTaskDefinition({
                 name: newTaskName.trim(),
-                color: `hsl(${Math.random() * 360}, 70%, 70%)`, // Random color
+                color: `hsl(${Math.random() * 360}, 70%, 70%)`,
                 unit: unit,
             });
             taskId = newTaskId;
@@ -64,9 +127,9 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         
         if (!taskId) return;
         
-        const taskDef = getTaskDefinitionById(taskId);
+        const taskDef = userRecordsContext.getTaskDefinitionById(taskId);
 
-        addRecord({
+        userRecordsContext.addRecord({
             date: format(date || new Date(), 'yyyy-MM-dd'),
             value: Number(quickLogValue),
             taskType: taskId,
@@ -83,7 +146,7 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
     };
     
     const handleDeleteRecord = (id: string) => {
-        deleteRecord(id);
+        userRecordsContext.deleteRecord(id);
         toast({
             title: "Record Deleted",
             description: "The time entry has been removed.",
@@ -92,20 +155,18 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
     };
 
     const chartTitle = date ? `Time Breakdown for ${format(date, 'MMM d, yyyy')}` : 'Daily Time Breakdown';
-    const chartDescription = date ? `A visualization of your time-based tasks for this day.` : `A 24-hour visualization of your time-based tasks for today.`
+    const chartDescription = date ? `A visualization of time-based tasks for this day.` : `A 24-hour visualization of your time-based tasks for today.`
 
     const pieData = useMemo(() => {
         const totalMinutes = data.reduce((sum, item) => item.name !== 'Unallocated' ? sum + item.value : sum, 0);
         return data.map(item => ({
             ...item,
-            // Calculate percentage only based on logged time
             percentage: totalMinutes > 0 ? (item.value / totalMinutes) : 0,
         }));
     }, [data]);
     
     const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, name }: any) => {
       const RADIAN = Math.PI / 180;
-      // Increased stagger and adjusted logic
       const yStagger = (index % 4) * 20; 
       const radius = innerRadius + (outerRadius - innerRadius) * 1.25 + yStagger; 
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -139,10 +200,14 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
       );
     }, [dashboardSettings.pieChartLabelFormat]);
 
+    const getRecordsByDate = (dateStr: string): RecordEntry[] => {
+        return records.filter(r => r.date === dateStr);
+    };
+
     const dailyRecords = getRecordsByDate(format(date || new Date(), 'yyyy-MM-dd'));
     const timeBasedRecords = dailyRecords.filter(rec => {
         if (!rec.taskType) return false;
-        const task = getTaskDefinitionById(rec.taskType);
+        const task = userRecordsContext.getTaskDefinitionById(rec.taskType);
         return task && (task.unit === 'minutes' || task.unit === 'hours');
     });
 
@@ -230,7 +295,7 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
                                         <ScrollArea className="h-24 pr-2">
                                             <div className="space-y-1">
                                                 {timeBasedRecords.map(rec => {
-                                                    const task = getTaskDefinitionById(rec.taskType!);
+                                                    const task = userRecordsContext.getTaskDefinitionById(rec.taskType!);
                                                     return (
                                                         <div key={rec.id} className="flex items-center justify-between text-xs p-1 rounded-md hover:bg-muted/50">
                                                             <span>{task?.name}: <span className="font-bold">{rec.value}</span> {task?.unit}</span>
@@ -254,5 +319,3 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
 }
 
 export default DailyTimeBreakdownChart;
-
-    

@@ -20,6 +20,8 @@ import StatsPanel from '@/components/records/StatsPanel';
 import TaskComparisonChart from '@/components/friends/TaskComparisonChart';
 import { calculateUserLevelInfo } from '@/lib/config';
 import { subDays, startOfWeek, endOfWeek, isWithinInterval, startOfDay } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DailyTimeBreakdownChart from '@/components/dashboard/DailyTimeBreakdownChart';
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -122,6 +124,9 @@ const FriendProfileContent = () => {
     const avatarNumber = (simpleHash(friendId) % 12) + 1;
     const friendAvatar = friendData.photoURL || `/avatars/avatar${avatarNumber}.jpeg`;
 
+    const today = new Date();
+    const yesterday = subDays(today, 1);
+
     return (
         <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
             <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
@@ -151,6 +156,37 @@ const FriendProfileContent = () => {
                     highGoals={friendData.highGoals || []}
                     freezeCrystals={friendData.freezeCrystals || 0}
                 />
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Daily Breakdown</CardTitle>
+                        <CardDescription>A look at their time allocation for today and yesterday.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue="today" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="today">Today</TabsTrigger>
+                                <TabsTrigger value="yesterday">Yesterday</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="today" className="mt-4">
+                                <DailyTimeBreakdownChart
+                                    date={today}
+                                    records={friendRecords}
+                                    taskDefinitions={friendTasks}
+                                    hideFooter={true}
+                                />
+                            </TabsContent>
+                            <TabsContent value="yesterday" className="mt-4">
+                                <DailyTimeBreakdownChart
+                                    date={yesterday}
+                                    records={friendRecords}
+                                    taskDefinitions={friendTasks}
+                                    hideFooter={true}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                </Card>
                 
                 <TaskComparisonChart friendData={friendData} />
                 
