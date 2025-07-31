@@ -37,27 +37,8 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 
 const DailyTimeBreakdownChart = () => {
-    const { getDailyTimeBreakdown, taskDefinitions } = useUserRecords();
+    const { getDailyTimeBreakdown } = useUserRecords();
     const data = getDailyTimeBreakdown();
-    
-    if (taskDefinitions.filter(t => t.unit === 'minutes' || t.unit === 'hours').length === 0) {
-        return (
-             <Card className="shadow-lg">
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Clock className="h-6 w-6 text-accent" />
-                        <CardTitle>Daily Time Breakdown</CardTitle>
-                    </div>
-                    <CardDescription>A 24-hour visualization of your time-based tasks.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="h-[300px] flex items-center justify-center text-center text-muted-foreground">
-                        <p>No time-based tasks (minutes/hours) defined.<br/>Please add one in "Manage Tasks" to use this chart.</p>
-                    </div>
-                </CardContent>
-            </Card>
-        )
-    }
 
     return (
         <Card className="shadow-lg">
