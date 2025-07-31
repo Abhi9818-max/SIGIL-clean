@@ -6,17 +6,18 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { Clock, PlusCircle, ChevronDown } from 'lucide-react';
+import { Clock, PlusCircle, ChevronDown, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { Separator } from '../ui/separator';
-import type { TaskUnit } from '@/types';
+import type { TaskUnit, RecordEntry } from '@/types';
 import { Label } from '../ui/label';
 import { cn } from '@/lib/utils';
 import type { DailyTimeBreakdownData } from '@/types';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface DailyTimeBreakdownChartProps {
   date?: Date;
@@ -24,7 +25,7 @@ interface DailyTimeBreakdownChartProps {
 }
 
 const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date, hideFooter = false }) => {
-    const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition, getTaskDefinitionById } = useUserRecords();
+    const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition, getTaskDefinitionById, getRecordsByDate, deleteRecord } = useUserRecords();
     const { dashboardSettings } = useSettings();
     const data = useMemo(() => getDailyTimeBreakdown(date), [getDailyTimeBreakdown, date]);
     const { toast } = useToast();
@@ -80,6 +81,15 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         setNewTaskName('');
         setQuickLogValue('');
     };
+    
+    const handleDeleteRecord = (id: string) => {
+        deleteRecord(id);
+        toast({
+            title: "Record Deleted",
+            description: "The time entry has been removed.",
+            variant: "destructive"
+        });
+    };
 
     const chartTitle = date ? `Time Breakdown for ${format(date, 'MMM d, yyyy')}` : 'Daily Time Breakdown';
     const chartDescription = date ? `A visualization of your time-based tasks for this day.` : `A 24-hour visualization of your time-based tasks for today.`
@@ -128,6 +138,13 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         </g>
       );
     }, [dashboardSettings.pieChartLabelFormat]);
+
+    const dailyRecords = getRecordsByDate(format(date || new Date(), 'yyyy-MM-dd'));
+    const timeBasedRecords = dailyRecords.filter(rec => {
+        if (!rec.taskType) return false;
+        const task = getTaskDefinitionById(rec.taskType);
+        return task && (task.unit === 'minutes' || task.unit === 'hours');
+    });
 
     return (
         <Card className="shadow-lg">
@@ -207,6 +224,26 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
                                 <Button onClick={handleQuickLog} className="w-full">
                                     <PlusCircle className="mr-2 h-4 w-4" /> Log Time
                                 </Button>
+                                {timeBasedRecords.length > 0 && (
+                                    <div className="space-y-2 pt-2">
+                                        <h4 className="text-xs font-semibold text-muted-foreground">LOGGED TODAY:</h4>
+                                        <ScrollArea className="h-24 pr-2">
+                                            <div className="space-y-1">
+                                                {timeBasedRecords.map(rec => {
+                                                    const task = getTaskDefinitionById(rec.taskType!);
+                                                    return (
+                                                        <div key={rec.id} className="flex items-center justify-between text-xs p-1 rounded-md hover:bg-muted/50">
+                                                            <span>{task?.name}: <span className="font-bold">{rec.value}</span> {task?.unit}</span>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteRecord(rec.id)}>
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </CardFooter>
@@ -217,3 +254,5 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
 }
 
 export default DailyTimeBreakdownChart;
+
+    
