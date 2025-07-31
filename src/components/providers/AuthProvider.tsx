@@ -4,9 +4,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User, updateProfile } from 'firebase/auth';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import type { UserData } from '@/types';
 
@@ -96,8 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
-      setUserData(null);
-      setIsUserDataLoaded(false);
+      // No need to clear local states as they will be cleared by the effect
       router.push('/login');
     } catch (error) {
       console.error("Logout failed:", error);
@@ -113,10 +111,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await updateProfile(userCredential.user, { displayName: username });
 
       const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, { 
+      const initialUserData: UserData = {
         username: username,
         username_lowercase: username.toLowerCase(),
-      });
+        photoURL: null,
+        // Other fields will be initialized with defaults by UserRecordsProvider
+      };
+      await setDoc(userDocRef, initialUserData);
 
       toast({ title: 'Account Created!', description: 'Welcome to S.I.G.I.L.' });
       router.push('/');

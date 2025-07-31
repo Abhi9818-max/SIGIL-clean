@@ -35,21 +35,15 @@ export default function HomePage() {
   const [selectedDateForModal, setSelectedDateForModal] = useState<string | null>(null);
   const [isManageTasksModalOpen, setIsManageTasksModalOpen] = useState(false);
   const [selectedTaskFilterId, setSelectedTaskFilterId] = useState<string | null>(null);
-  const [currentLevelInfo, setCurrentLevelInfo] = useState<UserLevelInfo | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const {
-    taskDefinitions,
-    getUserLevelInfo,
-    records,
-    totalBonusPoints,
-    awardTierEntryBonus,
-  } = useUserRecords();
-  const { dashboardSettings } = useSettings();
+  
   const { isUserDataLoaded } = useAuth();
+  const userRecords = useUserRecords();
+  const { dashboardSettings } = useSettings();
   const { toast } = useToast();
+
+  const currentLevelInfo = userRecords.getUserLevelInfo();
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
@@ -59,15 +53,6 @@ export default function HomePage() {
     const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
     setQuote(randomQuote);
   }, []);
-
-  useEffect(() => {
-    if (isUserDataLoaded) {
-      const levelInfo = getUserLevelInfo();
-      setCurrentLevelInfo(levelInfo);
-      setIsLoading(false);
-    }
-  }, [isUserDataLoaded, getUserLevelInfo, records, totalBonusPoints]);
-
 
   useEffect(() => {
     if (currentLevelInfo) {
@@ -89,7 +74,7 @@ export default function HomePage() {
           let toastDescription = newTierData.welcomeMessage;
 
           if (newTierData.tierEntryBonus && newTierData.tierEntryBonus > 0 && newTierData.minLevel > TIER_INFO[0].minLevel) {
-            awardTierEntryBonus(newTierData.tierEntryBonus);
+            userRecords.awardTierEntryBonus(newTierData.tierEntryBonus);
             toastDescription += ` You earned ${newTierData.tierEntryBonus} bonus XP!`;
           }
 
@@ -108,7 +93,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [currentLevelInfo, toast, awardTierEntryBonus]);
+  }, [currentLevelInfo, toast, userRecords.awardTierEntryBonus]);
 
   const handleDayClick = (date: string) => {
     setSelectedDateForModal(date);
@@ -124,7 +109,7 @@ export default function HomePage() {
     setIsManageTasksModalOpen(true);
   };
 
-  if (isLoading || !currentLevelInfo) {
+  if (!isUserDataLoaded || !currentLevelInfo) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-primary">Loading your S.I.G.I.L...</div>
@@ -149,7 +134,7 @@ export default function HomePage() {
 
         {dashboardSettings.showTaskFilterBar && (
           <TaskFilterBar
-            taskDefinitions={taskDefinitions}
+            taskDefinitions={userRecords.taskDefinitions}
             selectedTaskId={selectedTaskFilterId}
             onSelectTask={(taskId) => setSelectedTaskFilterId(taskId)}
           />

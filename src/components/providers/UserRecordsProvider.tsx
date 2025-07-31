@@ -1,9 +1,9 @@
 
 "use client";
 
-import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, GoalProgress, Achievement, HighGoal, DailyTimeBreakdownData, UserData } from '@/types';
+import type { RecordEntry, TaskDefinition, WeeklyProgressStats, AggregatedTimeDataPoint, UserLevelInfo, Constellation, TaskDistributionData, ProductivityByDayData, HighGoal, DailyTimeBreakdownData, UserData } from '@/types';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
-import { doc, setDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './AuthProvider';
 import {
@@ -26,11 +26,7 @@ import {
   endOfWeek,
   subWeeks,
   isSameDay,
-  startOfMonth,
-  endOfMonth,
-  subMonths,
   getDay,
-  differenceInDays,
   isWithinInterval,
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
@@ -42,16 +38,16 @@ const removeUndefinedValues = (obj: any): any => {
     return null;
   }
   if (Array.isArray(obj)) {
-    return obj.map(removeUndefinedValues).filter(v => v !== null);
+    return obj.map(removeUndefinedValues).filter(v => v !== null && v !== undefined);
   }
-  if (typeof obj === 'object') {
+  if (typeof obj === 'object' && !(obj instanceof Date)) {
     const newObj: { [key: string]: any } = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const value = obj[key];
         if (value !== undefined) {
           const sanitizedValue = removeUndefinedValues(value);
-          if (sanitizedValue !== null) {
+          if (sanitizedValue !== null && sanitizedValue !== undefined) {
             newObj[key] = sanitizedValue;
           }
         }
@@ -116,13 +112,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const { user, userData, isUserDataLoaded } = useAuth();
   const { toast } = useToast();
 
-  // Primary state derived from userData
   const records = useMemo(() => userData?.records || [], [userData]);
   const taskDefinitions = useMemo(() => {
     if (userData?.taskDefinitions && userData.taskDefinitions.length > 0) {
       return userData.taskDefinitions;
     }
-    // For new users, provide defaults
     return DEFAULT_TASK_DEFINITIONS.map(task => ({ ...task, id: task.id || uuidv4() }));
   }, [userData]);
   const totalBonusPoints = useMemo(() => userData?.bonusPoints || 0, [userData]);
@@ -137,7 +131,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
       try {
-        // Sanitize data before sending to Firestore
         const sanitizedData = removeUndefinedValues(dataToUpdate);
         if (sanitizedData && Object.keys(sanitizedData).length > 0) {
            await setDoc(userDocRef, sanitizedData, { merge: true });
@@ -165,19 +158,16 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     let currentDate = startOfDay(new Date());
     let streak = 0;
   
-    // If today has no record, start checking from yesterday
     if (!recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
       currentDate = subDays(currentDate, 1);
     }
   
     if (isDaily) {
-      // Daily streak logic
       while (recordDates.has(format(currentDate, 'yyyy-MM-dd'))) {
         streak++;
         currentDate = subDays(currentDate, 1);
       }
     } else {
-      // Weekly streak logic
       const freqCount = taskDef?.frequencyCount || 1;
       let consecutiveWeeks = 0;
       let continueStreak = true;
@@ -191,12 +181,12 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         if (recordsThisWeek >= freqCount) {
           consecutiveWeeks++;
-          currentDate = subDays(weekStart, 1); // Move to the previous week
+          currentDate = subDays(weekStart, 1);
         } else {
           continueStreak = false;
         }
       }
-      streak = consecutiveWeeks; // For weekly tasks, streak is in weeks
+      streak = consecutiveWeeks;
     }
   
     return streak;
@@ -275,18 +265,15 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
     const recordDates = new Set(relevantRecords.map(r => r.date));
   
     if (!taskId) {
-      // Overall consistency: any activity on a day counts
-      const activeDays = new Set(relevantRecords.map(r => r.date)).size;
+      const activeDays = recordDates.size;
       return Math.round((activeDays / days) * 100);
     }
   
     const taskDef = getTaskDefinitionById(taskId);
     if (!taskDef || taskDef.frequencyType === 'daily' || !taskDef.frequencyType) {
-      // Daily task consistency
-      const activeDays = new Set(relevantRecords.filter(r => r.taskType === taskId).map(r => r.date)).size;
+      const activeDays = recordDates.size;
       return Math.round((activeDays / days) * 100);
     } else {
-      // Weekly task consistency
       const freqCount = taskDef.frequencyCount || 1;
       let totalWeeks = 0;
       let successfulWeeks = 0;
@@ -310,11 +297,11 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
         currentDate = subDays(weekStart, 1);
       }
       
-      if (totalWeeks === 0) return 100; // or 0, depending on desired behavior for no full weeks
+      if (totalWeeks === 0) return 100;
       return Math.round((successfulWeeks / totalWeeks) * 100);
     }
   
-  }, [getRecordsForDateRange, getTaskDefinitionById, records, taskDefinitions, isUserDataLoaded]);
+  }, [getRecordsForDateRange, getTaskDefinitionById, isUserDataLoaded]);
 
   const addTaskDefinition = useCallback((taskData: Omit<TaskDefinition, 'id'>): string => {
     const newId = uuidv4();
@@ -334,10 +321,8 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const deleteTaskDefinition = useCallback((taskId: string) => {
     const updatedTasks = taskDefinitions.filter(task => task.id !== taskId);
-    updateUserDataInDb({ taskDefinitions: updatedTasks });
-
     const updatedRecords = records.map(rec => rec.taskType === taskId ? {...rec, taskType: undefined} : rec);
-    updateUserDataInDb({ records: updatedRecords });
+    updateUserDataInDb({ taskDefinitions: updatedTasks, records: updatedRecords });
   }, [taskDefinitions, records, updateUserDataInDb]);
 
   const getStatsForCompletedWeek = useCallback((weekOffset: number, taskId?: string | null): WeeklyProgressStats | null => {
@@ -414,7 +399,6 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
   // Constellation Functions
   const getAvailableSkillPoints = useCallback((taskId: string): number => {
     if (records.length === 0) return 0;
-    // Skill points are equivalent to the total value recorded for a task
     const totalPoints = getAggregateSum(new Date("1900-01-01"), new Date(), taskId);
     const spentPoints = spentSkillPoints[taskId] || 0;
     return totalPoints - spentPoints;
@@ -549,7 +533,7 @@ export const UserRecordsProvider: React.FC<{ children: ReactNode }> = ({ childre
       const updatedAchievements = [...new Set([...unlockedAchievements, ...newlyUnlocked])];
       updateUserDataInDb({ unlockedAchievements: updatedAchievements });
     }
-  }, [isUserDataLoaded, records, totalBonusPoints, unlockedSkills, taskDefinitions, getUserLevelInfo, getCurrentStreak, unlockedAchievements, toast, updateUserDataInDb]);
+  }, [isUserDataLoaded, getUserLevelInfo, taskDefinitions, getCurrentStreak, unlockedSkills.length, unlockedAchievements, toast, updateUserDataInDb]);
 
   // High Goal Functions
   const addHighGoal = useCallback((goalData: Omit<HighGoal, 'id'>) => {

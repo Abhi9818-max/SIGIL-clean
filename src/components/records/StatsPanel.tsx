@@ -65,6 +65,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({
   }, [getRecordsForDateRange]);
 
   const getCurrentStreak = useCallback((taskId: string | null = null): number => {
+    if (!records) return 0;
     let taskRelevantRecords = taskId ? records.filter(r => r.taskType === taskId) : records;
     const recordDates = new Set(taskRelevantRecords.map(r => r.date));
   
@@ -146,7 +147,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({
 
   const activeHighGoal = useMemo(() => {
     const now = new Date();
-    if (!selectedTaskFilterId) return null;
+    if (!selectedTaskFilterId || !highGoals) return null;
     const relevantGoals = [...highGoals]
         .filter(g => g.taskId === selectedTaskFilterId && parseISO(g.endDate) >= now);
     
@@ -155,7 +156,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({
     return relevantGoals.sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())[0];
   }, [highGoals, selectedTaskFilterId]);
 
-  // If this is not on the dashboard (indicated by recordsProp being passed), show all cards.
   const isFriendProfile = recordsProp !== undefined;
   
   const visibleCards = [
