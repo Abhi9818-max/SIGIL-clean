@@ -265,7 +265,7 @@ export default function TodoPage() {
                 </Button>
             </div>
              <CardDescription>
-              {view === 'today' ? "" : "Review and finalize yesterday's tasks."}
+              {view === 'today' ? "Create binding agreements with yourself. Complete them on time or face a penalty." : "Review and finalize yesterday's tasks."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -313,3 +313,5 @@ export default function TodoPage() {
     </div>
   );
 }
+
+    
