@@ -104,7 +104,7 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, [user]);
 
     const acceptFriendRequest = useCallback(async (request: FriendRequest) => {
-        if (!user || !user.displayName) return;
+        if (!user || !user.displayName || !userData) return;
         const batch = writeBatch(db);
         
         // Get the sender's data to include their photoURL
@@ -123,7 +123,7 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const senderFriendRef = doc(db, `users/${request.senderId}/friends`, user.uid);
         batch.set(senderFriendRef, { 
             uid: user.uid, 
-            username: user.displayName, 
+            username: userData.username, 
             photoURL: userData?.photoURL || null,
             since: new Date().toISOString() 
         });
