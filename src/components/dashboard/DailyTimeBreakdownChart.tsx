@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -62,12 +61,6 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
     const [unit, setUnit] = useState<TaskUnit>('minutes');
     const [quickLogValue, setQuickLogValue] = useState<string>('');
     
-    const totalLoggedMinutes = useMemo(() => {
-        return data.reduce((sum, entry) => {
-            return entry.name !== 'Unallocated' ? sum + entry.value : sum;
-        }, 0);
-    }, [data]);
-
     const handleQuickLog = () => {
         if (!newTaskName.trim() || !quickLogValue) {
              toast({
@@ -142,7 +135,6 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
                                 data={data}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={60}
                                 outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"
@@ -155,12 +147,6 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
                             </Pie>
                         </PieChart>
                     </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-bold text-foreground">
-                            {`${Math.floor(totalLoggedMinutes / 60)}h ${totalLoggedMinutes % 60}m`}
-                        </span>
-                        <span className="text-xs text-muted-foreground">Logged Today</span>
-                    </div>
                 </div>
             </CardContent>
             {!hideFooter && (
@@ -218,5 +204,3 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
 }
 
 export default DailyTimeBreakdownChart;
-
-    
