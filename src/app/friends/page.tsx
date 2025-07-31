@@ -126,7 +126,7 @@ const FriendsContent = () => {
                                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                     />
                                     <Button onClick={handleSearch} disabled={isLoadingSearch} size="icon">
-                                        {isLoadingSearch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                        <Search className="h-4 w-4" />
                                         <span className="sr-only">Search</span>
                                     </Button>
                                 </div>
@@ -192,8 +192,8 @@ const FriendsContent = () => {
                          <Card>
                              <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
                                 <AccordionItem value="item-1" className="border-b-0">
-                                   <AccordionTrigger className="p-6">
-                                        <CardHeader className="p-0 text-left">
+                                   <AccordionTrigger className="p-6 focus:no-underline hover:no-underline">
+                                        <CardHeader className="p-0 text-left w-full">
                                             <CardTitle>Requests</CardTitle>
                                         </CardHeader>
                                    </AccordionTrigger>
