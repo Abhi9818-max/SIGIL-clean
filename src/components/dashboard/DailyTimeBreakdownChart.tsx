@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from 'recharts';
+import React, { useState, useMemo, useCallback } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -22,38 +22,6 @@ interface DailyTimeBreakdownChartProps {
   date?: Date;
   hideFooter?: boolean;
 }
-
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, name }: any) => {
-  const RADIAN = Math.PI / 180;
-  // Increase line length
-  const radius = innerRadius + (outerRadius - innerRadius) * 1.25; 
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  // Stagger y position to prevent overlap
-  const y = cy + radius * Math.sin(-midAngle * RADIAN) + (index % 2 === 0 ? 0 : 15);
-
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 5) * cos;
-  const sy = cy + (outerRadius + 5) * sin;
-  const mx = cx + (outerRadius + 15) * cos;
-  const my = cy + (outerRadius + 15) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 12;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
-
-  if (payload.name === 'Unallocated') return null;
-
-  return (
-    <g>
-       <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={payload.fill} fill="none" />
-       <circle cx={ex} cy={ey} r={2} fill={payload.fill} stroke="none" />
-       <text x={ex + (cos >= 0 ? 1 : -1) * 6} y={ey} dy={4} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs">
-           {`${name} (${(percent * 100).toFixed(0)}%)`}
-       </text>
-    </g>
-  );
-};
-
 
 const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date, hideFooter = false }) => {
     const { getDailyTimeBreakdown, taskDefinitions, addRecord, addTaskDefinition } = useUserRecords();
@@ -131,40 +99,37 @@ const DailyTimeBreakdownChart: React.FC<DailyTimeBreakdownChartProps> = ({ date,
         }));
     }, [data]);
     
-
-    const CustomTooltip = ({ active, payload, settings }: any) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            let displayValue: string;
+    const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, name }: any) => {
+      const RADIAN = Math.PI / 180;
+      // Stagger y position to prevent overlap
+      const yStagger = (index % 2 === 0 ? 0 : 15);
+      const radius = innerRadius + (outerRadius - innerRadius) * 1.25 + yStagger; 
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
     
-            if (settings.pieChartLabelFormat === 'time') {
-                const hours = Math.floor(data.value / 60);
-                const minutes = data.value % 60;
-                displayValue = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            } else {
-                const totalMinutes = pieData.reduce((sum: number, entry: any) => sum + entry.value, 0);
-                const percentage = totalMinutes > 0 ? (data.value / totalMinutes) * 100 : 0;
-                displayValue = `${percentage.toFixed(0)}%`;
-            }
-
-            if (data.name === 'Unallocated') {
-                displayValue = "Not logged";
-            }
+      const sin = Math.sin(-RADIAN * midAngle);
+      const cos = Math.cos(-RADIAN * midAngle);
+      const sx = cx + (outerRadius + 5) * cos;
+      const sy = cy + (outerRadius + 5) * sin;
+      const mx = cx + (outerRadius + 15) * cos;
+      const my = cy + (outerRadius + 15) * sin + yStagger;
+      const ex = mx + (cos >= 0 ? 1 : -1) * 12;
+      const ey = my;
+      const textAnchor = cos >= 0 ? 'start' : 'end';
     
-            return (
-                <div className="rounded-lg border bg-background p-2.5 shadow-lg">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
-                        <p className="text-sm font-medium text-foreground">{data.name}: <span className="font-bold">{displayValue}</span></p>
-                    </div>
-                </div>
-            );
-        }
-        return null;
-    };
-
-    const totalLoggedMinutes = useMemo(() => data.reduce((sum, item) => item.name !== 'Unallocated' ? sum + item.value : sum, 0), [data]);
+      if (payload.name === 'Unallocated' || percent === 0) return null;
     
+      return (
+        <g>
+           <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={payload.fill} fill="none" />
+           <circle cx={ex} cy={ey} r={2} fill={payload.fill} stroke="none" />
+           <text x={ex + (cos >= 0 ? 1 : -1) * 6} y={ey} dy={4} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs">
+               {`${name} (${(percent * 100).toFixed(0)}%)`}
+           </text>
+        </g>
+      );
+    }, []);
+
     return (
         <Card className="shadow-lg">
             <CardHeader>
