@@ -1,29 +1,112 @@
 
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { subDays, parseISO, formatDistanceToNowStrict } from 'date-fns';
+import { subDays, parseISO, formatDistanceToNowStrict, startOfDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 import PerformanceCircle from './PerformanceCircle';
 import { Flame, Snowflake, TrendingUp, ShieldCheck, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { RecordEntry, TaskDefinition, HighGoal } from '@/types';
 
-const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ selectedTaskFilterId }) => {
-  const { 
-    getAggregateSum, 
-    getDailyConsistency,
-    getTaskDefinitionById, 
-    getCurrentStreak,
-    freezeCrystals,
-    highGoals,
-    getHighGoalProgress,
-    records
-  } = useUserRecords();
+interface StatsPanelProps {
+  selectedTaskFilterId?: string | null;
+  // Optional props to override context for friend profiles
+  records?: RecordEntry[];
+  taskDefinitions?: TaskDefinition[];
+  highGoals?: HighGoal[];
+  freezeCrystals?: number;
+}
+
+const StatsPanel: React.FC<StatsPanelProps> = ({ 
+  selectedTaskFilterId,
+  records: recordsProp,
+  taskDefinitions: taskDefinitionsProp,
+  highGoals: highGoalsProp,
+  freezeCrystals: freezeCrystalsProp
+}) => {
+  const userRecordsContext = useUserRecords();
   const { dashboardSettings } = useSettings();
+
+  // Use props if provided, otherwise fall back to context
+  const records = recordsProp !== undefined ? recordsProp : userRecordsContext.records;
+  const taskDefinitions = taskDefinitionsProp !== undefined ? taskDefinitionsProp : userRecordsContext.taskDefinitions;
+  const highGoals = highGoalsProp !== undefined ? highGoalsProp : userRecordsContext.highGoals;
+  const freezeCrystals = freezeCrystalsProp !== undefined ? freezeCrystalsProp : userRecordsContext.freezeCrystals;
+
+  const getTaskDefinitionById = useCallback((taskId: string): TaskDefinition | undefined => {
+    return taskDefinitions.find(task => task.id === taskId);
+  }, [taskDefinitions]);
+
+  const getRecordsForDateRange = useCallback((startDate: Date, endDate: Date): RecordEntry[] => {
+    const start = startOfDay(startDate);
+    const end = startOfDay(endDate);
+
+    return records.filter(r => {
+      try {
+        const recordDate = startOfDay(parseISO(r.date));
+        return recordDate >= start && recordDate <= end;
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [records]);
+
+  const getAggregateSum = useCallback((startDate: Date, endDate: Date, taskId?: string | null): number => {
+    let relevantRecords = getRecordsForDateRange(startDate, endDate);
+    if (taskId) {
+      relevantRecords = relevantRecords.filter(r => r.taskType === taskId);
+    }
+    return relevantRecords.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+  }, [getRecordsForDateRange]);
+
+  const getCurrentStreak = useCallback((taskId: string | null = null): number => {
+    let taskRelevantRecords = taskId ? records.filter(r => r.taskType === taskId) : records;
+    const recordDates = new Set(taskRelevantRecords.map(r => r.date));
+  
+    const taskDef = taskId ? getTaskDefinitionById(taskId) : null;
+    const isDaily = !taskDef || !taskDef.frequencyType || taskDef.frequencyType === 'daily';
+  
+    let currentDate = startOfDay(new Date());
+    let streak = 0;
+  
+    if (!recordDates.has(currentDate.toISOString().split('T')[0])) {
+      currentDate = subDays(currentDate, 1);
+    }
+  
+    if (isDaily) {
+      while (recordDates.has(currentDate.toISOString().split('T')[0])) {
+        streak++;
+        currentDate = subDays(currentDate, 1);
+      }
+    } else {
+      const freqCount = taskDef?.frequencyCount || 1;
+      let consecutiveWeeks = 0;
+      let continueStreak = true;
+  
+      while (continueStreak) {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+        const recordsThisWeek = [...recordDates].filter(d => 
+          isWithinInterval(parseISO(d), { start: weekStart, end: weekEnd })
+        ).length;
+        
+        if (recordsThisWeek >= freqCount) {
+          consecutiveWeeks++;
+          currentDate = subDays(weekStart, 1);
+        } else {
+          continueStreak = false;
+        }
+      }
+      streak = consecutiveWeeks;
+    }
+  
+    return streak;
+  }, [records, getTaskDefinitionById]);
   
   const aggregate = useMemo(() => {
     const today = new Date();
@@ -32,63 +115,67 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
   }, [records, selectedTaskFilterId, getAggregateSum, dashboardSettings.totalDays]);
 
   const consistency = useMemo(() => {
-    return getDailyConsistency(dashboardSettings.consistencyDays, selectedTaskFilterId);
-  }, [records, selectedTaskFilterId, getDailyConsistency, dashboardSettings.consistencyDays]);
+    const days = dashboardSettings.consistencyDays;
+    const today = startOfDay(new Date());
+    const startDate = startOfDay(subDays(today, days - 1));
+  
+    let relevantRecords = getRecordsForDateRange(startDate, today);
+    if (selectedTaskFilterId) {
+      relevantRecords = relevantRecords.filter(r => r.taskType === selectedTaskFilterId);
+    }
+    const activeDays = new Set(relevantRecords.map(r => r.date)).size;
+    return Math.round((activeDays / days) * 100);
+  }, [records, selectedTaskFilterId, getRecordsForDateRange, dashboardSettings.consistencyDays]);
 
   const currentStreak = useMemo(() => {
     return getCurrentStreak(selectedTaskFilterId);
   }, [records, selectedTaskFilterId, getCurrentStreak]);
 
   const { task, isDarkStreakSelected, unitLabel } = useMemo(() => {
-    const task = selectedTaskFilterId ? getTaskDefinitionById(selectedTaskFilterId) : null;
+    if (!selectedTaskFilterId) return { task: null, isDarkStreakSelected: false, unitLabel: '' };
+    const task = getTaskDefinitionById(selectedTaskFilterId);
     let unitLabel = '';
     
     if (task?.unit) {
-      if (task.unit === 'custom' && task.customUnitName) {
-        unitLabel = task.customUnitName;
-      } else if (task.unit !== 'count' && task.unit !== 'generic' && task.unit !== 'custom') {
-        unitLabel = task.unit;
-      }
+      if (task.unit === 'custom' && task.customUnitName) unitLabel = task.customUnitName;
+      else if (task.unit !== 'count' && task.unit !== 'generic' && task.unit !== 'custom') unitLabel = task.unit;
     }
 
-    return {
-      task,
-      isDarkStreakSelected: task?.darkStreakEnabled === true,
-      unitLabel
-    };
+    return { task, isDarkStreakSelected: task?.darkStreakEnabled === true, unitLabel };
   }, [selectedTaskFilterId, getTaskDefinitionById]);
 
   const activeHighGoal = useMemo(() => {
     const now = new Date();
-    // Only show if a specific task with an active high goal is selected
-    if (!selectedTaskFilterId) {
-        return null;
-    }
+    if (!selectedTaskFilterId) return null;
     const relevantGoals = [...highGoals]
         .filter(g => g.taskId === selectedTaskFilterId && parseISO(g.endDate) >= now);
     
-    if (relevantGoals.length === 0) {
-        return null;
-    }
+    if (relevantGoals.length === 0) return null;
     
-    // Return the goal that ends soonest
     return relevantGoals.sort((a, b) => parseISO(a.endDate).getTime() - parseISO(b.endDate).getTime())[0];
   }, [highGoals, selectedTaskFilterId]);
 
+  // If this is not on the dashboard (indicated by recordsProp being passed), show all cards.
+  const isFriendProfile = recordsProp !== undefined;
+  
   const visibleCards = [
-    dashboardSettings.showTotalLast30Days,
-    dashboardSettings.showCurrentStreak,
-    dashboardSettings.showDailyConsistency,
-    dashboardSettings.showHighGoalStat && !!activeHighGoal,
+    isFriendProfile || dashboardSettings.showTotalLast30Days,
+    isFriendProfile || dashboardSettings.showCurrentStreak,
+    isFriendProfile || dashboardSettings.showDailyConsistency,
+    isFriendProfile ? !!activeHighGoal : dashboardSettings.showHighGoalStat && !!activeHighGoal,
   ].filter(Boolean).length;
 
   if (visibleCards === 0) {
     return null;
   }
+  
+  const getHighGoalProgress = (goal: HighGoal) => {
+    return getAggregateSum(parseISO(goal.startDate), parseISO(goal.endDate), goal.taskId);
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {dashboardSettings.showTotalLast30Days && (
+        {(isFriendProfile || dashboardSettings.showTotalLast30Days) && (
             <Card className="shadow-lg animate-fade-in-up">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -106,7 +193,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             </Card>
         )}
 
-        {dashboardSettings.showCurrentStreak && (
+        {(isFriendProfile || dashboardSettings.showCurrentStreak) && (
             <Card
             className={cn(
                 "shadow-lg animate-fade-in-up transition-all relative",
@@ -153,7 +240,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             </Card>
         )}
 
-        {dashboardSettings.showDailyConsistency && (
+        {(isFriendProfile || dashboardSettings.showDailyConsistency) && (
             <Card className="shadow-lg animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -173,7 +260,7 @@ const StatsPanel: React.FC<{ selectedTaskFilterId: string | null; }> = ({ select
             </Card>
         )}
         
-        {dashboardSettings.showHighGoalStat && activeHighGoal && (
+        {(isFriendProfile || dashboardSettings.showHighGoalStat) && activeHighGoal && (
           <Link href="/high-goals">
               <Card className="shadow-lg animate-fade-in-up h-full hover:bg-muted/50 transition-colors" style={{ animationDelay: `300ms` }}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

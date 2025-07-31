@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,7 +16,10 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import LevelIndicator from '@/components/layout/LevelIndicator';
 import ContributionGraph from '@/components/records/ContributionGraph';
+import StatsPanel from '@/components/records/StatsPanel';
+import TaskComparisonChart from '@/components/friends/TaskComparisonChart';
 import { calculateUserLevelInfo } from '@/lib/config';
+import { subDays, startOfWeek, endOfWeek, isWithinInterval, startOfDay } from 'date-fns';
 
 // Simple hash function to get a number from a string
 const simpleHash = (s: string) => {
@@ -39,8 +42,8 @@ const FriendProfileContent = () => {
     const [friendData, setFriendData] = useState<UserData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const { getUserLevelInfo } = useUserRecords();
-    const levelInfo = getUserLevelInfo();
+    const currentUserRecords = useUserRecords();
+    const levelInfo = currentUserRecords.getUserLevelInfo();
     const pageTierClass = levelInfo ? `page-tier-group-${levelInfo.tierGroup}` : 'page-tier-group-1';
 
     useEffect(() => {
@@ -65,6 +68,38 @@ const FriendProfileContent = () => {
         fetchFriendData();
     }, [friendId, getFriendData, router]);
 
+    const friendStats = useMemo(() => {
+        if (!friendData) return { streak: 0, consistency: 0, aggregate: 0, highGoal: null, highGoalProgress: 0 };
+        
+        const friendRecords = friendData.records || [];
+        const friendTasks = friendData.taskDefinitions || [];
+        
+        // Aggregate
+        const today = new Date();
+        const startDate = subDays(today, 29);
+        const aggregate = friendRecords
+            .filter(r => new Date(r.date) >= startDate && new Date(r.date) <= today)
+            .reduce((sum, r) => sum + r.value, 0);
+
+        // Consistency
+        const recordDates = new Set(friendRecords.map(r => r.date));
+        const activeDays = Array.from(recordDates).filter(d => new Date(d) >= startDate && new Date(d) <= today).length;
+        const consistency = Math.round((activeDays / 30) * 100);
+
+        // Streak
+        let streak = 0;
+        let currentDate = startOfDay(new Date());
+        if (!recordDates.has(currentDate.toISOString().split('T')[0])) {
+            currentDate = subDays(currentDate, 1);
+        }
+        while (recordDates.has(currentDate.toISOString().split('T')[0])) {
+            streak++;
+            currentDate = subDays(currentDate, 1);
+        }
+
+        return { streak, consistency, aggregate, highGoal: null, highGoalProgress: 0 };
+    }, [friendData]);
+
     if (isLoading) {
         return <div className="flex items-center justify-center min-h-screen">Loading friend's profile...</div>;
     }
@@ -84,14 +119,13 @@ const FriendProfileContent = () => {
     const totalExperience = friendRecords.reduce((sum, r) => sum + r.value, 0) + friendBonusPoints;
     const friendLevelInfo = calculateUserLevelInfo(totalExperience);
 
-    // Use a consistent avatar from local assets if no photoURL is set
     const avatarNumber = (simpleHash(friendId) % 12) + 1;
-    const friendAvatar = friendData.photoURL || `/images/avatars/avatar-${avatarNumber}.jpeg`;
+    const friendAvatar = friendData.photoURL || `/avatars/avatar${avatarNumber}.jpeg`;
 
     return (
         <div className={cn("min-h-screen flex flex-col", pageTierClass)}>
             <Header onAddRecordClick={() => {}} onManageTasksClick={() => {}} />
-            <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up">
+            <main className="flex-grow container mx-auto p-4 md:p-8 animate-fade-in-up space-y-8">
                 <Button variant="outline" onClick={() => router.push('/friends')} className="mb-4">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Friends
@@ -110,13 +144,25 @@ const FriendProfileContent = () => {
                             <LevelIndicator levelInfo={friendLevelInfo} />
                         </div>
                     </CardHeader>
-                    <CardContent>
+                </Card>
+                <StatsPanel
+                    records={friendRecords}
+                    taskDefinitions={friendTasks}
+                    highGoals={friendData.highGoals || []}
+                    freezeCrystals={friendData.freezeCrystals || 0}
+                />
+                
+                <TaskComparisonChart friendData={friendData} />
+                
+                <Card>
+                    <CardHeader>
                         <h3 className="text-lg font-semibold my-4">Contribution Graph</h3>
+                    </CardHeader>
+                    <CardContent>
                         <ContributionGraph 
                             year={new Date().getFullYear()}
                             onDayClick={() => {}} 
                             selectedTaskFilterId={null}
-                            // @ts-ignore
                             records={friendRecords} 
                             taskDefinitions={friendTasks}
                             displayMode="full"
