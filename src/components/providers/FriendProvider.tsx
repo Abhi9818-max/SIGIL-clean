@@ -126,14 +126,13 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
         const batch = writeBatch(db);
         
-        // Fetch full UserData for both users to ensure all info is available
+        // Fetch full UserData for the sender to ensure all info is available
         const senderDataDoc = await getDoc(doc(db, 'users', request.senderId));
         if (!senderDataDoc.exists()) {
             toast({ title: 'Error', description: 'Could not find the user who sent the request.', variant: 'destructive' });
             return;
         }
         const senderData = senderDataDoc.data() as UserData;
-        const currentUserData = userData; // We already have this from useAuth
 
         // Add sender to current user's friend list
         const currentUserFriendRef = doc(db, `users/${user.uid}/friends`, request.senderId);
@@ -148,8 +147,8 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const senderFriendRef = doc(db, `users/${request.senderId}/friends`, user.uid);
         batch.set(senderFriendRef, { 
             uid: user.uid, 
-            username: currentUserData.username, 
-            photoURL: currentUserData.photoURL || null,
+            username: userData.username, 
+            photoURL: userData.photoURL || null,
             since: new Date().toISOString() 
         });
         
@@ -182,10 +181,11 @@ export const FriendProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const getFriendData = useCallback(async (friendId: string): Promise<UserData | null> => {
         if (!user) return null;
         
-        const friendRef = doc(db, `users/${user.uid}/friends`, friendId);
-        const friendSnap = await getDoc(friendRef);
-        if (!friendSnap.exists()) {
-            console.error("Not a friend.");
+        // Ensure the current user has this person as a friend before fetching data.
+        // This is a basic security check.
+        const friendLinkDoc = await getDoc(doc(db, `users/${user.uid}/friends`, friendId));
+        if (!friendLinkDoc.exists()) {
+            console.error("Not a friend or permission denied.");
             return null;
         }
 
