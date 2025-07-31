@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
-import { UserSearch, UserPlus, Users, Mail, Check, X, Hourglass, ChevronDown } from 'lucide-react';
+import { UserSearch, UserPlus, Users, Mail, Check, X, Hourglass, ChevronDown, Search, Loader2 } from 'lucide-react';
 import { useUserRecords } from '@/components/providers/UserRecordsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { FriendProvider, useFriends } from '@/components/providers/FriendProvider';
@@ -125,8 +125,9 @@ const FriendsContent = () => {
                                         onChange={(e) => setUsernameQuery(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                     />
-                                    <Button onClick={handleSearch} disabled={isLoadingSearch}>
-                                        {isLoadingSearch ? "Searching..." : "Search"}
+                                    <Button onClick={handleSearch} disabled={isLoadingSearch} size="icon">
+                                        {isLoadingSearch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                        <span className="sr-only">Search</span>
                                     </Button>
                                 </div>
                                 {searchMessage && <p className="text-sm text-muted-foreground mt-3">{searchMessage}</p>}
@@ -191,11 +192,11 @@ const FriendsContent = () => {
                          <Card>
                              <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
                                 <AccordionItem value="item-1" className="border-b-0">
-                                   <CardHeader className="p-0">
-                                        <AccordionTrigger className="p-6">
+                                   <AccordionTrigger className="p-6">
+                                        <CardHeader className="p-0 text-left">
                                             <CardTitle>Requests</CardTitle>
-                                        </AccordionTrigger>
-                                   </CardHeader>
+                                        </CardHeader>
+                                   </AccordionTrigger>
                                    <AccordionContent>
                                        <CardDescription className="px-6 pb-4">
                                             Manage your friend requests.
