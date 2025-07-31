@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -391,12 +391,12 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                   <div className="space-y-3">
                     {taskDefinitions.map((task) => (
                       <div key={task.id} className={cn("p-3 border rounded-lg transition-all", editingTask?.id === task.id ? 'bg-muted border-primary/50' : 'bg-card-foreground/5')}>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-10 rounded-sm" style={{ backgroundColor: task.color }} />
+                            <div className="w-3 h-10 rounded-sm flex-shrink-0" style={{ backgroundColor: task.color }} />
                             <div>
                                 <p className="font-semibold">{task.name}</p>
-                                <div className="flex items-center gap-4 text-muted-foreground text-xs mt-1">
+                                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-muted-foreground text-xs mt-1">
                                 <Tooltip><TooltipTrigger className="flex items-center gap-1"><CalendarCheck className="h-4 w-4" /><span>{getFrequencyLabel(task)}</span></TooltipTrigger><TooltipContent><p>Task Frequency</p></TooltipContent></Tooltip>
 
                                 {task.darkStreakEnabled && (
@@ -410,7 +410,7 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
                                 </div>
                             </div>
                           </div>
-                           <div className="flex items-center gap-1">
+                           <div className="flex items-center gap-1 flex-shrink-0">
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => resetFormFields(task)}>
                                 <Pencil className="h-4 w-4" />
                                 <span className="sr-only">Edit {task.name}</span>
@@ -452,4 +452,3 @@ const ManageTasksModal: React.FC<ManageTasksModalProps> = ({ isOpen, onOpenChang
 };
 
 export default ManageTasksModal;
-
